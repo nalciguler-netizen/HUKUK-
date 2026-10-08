@@ -24,9 +24,9 @@ const AI_MODELS = [
 
 // Paket sınırları (günlük)
 const PLANS = {
-  basic:   { label: "Basic",   price: 0,    search: 10,   ai: 3,   maxText: 6000 },
-  optimus: { label: "Optimus", price: 400,  search: 200,  ai: 50,  maxText: 15000 },
-  maximus: { label: "Maximus", price: 1000, search: 1000, ai: 200, maxText: 30000 },
+  basic:   { label: "Basic",   price: 0,    search: 10,   ai: 3,   maxText: 12000 },
+  optimus: { label: "Optimus", price: 400,  search: 200,  ai: 50,  maxText: 40000 },
+  maximus: { label: "Maximus", price: 1000, search: 1000, ai: 200, maxText: 80000 },
 };
 
 // Resmî karar bankaları (kamuya açık arama arayüzleri)
@@ -288,7 +288,16 @@ const AI_RULES =
   "(5) Sonunda tek satırla 'Bu çıktı hukuki danışmanlık değildir; bir avukat tarafından kontrol edilmelidir.' yaz.";
 
 const AI_TASKS = {
-  ozet: "Aşağıdaki mahkeme kararını özetle: taraflar (adları maskelenmişse öyle bırak), uyuşmazlık konusu, mahkemenin gerekçesi, hüküm/sonuç ve kararın uygulamada önemi.",
+  ozet: "Aşağıdaki mahkeme kararını bir avukat için özetle. Şu başlıkları sırayla ve kısa tut:\n" +
+    "1. Künye: mahkeme/daire, esas no, karar no, tarih (yalnızca metinde geçenler).\n" +
+    "2. Taraflar ve dava türü (adlar maskelenmişse öyle bırak).\n" +
+    "3. Olay ve talep: davacının iddiası ve talebi, davalının savunması (2-4 cümle).\n" +
+    "4. Yargılama süreci: ilk derece kararı, istinaf/temyiz aşamaları ve kimin neye itiraz ettiği.\n" +
+    "5. Mahkemenin gerekçesi: kararı belirleyen hukuki değerlendirme; en önemli cümleyi metinden tırnak içinde aynen aktar.\n" +
+    "6. Hüküm: onama / bozma / kaldırma / ret / kabul vb. ve gerekçesi tek cümleyle; oy birliği mi çokluk mu.\n" +
+    "7. Dayanılan mevzuat: yalnızca metinde açıkça geçen kanun ve maddeler.\n" +
+    "8. İçtihat değeri: bu karardan çıkan genel ilke tek cümleyle ve hangi tür davalarda emsal olabileceği.\n" +
+    "Gereksiz tekrar yapma, metinde olmayan bilgi ekleme.",
   sozlesme: "Aşağıdaki sözleşmeyi incele: taraflar ve konu, temel yükümlülükler, riskli/tek taraflı maddeler (madde alıntısıyla), eksik görünen hükümler, müzakere önerileri. Risk seviyesini Yüksek/Orta/Düşük olarak belirt.",
   dilekce: "Aşağıda verilen olay ve taleplere göre bir dilekçe TASLAĞI iskeleti hazırla: başlık, taraflar (boş alanlar [ ] ile), konu, açıklamalar (olaylar sırasıyla), hukuki nedenler (yalnızca kullanıcının metninde geçen kanun/karar atıflarını kullan; yoksa '[ilgili mevzuat avukat tarafından eklenecek]' yaz), deliller, sonuç ve istem.",
   ceviri: "Aşağıdaki hukuki metni hedef dile çevir. Hukuki terimleri doğru karşılıklarıyla kullan; emin olmadığın terimin yanına parantez içinde Türkçe aslını yaz.",
@@ -301,7 +310,12 @@ async function runAI(env, task, text, extra, maxText) {
   let t = String(text || "").trim();
   if (t.length < 30) throw new HttpError(400, "Lütfen analiz edilecek metni girin (en az 30 karakter).");
   let note = "";
-  if (t.length > maxText) { t = t.slice(0, maxText); note = `Not: Metnin ilk ${maxText} karakteri işlendi (paket sınırı).`; }
+  if (t.length > maxText) {
+    // Kararlarda gerekçe ve hüküm sondadır: başın %35'i + sonun %65'i alınır, ortadaki kısım atlanır.
+    const head = Math.floor(maxText * 0.35), tail = maxText - head;
+    t = t.slice(0, head) + "\n\n[... metnin orta kısmı uzunluk nedeniyle atlandı ...]\n\n" + t.slice(-tail);
+    note = `Not: Metin uzun olduğu için başı ve sonu (gerekçe/hüküm) işlendi, orta kısmın bir bölümü atlandı (paket sınırı ${maxText.toLocaleString("tr-TR")} karakter).`;
+  }
   const target = task === "ceviri" ? `\nHedef dil: ${String(extra || "İngilizce").slice(0, 40)}` : "";
   const messages = [
     { role: "system", content: AI_RULES },
