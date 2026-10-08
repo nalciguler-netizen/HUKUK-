@@ -401,7 +401,7 @@ async function doSearch(q, page, btn){
 function drawResults(r, scroll){
   const box = $("#results");
   if (!r.items.length){ box.innerHTML = `<p class="muted" style="margin-top:14px">Sonuç bulunamadı. Farklı kelimeler deneyin.</p>`; return; }
-  box.innerHTML = `<p class="muted small" style="margin:14px 2px 0">${esc(r.sourceLabel)} · yaklaşık ${Number(r.total).toLocaleString("tr-TR")} sonuç${r.quota ? ` · bugünkü arama: ${r.quota.used}/${r.quota.limit}` : ""}</p>` +
+  box.innerHTML = (r.note ? `<div class="notice">${esc(r.note)}</div>` : "") + `<p class="muted small" style="margin:14px 2px 0">${esc(r.sourceLabel)} · yaklaşık ${Number(r.total).toLocaleString("tr-TR")} sonuç${r.quota ? ` · bugünkü arama: ${r.quota.used}/${r.quota.limit}` : ""}</p>` +
     r.items.map((it, i) => `<button class="result" data-i="${i}"><b>${esc(it.daire)}</b><span>E. ${esc(it.esas || "—")} · K. ${esc(it.karar || "—")} · ${esc(it.tarih || "")}</span></button>`).join("") +
     (r.items.length < r.total ? `<div class="row"><button class="btn btn-ghost btn-block" id="more">Daha fazla sonuç</button></div>` : "");
   box.onclick = e => { const el = e.target.closest(".result"); if (el) openDecision(r.source, r.items[+el.dataset.i]); };

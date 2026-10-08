@@ -1,0 +1,12 @@
+{
+  // Cloudflare'in GitHub'dan otomatik yayın ayarı (Hukuk Platformu arka ucu)
+  "name": "hukuk-api",
+  "main": "worker.js",
+  "compatibility_date": "2026-09-01",
+  "keep_vars": true,
+  "d1_databases": [
+    { "binding": "DB", "database_name": "hukuk-db", "database_id": "f35ff60e-c638-4ad9-bbbd-1af73fa2033f" }
+  ],
+  "ai": { "binding": "AI" },
+  "observability": { "enabled": true }
+}
