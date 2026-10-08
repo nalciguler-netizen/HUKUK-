@@ -640,13 +640,21 @@ async function tabAccount(){
     <div class="row"><a class="btn btn-ghost" href="#/paketler">Paketleri gör</a><button class="btn btn-ghost" id="logout">Çıkış yap</button></div>
   </div>
   ${u.isAdmin ? `<div class="card" style="margin-top:14px">
-    <h3>Yönetici: paket tanımla</h3>
+    <h3>Yönetici</h3>
     <label for="ae">Kullanıcı e-postası</label><input id="ae" type="email">
     <label for="ap">Paket</label><select id="ap"><option value="optimus">Optimus</option><option value="maximus">Maximus</option><option value="basic">Basic</option></select>
     <label for="ad">Gün</label><input id="ad" type="text" inputmode="numeric" value="30">
     <div id="am" class="hidden"></div>
-    <button class="btn btn-primary" id="aset" style="margin-top:12px">Tanımla</button>
+    <div class="row"><button class="btn btn-primary" id="aset">Paketi tanımla</button><button class="btn btn-ghost" id="areset">Şifresini sıfırla</button></div>
+    <p class="muted small" style="margin:8px 0 0">Şifre sıfırlamada yalnızca e-posta yeterli; üretilen geçici şifreyi kullanıcıya iletin.</p>
   </div>` : ""}
+  <div class="card" style="margin-top:14px">
+    <h3>Şifremi değiştir</h3>
+    <label for="cp">Mevcut (veya geçici) şifre</label><input id="cp" type="password" autocomplete="current-password">
+    <label for="np">Yeni şifre (en az 8 karakter)</label><input id="np" type="password" autocomplete="new-password" minlength="8">
+    <div id="cm" class="hidden"></div>
+    <button class="btn btn-ghost" id="chg" style="margin-top:12px">Şifreyi değiştir</button>
+  </div>
   <div class="card" style="margin-top:14px">${serverBox()}</div>
   <div class="card" style="margin-top:14px">
     <h3>Hesabı sil</h3>
@@ -661,6 +669,27 @@ async function tabAccount(){
     const btn = $("#del"); busy(btn, true);
     try { const r = await api("/api/account/delete", { password: $("#dp").value }); alert(r.message); logoutLocal(); location.hash = "#/"; }
     catch (err) { showMsg($("#dm"), err.message); }
+    finally { busy(btn, false); }
+  };
+  $("#chg").onclick = async () => {
+    const btn = $("#chg"); busy(btn, true);
+    try { const r = await api("/api/account/password", { current: $("#cp").value, password: $("#np").value }); showMsg($("#cm"), r.message, true); $("#cp").value = $("#np").value = ""; }
+    catch (err) { showMsg($("#cm"), err.message); }
+    finally { busy(btn, false); }
+  };
+  if (u.isAdmin) $("#areset").onclick = async () => {
+    const em = $("#ae").value.trim();
+    if (!em) return showMsg($("#am"), "Önce kullanıcının e-postasını yazın.");
+    if (!confirm(em + " için şifre sıfırlansın mı? Kullanıcının açık oturumları kapanır.")) return;
+    const btn = $("#areset"); busy(btn, true);
+    try {
+      const r = await api("/api/admin/reset-password", { email: em }); showMsg($("#am"), r.message, true);
+      if (!r.emailed) {
+        const body = `Merhaba,\n\n${CONFIG.APP_NAME} şifreniz talebiniz üzerine sıfırlandı.\n\nGeçici şifreniz: ${r.tempPassword}\n\nBu şifreyle giriş yapın: ${location.href.split("#")[0]}#/giris\nArdından Hesabım → Şifremi değiştir bölümünden kendi şifrenizi belirleyin.\n\nSaygılarımızla,\n${CONFIG.OWNER}`;
+        location.href = `mailto:${r.email}?subject=${encodeURIComponent(r.subject)}&body=${encodeURIComponent(body)}`;
+      }
+    }
+    catch (err) { showMsg($("#am"), err.message); }
     finally { busy(btn, false); }
   };
   if (u.isAdmin) $("#aset").onclick = async () => {
@@ -729,7 +758,7 @@ function pageKvkk(){
   <h2>3. Amaçlar ve hukuki sebepler</h2>
   <p>Verileriniz; üyelik sözleşmesinin kurulması ve ifası (KVKK m.5/2-c), hesap güvenliğinin ve hizmet sürekliliğinin sağlanması ile kötüye kullanımın önlenmesi için veri sorumlusunun meşru menfaati (m.5/2-f) ve yasal yükümlülüklerin yerine getirilmesi (m.5/2-ç) hukuki sebeplerine dayanılarak işlenir.</p>
   <h2>4. Aktarım</h2>
-  <p>Platform altyapısı; barındırma, veritabanı ve yapay zekâ işlemleri için Cloudflare, Inc. (ABD), şifre sıfırlama e-postaları için Brevo (Fransa) hizmet sağlayıcılarını kullanır. Bu nedenle verileriniz yurt dışındaki sunuculara aktarılabilir. Yurt dışına aktarım, KVKK m.9'da öngörülen uygun güvencelere dayanılarak gerçekleştirilir. Verileriniz bunun dışında, kanunen yetkili kurumların talepleri hariç, üçüncü kişilerle paylaşılmaz ve satılmaz.</p>
+  <p>Platform altyapısı; barındırma, veritabanı ve yapay zekâ işlemleri için Cloudflare, Inc. (ABD), şifre sıfırlama e-postaları için Google (Gmail, ABD) hizmet sağlayıcılarını kullanır. Bu nedenle verileriniz yurt dışındaki sunuculara aktarılabilir. Yurt dışına aktarım, KVKK m.9'da öngörülen uygun güvencelere dayanılarak gerçekleştirilir. Verileriniz bunun dışında, kanunen yetkili kurumların talepleri hariç, üçüncü kişilerle paylaşılmaz ve satılmaz.</p>
   <h2>5. Toplama yöntemi ve saklama süresi</h2>
   <p>Veriler kayıt formu ve Platform kullanımı sırasında elektronik ortamda toplanır. Hesap verileri hesabınız açık kaldığı sürece saklanır; hesabınızı sildiğinizde kalıcı olarak silinir. Kanunen saklanması zorunlu kayıtlar ilgili süre boyunca tutulur.</p>
   <h2>6. Haklarınız</h2>

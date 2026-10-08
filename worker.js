@@ -1,5 +1,6 @@
 // Hukuk Platformu — Cloudflare Worker arka ucu
 // Hak sahibi: Yurdagül Güler. Tüm hakları saklıdır.
+import { connect } from "cloudflare:sockets";
 //
 // Gerekli bağlantılar (Worker > Settings > Bindings):
 //   DB  : D1 veritabanı (schema.sql ile kurulur)
@@ -7,8 +8,9 @@
 // Değişkenler (Settings > Variables and Secrets):
 //   APP_URL        : sitenin adresi, ör. https://nalciguler-netizen.github.io/HUKUK/
 //   APP_NAME       : Hukuk Platformu
-//   SENDER_EMAIL   : şifre sıfırlama e-postalarının gönderen adresi
-//   BREVO_API_KEY  : (Secret) Brevo e-posta API anahtarı — yoksa sıfırlama e-postası gönderilmez
+//   GMAIL_USER         : e-postaları gönderecek Gmail adresi (ör. yolhava.destek@gmail.com)
+//   GMAIL_APP_PASSWORD : (Secret) o Gmail hesabının 16 haneli "uygulama şifresi"
+//   SUPPORT_EMAIL      : kullanıcılara gösterilen destek adresi
 //   ALLOWED_ORIGIN : isteğe bağlı; boşsa APP_URL'nin kökü kullanılır
 
 const PBKDF2_ITER = 50000;         // ücretsiz plan CPU sınırı için; hash ile birlikte saklanır, sonradan artırılabilir
@@ -339,21 +341,82 @@ async function runAI(env, task, text, extra, maxText) {
   throw new HttpError(502, "Yapay zekâ servisi şu an yanıt vermedi, biraz sonra tekrar deneyin. (" + lastErr + ")");
 }
 
-// ---------- e-posta (şifre sıfırlama) ----------
-async function sendResetMail(env, to, link) {
-  if (!env.BREVO_API_KEY || !env.SENDER_EMAIL) return false;
+// ---------- e-posta (Gmail üzerinden, ek hesap gerektirmez) ----------
+const mailReady = env => !!(env.GMAIL_USER && env.GMAIL_APP_PASSWORD);
+const supportEmail = env => env.SUPPORT_EMAIL || env.GMAIL_USER || "yolhava.destek@gmail.com";
+const b64utf8 = str => { const bytes = enc.encode(str); let bin = ""; for (const x of bytes) bin += String.fromCharCode(x); return btoa(bin); };
+
+// Gmail SMTP (465, şifreli bağlantı). connectFn testte değiştirilebilsin diye parametre.
+async function smtpSend(env, to, subject, html, connectFn = connect) {
+  const user = String(env.GMAIL_USER).trim(), pass = String(env.GMAIL_APP_PASSWORD).replace(/\s+/g, "");
   const name = env.APP_NAME || "Hukuk Platformu";
-  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
-    method: "POST",
-    headers: { "api-key": env.BREVO_API_KEY, "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({
-      sender: { email: env.SENDER_EMAIL, name },
-      to: [{ email: to }],
-      subject: `${name} — şifre sıfırlama`,
-      htmlContent: `<p>Merhaba,</p><p>Şifrenizi sıfırlamak için aşağıdaki bağlantıya ${RESET_MINUTES} dakika içinde tıklayın:</p><p><a href="${link}">${link}</a></p><p>Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz.</p>`,
-    }),
-  });
-  return res.ok;
+  const sock = connectFn({ hostname: "smtp.gmail.com", port: 465 }, { secureTransport: "on" });
+  const writer = sock.writable.getWriter();
+  const reader = sock.readable.getReader();
+  const dec = new TextDecoder();
+  let buf = "";
+  const readReply = async () => {
+    // Çok satırlı yanıtlar "250-..." ile sürer, "250 ..." ile biter.
+    for (;;) {
+      const lines = buf.split("\r\n");
+      for (let i = 0; i < lines.length - 1; i++) {
+        if (/^\d{3} /.test(lines[i])) { buf = lines.slice(i + 1).join("\r\n"); return { code: +lines[i].slice(0, 3), text: lines.slice(0, i + 1).join(" ") }; }
+      }
+      const { value, done } = await reader.read();
+      if (done) throw new Error("SMTP bağlantısı kapandı");
+      buf += dec.decode(value, { stream: true });
+    }
+  };
+  const cmd = async (line, okCodes) => {
+    if (line !== null) await writer.write(enc.encode(line + "\r\n"));
+    const r = await readReply();
+    if (!okCodes.includes(r.code)) throw new Error(`SMTP ${r.code}: ${r.text.slice(0, 160)}`);
+    return r;
+  };
+  try {
+    await cmd(null, [220]);
+    await cmd("EHLO hukuk-platformu", [250]);
+    await cmd("AUTH LOGIN", [334]);
+    await cmd(btoa(user), [334]);
+    await cmd(btoa(pass), [235]);
+    await cmd(`MAIL FROM:<${user}>`, [250]);
+    await cmd(`RCPT TO:<${to}>`, [250, 251]);
+    await cmd("DATA", [354]);
+    const body64 = b64utf8(html).replace(/.{1,76}/g, "$&\r\n");
+    const msg = [
+      `From: =?UTF-8?B?${b64utf8(name)}?= <${user}>`,
+      `To: <${to}>`,
+      `Reply-To: <${supportEmail(env)}>`,
+      `Subject: =?UTF-8?B?${b64utf8(subject)}?=`,
+      `Date: ${new Date().toUTCString()}`,
+      `Message-ID: <${randomToken(12)}@hukuk-platformu>`,
+      "MIME-Version: 1.0",
+      "Content-Type: text/html; charset=UTF-8",
+      "Content-Transfer-Encoding: base64",
+      "",
+      body64,
+    ].join("\r\n");
+    await cmd(msg + "\r\n.", [250]);
+    try { await cmd("QUIT", [221]); } catch {}
+    return true;
+  } finally {
+    try { reader.releaseLock(); writer.releaseLock(); await sock.close(); } catch {}
+  }
+}
+
+async function sendMail(env, to, subject, html) {
+  if (!mailReady(env)) return false;
+  try { return await smtpSend(env, to, subject, html); }
+  catch (e) { console.error("MAIL", String(e && e.message || e)); return false; }
+}
+
+function mailTemplate(env, title, inner) {
+  const name = env.APP_NAME || "Hukuk Platformu";
+  return `<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;color:#1d2433">
+  <div style="background:#14213d;color:#fff;padding:16px 20px;border-radius:10px 10px 0 0;font-size:18px;font-weight:bold">⚖ ${name}</div>
+  <div style="border:1px solid #e3e1da;border-top:0;padding:20px;border-radius:0 0 10px 10px">
+  <h2 style="margin:0 0 12px;font-size:18px">${title}</h2>${inner}
+  <p style="color:#5d6678;font-size:13px;margin-top:20px">Sorularınız için: ${supportEmail(env)}</p></div></div>`;
 }
 
 // ---------- yönlendirme ----------
@@ -407,15 +470,22 @@ async function route(req, env, ctx) {
   if (path === "/api/forgot" && req.method === "POST") {
     const b = await body(req);
     const email = cleanEmail(b.email);
+    const manual = `Şifre sıfırlama için lütfen kayıtlı e-posta adresinizi belirterek ${supportEmail(env)} adresine yazın; şifreniz kısa sürede sıfırlanır.`;
+    if (!mailReady(env)) throw new HttpError(503, manual);
     const u = await env.DB.prepare("SELECT id FROM users WHERE email=?").bind(email).first();
-    const generic = { ok: true, message: "Bu e-posta kayıtlıysa şifre sıfırlama bağlantısı gönderildi. Gelen kutunuzu ve spam klasörünü kontrol edin." };
+    const generic = { ok: true, message: "Bu e-posta kayıtlıysa şifre sıfırlama bağlantısı gönderildi. Gelen kutunuzu ve spam (istenmeyen) klasörünü kontrol edin." };
     if (!u) return generic;
     const token = randomToken();
     await env.DB.prepare("INSERT INTO resets (token_hash, user_id, expires_at) VALUES (?,?,?)")
       .bind(await sha256(token), u.id, now() + RESET_MINUTES * 60).run();
     const base = (env.APP_URL || "").replace(/#.*$/, "");
-    const sent = await sendResetMail(env, email, `${base}#sifirla=${token}`);
-    if (!sent) throw new HttpError(503, "E-posta gönderimi henüz yapılandırılmadı. Lütfen destek adresine yazın.");
+    const link = `${base}#sifirla=${token}`;
+    const sent = await sendMail(env, email, `${env.APP_NAME || "Hukuk Platformu"} — şifre sıfırlama`, mailTemplate(env, "Şifre sıfırlama",
+      `<p>Merhaba,</p><p>Şifrenizi sıfırlamak için aşağıdaki düğmeye <b>${RESET_MINUTES} dakika içinde</b> dokunun:</p>
+       <p style="margin:20px 0"><a href="${link}" style="background:#c9a24b;color:#14213d;padding:12px 18px;border-radius:8px;text-decoration:none;font-weight:bold">Yeni şifre belirle</a></p>
+       <p style="font-size:13px;color:#5d6678">Düğme çalışmazsa bu adresi tarayıcınıza yapıştırın:<br>${link}</p>
+       <p>Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz; şifreniz değişmez.</p>`));
+    if (!sent) throw new HttpError(503, manual);
     return generic;
   }
 
@@ -482,6 +552,42 @@ async function route(req, env, ctx) {
       env.DB.prepare("DELETE FROM users WHERE id=?").bind(user.id),
     ]);
     return { ok: true, message: "Hesabınız ve kişisel verileriniz silindi." };
+  }
+
+  if (path === "/api/account/password" && req.method === "POST") {
+    const b = await body(req);
+    const cur = await hashPassword(String(b.current || ""), user.pass_salt, user.pass_iter);
+    if (!safeEqual(cur, user.pass_hash)) throw new HttpError(401, "Mevcut şifre hatalı.");
+    const password = checkPassword(b.password);
+    const salt = newSalt();
+    await env.DB.prepare("UPDATE users SET pass_hash=?, pass_salt=?, pass_iter=? WHERE id=?")
+      .bind(await hashPassword(password, salt, PBKDF2_ITER), salt, PBKDF2_ITER, user.id).run();
+    return { ok: true, message: "Şifreniz güncellendi." };
+  }
+
+  // Yönetici: unutulan şifreyi geçici şifreyle sıfırlama
+  if (path === "/api/admin/reset-password" && req.method === "POST") {
+    if (!user.is_admin) throw new HttpError(403, "Yetkiniz yok.");
+    const b = await body(req);
+    const email = cleanEmail(b.email);
+    const target = await env.DB.prepare("SELECT id FROM users WHERE email=?").bind(email).first();
+    if (!target) throw new HttpError(404, "Kullanıcı bulunamadı.");
+    const abc = "abcdefghjkmnpqrstuvwxyz23456789"; const rnd = new Uint8Array(10); crypto.getRandomValues(rnd);
+    const temp = [...rnd].map(x => abc[x % abc.length]).join("");
+    const salt = newSalt();
+    await env.DB.batch([
+      env.DB.prepare("UPDATE users SET pass_hash=?, pass_salt=?, pass_iter=? WHERE id=?").bind(await hashPassword(temp, salt, PBKDF2_ITER), salt, PBKDF2_ITER, target.id),
+      env.DB.prepare("DELETE FROM sessions WHERE user_id=?").bind(target.id),
+    ]);
+    const base = (env.APP_URL || "").replace(/#.*$/, "");
+    const subject = `${env.APP_NAME || "Hukuk Platformu"} — geçici şifreniz`;
+    const sent = await sendMail(env, email, subject, mailTemplate(env, "Şifreniz sıfırlandı",
+      `<p>Merhaba,</p><p>Talebiniz üzerine şifreniz sıfırlandı. Geçici şifreniz:</p>
+       <p style="font-size:22px;font-weight:bold;letter-spacing:2px;background:#f4ead3;padding:12px;border-radius:8px;text-align:center">${temp}</p>
+       <p>Bu şifreyle <a href="${base}#/giris">giriş yapın</a>, ardından <b>Hesabım → Şifremi değiştir</b> bölümünden kendi şifrenizi belirleyin.</p>`));
+    if (sent) return { ok: true, emailed: true, message: `Geçici şifre ${email} adresine e-postayla gönderildi.` };
+    return { ok: true, emailed: false, tempPassword: temp, email, subject,
+      message: `Otomatik e-posta henüz kurulu değil. Geçici şifre: ${temp} — açılan e-posta taslağını kullanıcıya gönderin.` };
   }
 
   // Yönetici: kullanıcının paketini elle ayarlama (ödeme sistemi açılana kadar)
