@@ -15,7 +15,12 @@ const PBKDF2_ITER = 50000;         // ücretsiz plan CPU sınırı için; hash i
 const SESSION_DAYS = 30;
 const TRIAL_HOURS = 24;
 const RESET_MINUTES = 30;
-const AI_MODELS = ["@cf/google/gemma-4-26b-a4b-it", "@cf/zai-org/glm-4.7-flash"]; // sırayla denenir
+// Sırayla denenir. Düşünen (reasoning) modeller yavaş ve boş yanıt verebildiği için doğrudan yanıt veren modeller önde.
+const AI_MODELS = [
+  { id: "@cf/mistralai/mistral-small-3.1-24b-instruct", opts: { max_tokens: 1200 } },
+  { id: "@cf/meta/llama-4-scout-17b-16e-instruct", opts: { max_tokens: 1200 } },
+  { id: "@cf/google/gemma-4-26b-a4b-it", opts: { max_completion_tokens: 3000, chat_template_kwargs: { enable_thinking: false } } },
+];
 
 // Paket sınırları (günlük)
 const PLANS = {
@@ -207,7 +212,13 @@ async function searchOfficial(sourceKey, query, page) {
     } catch (e) {
       // Yargıtay sitesi bulut bağlantılarını reddedebiliyor; Yargıtay kararları UYAP Emsal'de de yayımlanır.
       const alt = await searchOfficial("emsal", q, p);
-      return { ...alt, requested: "yargitay", note: "Yargıtay karar arama sitesine şu an ulaşılamadı; sonuçlar UYAP Emsal'den getirildi." };
+      // UYAP Emsal tüm mahkemeleri verir; Yargıtay seçildiğinde bölge adliye ve ilk derece kararlarını ayıkla.
+      const only = alt.items.filter(it => !/bölge adliye|mahkemesi/i.test(it.daire));
+      const items = only.length ? only : alt.items;
+      return { ...alt, items, requested: "yargitay",
+        note: only.length
+          ? "Yargıtay karar arama sitesine şu an ulaşılamadı; Yargıtay kararları UYAP Emsal'den getirildi."
+          : "Yargıtay karar arama sitesine ulaşılamadı ve bu sayfada UYAP Emsal'de Yargıtay kararı bulunamadı; tüm mahkemelerin kararları gösteriliyor." };
     }
   } else if (sourceKey === "danistay") {
     // Danıştay iki arama biçimi sunar: önce basit kelime araması, olmazsa ayrıntılı arama.
@@ -298,9 +309,9 @@ async function runAI(env, task, text, extra, maxText) {
   ];
   if (!env.AI) throw new HttpError(500, "Yapay zekâ bağlantısı (AI) tanımlı değil.");
   let lastErr = "";
-  for (const model of AI_MODELS) {
+  for (const { id: model, opts } of AI_MODELS) {
     try {
-      const out = await env.AI.run(model, { messages, max_tokens: 1800, temperature: 0.2 });
+      const out = await env.AI.run(model, { messages, temperature: 0.2, ...opts });
       const c = out && Array.isArray(out.choices) && out.choices[0];
       let answer = (out && out.response) || (c && ((c.message && c.message.content) || c.text)) || "";
       answer = String(answer).replace(/<think>[\s\S]*?<\/think>/g, "").trim();
