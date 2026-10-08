@@ -152,6 +152,10 @@ async function useQuota(env, user, kind, commit = true) {
 // ---------- resmî kaynak erişimi ----------
 function cleanHtml(raw) {
   let v = String(raw || "");
+  // Biçim/kod bloklarını içerikleriyle birlikte at (Danıştay metnin başına CSS ekliyor).
+  v = v.replace(/<(style|script|head|title)[^>]*>[\s\S]*?<\/\1>/gi, " ").replace(/<!--[\s\S]*?-->/g, " ");
+  // Etiketsiz gelen CSS kalıntıları: ".highlight { ... }" / "mark { ... }"
+  v = v.replace(/^\s*(?:[.#]?[a-z][\w\-]*\s*(?:,\s*[.#]?[a-z][\w\-]*\s*)*)\{[^{}]*\}\s*/gim, "");
   v = v.replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|div|tr|h\d)>/gi, "\n").replace(/<[^>]+>/g, " ");
   v = v.replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
        .replace(/&quot;/g, '"').replace(/&#39;/g, "'")
@@ -290,7 +294,7 @@ async function getDecisionOfficial(env, sourceKey, id, hint) {
   const docId = String(id || "").trim();
   if (!/^[A-Za-z0-9_-]{1,64}$/.test(docId)) throw new HttpError(400, "Geçersiz karar kimliği.");
   const cached = await env.DB.prepare("SELECT * FROM decisions WHERE source=? AND doc_id=?").bind(sourceKey, docId).first();
-  if (cached) return { ...cached, officialUrl: `${s.base}/getDokuman?id=${docId}`, cached: true };
+  if (cached) return { ...cached, text: cleanHtml(cached.text), officialUrl: `${s.base}/getDokuman?id=${docId}`, cached: true };
 
   // Danıştay, belge isteğinde aranan kelimeyi de zorunlu tutuyor (metinde vurgulamak için).
   const kw = sourceKey === "danistay" ? `&arananKelime=${encodeURIComponent(String((hint && hint.q) || "").slice(0, 200))}` : "";
