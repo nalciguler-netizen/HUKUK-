@@ -24,9 +24,12 @@ const AI_MODELS = [
 
 // Paket sınırları (günlük)
 const PLANS = {
-  basic:   { label: "Basic",   price: 0,    search: 10,   ai: 3,   maxText: 12000 },
-  optimus: { label: "Optimus", price: 400,  search: 200,  ai: 50,  maxText: 40000 },
-  maximus: { label: "Maximus", price: 1000, search: 1000, ai: 200, maxText: 80000 },
+  basic:   { label: "Basic",   price: 0,    search: 10,   ai: 3,   maxText: 12000, files: false,
+             tasks: ["ozet"] },
+  optimus: { label: "Optimus", price: 400,  search: 200,  ai: 50,  maxText: 40000, files: true,
+             tasks: ["ozet", "sozlesme", "dilekce", "ceviri"] },
+  maximus: { label: "Maximus", price: 1000, search: 1000, ai: 200, maxText: 80000, files: true,
+             tasks: ["ozet", "sozlesme", "dilekce", "ceviri", "karsilastir"] },
 };
 
 // Resmî karar bankaları (kamuya açık arama arayüzleri)
@@ -457,6 +460,11 @@ async function route(req, env, ctx) {
   if (path === "/api/ai" && req.method === "POST") {
     const b = await body(req);
     const plan = effectivePlan(user);
+    const task = String(b.task || "");
+    if (AI_TASKS[task] && !PLANS[plan].tasks.includes(task)) {
+      const need = PLANS.optimus.tasks.includes(task) ? "Optimus" : "Maximus";
+      throw new HttpError(403, `Bu araç ${need} ve üzeri paketlerde kullanılabilir.`);
+    }
     await useQuota(env, user, "ai", false);            // önce sadece hak kontrolü
     const r = await runAI(env, String(b.task || ""), b.text, b.extra, PLANS[plan].maxText);
     const quota = await useQuota(env, user, "ai");     // başarılı olunca hak düşülür

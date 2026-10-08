@@ -46,6 +46,7 @@ h1,h2,h3{font-family:var(--serif);line-height:1.2;margin:0 0 .5em}
 .btn-gold{background:var(--gold);color:var(--navy)}
 .btn-ghost{background:transparent;border:1px solid var(--line)}
 .btn[disabled]{opacity:.55;cursor:wait}
+.btn.locked{opacity:.45;pointer-events:none}
 .btn-block{width:100%}
 label{display:block;font-size:.9rem;font-weight:500;margin:14px 0 6px}
 input[type=email],input[type=password],input[type=text],input[type=url],select,textarea{
@@ -123,6 +124,7 @@ footer.site nav{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:10px}
 <footer class="site">
   <div class="wrap">
     <nav>
+      <a href="#/kullanim">Nasıl kullanılır?</a>
       <a href="#/paketler">Paketler</a>
       <a href="#/kosullar">Kullanım Koşulları</a>
       <a href="#/kvkk">KVKK Aydınlatma Metni</a>
@@ -186,8 +188,8 @@ function logoutLocal(){ state.token = null; state.user = null; store.set("hp_tok
 function renderNav(){
   const nav = $("#topnav");
   nav.innerHTML = state.token
-    ? `<a href="#/paketler">Paketler</a><a href="#/panel" class="primary">Panelim</a>`
-    : `<a href="#/paketler">Paketler</a><a href="#/giris">Giriş</a><a href="#/kayit" class="primary">Ücretsiz dene</a>`;
+    ? `<a href="#/kullanim">Kullanım</a><a href="#/panel" class="primary">Panelim</a>`
+    : `<a href="#/kullanim">Kullanım</a><a href="#/giris">Giriş</a><a href="#/kayit" class="primary">Ücretsiz dene</a>`;
 }
 
 // ================== SAYFALAR ==================
@@ -235,9 +237,9 @@ function pageHome(){
 function feature(ico, title, text){ return `<article class="card feature"><div class="ico">${ico}</div><h3>${esc(title)}</h3><p>${esc(text)}</p></article>`; }
 
 const PLAN_INFO = [
-  { key:"basic", name:"Basic", price:"0 ₺", items:["Günde 10 karar araması","Günde 3 yapay zekâ işlemi","6.000 karaktere kadar metin"] },
-  { key:"optimus", name:"Optimus", price:"400 ₺", featured:true, items:["Günde 200 karar araması","Günde 50 yapay zekâ işlemi","15.000 karaktere kadar metin","Tüm analiz araçları"] },
-  { key:"maximus", name:"Maximus", price:"1.000 ₺", items:["Günde 1.000 karar araması","Günde 200 yapay zekâ işlemi","30.000 karaktere kadar metin","Öncelikli destek"] },
+  { key:"basic", name:"Basic", price:"0 ₺", items:["Günde 10 karar araması","Günde 3 karar özeti","Metin yapıştırarak kullanım"] },
+  { key:"optimus", name:"Optimus", price:"400 ₺", featured:true, items:["Günde 200 karar araması","Günde 50 yapay zekâ işlemi","Sözleşme analizi, dilekçe taslağı, hukuki çeviri","UYAP (UDF/EYP), PDF, Word ve fotoğraf yükleme","40.000 karaktere kadar belge"] },
+  { key:"maximus", name:"Maximus", price:"1.000 ₺", items:["Günde 1.000 karar araması","Günde 200 yapay zekâ işlemi","Optimus'un tüm özellikleri + karar karşılaştırma","80.000 karaktere kadar belge","Öncelikli destek"] },
 ];
 function pagePlans(){
   app.innerHTML = `<section class="block plans"><div class="wrap">
@@ -357,12 +359,14 @@ function onLoggedIn(r){
 // ================== PANEL ==================
 async function pagePanel(){
   if (!state.token){ location.hash = "#/giris"; return; }
+  if (!state.user) { try { state.user = (await api("/api/me")).user; } catch {} if (!state.token) { location.hash = "#/giris"; return; } }
   app.innerHTML = `<div class="wrap">
     <div class="tabs" id="tabs">
       <button data-t="ara">Karar ara</button>
       <button data-t="analiz">Belge analizi</button>
       <button data-t="hesap">Hesabım</button>
     </div>
+    <p class="small" style="margin:6px 2px 0"><a href="#/kullanim">📘 Nasıl kullanılır?</a> · <a href="${feedbackLink()}">✉️ Geri bildirim gönder</a></p>
     <div id="tabbody" style="padding-bottom:30px"></div>
   </div>`;
   $("#tabs").onclick = e => { const t = e.target.dataset.t; if (t){ state.tab = t; renderTab(); } };
@@ -458,23 +462,126 @@ async function copy(text, btn){
 }
 
 const TASKS = {
-  ozet: ["Karar özeti", "Özetlenecek karar metnini yapıştırın…"],
-  sozlesme: ["Sözleşme risk analizi", "İncelenecek sözleşme metnini yapıştırın…"],
+  ozet: ["Karar özeti", "Özetlenecek karar metnini yapıştırın veya dosya / fotoğraf yükleyin…"],
+  sozlesme: ["Sözleşme risk analizi", "İncelenecek sözleşme metnini yapıştırın veya dosya / fotoğraf yükleyin…"],
   dilekce: ["Dilekçe taslağı", "Olayları, tarafları ve taleplerinizi yazın. Varsa dayanmak istediğiniz kanun maddelerini ve kararları da ekleyin…"],
-  ceviri: ["Hukuki çeviri", "Çevrilecek metni yapıştırın…"],
+  ceviri: ["Hukuki çeviri", "Çevrilecek metni yapıştırın veya dosya / fotoğraf yükleyin…"],
   karsilastir: ["Karar karşılaştırma", "Karşılaştırılacak kararların metinlerini art arda yapıştırın…"],
 };
+const PLAN_RANK = { basic: 0, optimus: 1, maximus: 2 };
+const TASK_MIN = { ozet: "basic", sozlesme: "optimus", dilekce: "optimus", ceviri: "optimus", karsilastir: "maximus" };
+const PLAN_NAME = { basic: "Basic", optimus: "Optimus", maximus: "Maximus" };
+function myPlan(){ return (state.user && state.user.plan) || "basic"; }
+function allowed(min){ return PLAN_RANK[myPlan()] >= PLAN_RANK[min]; }
+
+// ---------- dosya okuma (tamamen tarayıcıda; dosya sunucuya gönderilmez) ----------
+const LIB = {
+  jszip: "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js",
+  pdf: "https://cdn.jsdelivr.net/npm/pdfjs-dist@6.2.108/build/pdf.min.mjs",
+  pdfWorker: "https://cdn.jsdelivr.net/npm/pdfjs-dist@6.2.108/build/pdf.worker.min.mjs",
+  ocr: "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js",
+};
+const loaded = {};
+function loadScript(src){
+  if (!loaded[src]) loaded[src] = new Promise((ok, fail) => {
+    const sc = document.createElement("script"); sc.src = src; sc.onload = ok;
+    sc.onerror = () => { delete loaded[src]; fail(new Error("Dosya okuyucu yüklenemedi; internet bağlantınızı kontrol edin.")); };
+    document.head.appendChild(sc);
+  });
+  return loaded[src];
+}
+const xmlText = xml => new DOMParser().parseFromString(xml, "application/xml");
+async function readZip(buf){ await loadScript(LIB.jszip); return window.JSZip.loadAsync(buf); }
+async function udfText(zip){
+  const f = zip.file("content.xml"); if (!f) throw new Error("UDF içeriği bulunamadı.");
+  const doc = xmlText(await f.async("string"));
+  const c = doc.getElementsByTagName("content")[0];
+  return (c ? c.textContent : doc.documentElement.textContent || "").replace(/￼/g, "").trim();
+}
+async function docxText(zip){
+  const doc = xmlText(await zip.file("word/document.xml").async("string"));
+  const W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+  return [...doc.getElementsByTagNameNS(W, "p")].map(p =>
+    [...p.getElementsByTagNameNS(W, "t")].map(t => t.textContent).join("")).join("\n").trim();
+}
+async function pdfText(buf){
+  const lib = await import(LIB.pdf);
+  lib.GlobalWorkerOptions.workerSrc = LIB.pdfWorker;
+  const pdf = await lib.getDocument({ data: new Uint8Array(buf) }).promise;
+  const pages = [];
+  for (let i = 1; i <= Math.min(pdf.numPages, 200); i++) {
+    const tc = await (await pdf.getPage(i)).getTextContent();
+    pages.push(tc.items.map(it => it.str + (it.hasEOL ? "\n" : " ")).join(""));
+  }
+  const text = pages.join("\n\n").replace(/[ \t]+/g, " ").trim();
+  if (text.length < 40) throw new Error("Bu PDF taranmış (resim) bir belge gibi görünüyor; içinden metin okunamadı. Sayfaların fotoğrafını '📷 Fotoğraf çek' veya '🖼️ Galeriden seç' ile yükleyin.");
+  return text;
+}
+async function fileText(name, buf, depth = 0){
+  const ext = (name.split(".").pop() || "").toLowerCase();
+  if (ext === "txt") return new TextDecoder("utf-8").decode(buf);
+  if (ext === "pdf") return pdfText(buf);
+  if (ext === "doc") throw new Error("Eski Word (.doc) biçimi desteklenmiyor; belgeyi .docx veya PDF olarak kaydedip yükleyin.");
+  if (["udf", "docx", "eyp", "zip"].includes(ext)) {
+    const zip = await readZip(buf);
+    if (zip.file("content.xml")) return udfText(zip);
+    if (zip.file("word/document.xml")) return docxText(zip);
+    if (depth > 2) return "";
+    // EYP (imzalı UYAP paketi) veya zip: içindeki belgeleri sırayla oku
+    const parts = [];
+    for (const f of Object.values(zip.files)) {
+      if (f.dir || !/\.(udf|pdf|docx|txt|eyp)$/i.test(f.name)) continue;
+      try { const t = await fileText(f.name, await f.async("arraybuffer"), depth + 1); if (t.trim()) parts.push(`--- ${f.name.split("/").pop()} ---\n${t.trim()}`); } catch {}
+    }
+    if (!parts.length) throw new Error("Paketin içinde okunabilir belge bulunamadı.");
+    return parts.join("\n\n");
+  }
+  throw new Error("Bu dosya türü desteklenmiyor. UDF, EYP, PDF, Word (.docx) veya .txt yükleyin.");
+}
+async function shrinkImage(file){
+  // Büyük fotoğrafları küçült: yazı tanıma hızlanır, bellek taşmaz.
+  const img = await createImageBitmap(file);
+  const scale = Math.min(1, 2200 / Math.max(img.width, img.height));
+  const c = document.createElement("canvas");
+  c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+  const g = c.getContext("2d"); g.filter = "grayscale(1) contrast(1.25)"; g.drawImage(img, 0, 0, c.width, c.height);
+  return c;
+}
+async function ocrImages(files, onProgress){
+  await loadScript(LIB.ocr);
+  const worker = await window.Tesseract.createWorker("tur", 1, {
+    logger: m => { if (m.status && onProgress) onProgress(m); },
+  });
+  try {
+    const out = [];
+    for (let i = 0; i < files.length; i++) {
+      onProgress && onProgress({ status: `Sayfa ${i + 1}/${files.length} okunuyor`, progress: 0 });
+      const { data } = await worker.recognize(await shrinkImage(files[i]));
+      out.push((files.length > 1 ? `--- Sayfa ${i + 1} ---\n` : "") + (data.text || "").trim());
+    }
+    return out.join("\n\n");
+  } finally { await worker.terminate(); }
+}
+
 function tabAnalyze(){
   const b = $("#tabbody");
+  const canFiles = allowed("optimus");
   b.innerHTML = `<div class="card">
     <h2>Belge analizi</h2>
     <label for="task">İşlem</label>
-    <select id="task">${Object.entries(TASKS).map(([k,v]) => `<option value="${k}">${v[0]}</option>`).join("")}</select>
+    <select id="task">${Object.entries(TASKS).map(([k,v]) => { const ok = allowed(TASK_MIN[k]); return `<option value="${k}" ${ok ? "" : "disabled"}>${v[0]}${ok ? "" : " — " + PLAN_NAME[TASK_MIN[k]] + " paketinde"}</option>`; }).join("")}</select>
     <div id="langBox" class="hidden"><label for="lang">Hedef dil</label>
       <select id="lang"><option>İngilizce</option><option>Almanca</option><option>Fransızca</option><option>Arapça</option><option>Rusça</option><option>Türkçe</option></select></div>
+    <label>Belge ekle</label>
+    <div class="row" style="margin-top:0">
+      <label class="btn btn-ghost ${canFiles ? "" : "locked"}" style="margin:0">📄 Dosya yükle<input id="file" type="file" accept=".udf,.eyp,.pdf,.docx,.txt,.zip" class="hidden" ${canFiles ? "" : "disabled"}></label>
+      <label class="btn btn-ghost ${canFiles ? "" : "locked"}" style="margin:0">📷 Fotoğraf çek<input id="cam" type="file" accept="image/*" capture="environment" class="hidden" ${canFiles ? "" : "disabled"}></label>
+      <label class="btn btn-ghost ${canFiles ? "" : "locked"}" style="margin:0">🖼️ Galeriden seç<input id="gal" type="file" accept="image/*" multiple class="hidden" ${canFiles ? "" : "disabled"}></label>
+    </div>
+    <p class="muted small" style="margin:6px 0 0">${canFiles ? "UYAP belgeleri (UDF, imzalı EYP), PDF, Word ve fotoğraf desteklenir. Belgeler telefonunuzda okunur; sunucuya yalnızca metin gider. Çok sayfalı belgede her sayfanın fotoğrafını sırayla ekleyebilirsiniz." : "Dosya ve fotoğraf yükleme Optimus ve üzeri paketlerde kullanılabilir. Metni aşağıya yapıştırabilirsiniz."}</p>
+    <div id="fileInfo" class="hidden notice"></div>
     <label for="txt">Metin</label>
     <textarea id="txt"></textarea>
-    <div class="row"><label class="btn btn-ghost" style="margin:0">Dosyadan yükle (.txt)<input id="file" type="file" accept=".txt,text/plain" class="hidden"></label></div>
     <div class="notice">Gizlilik için müvekkil adları, T.C. kimlik numarası, sağlık ve ceza kaydı gibi bilgileri göndermeden önce maskeleyin (ör. "A.B."). Gönderilen metinler saklanmaz.</div>
     <div id="m" class="hidden"></div>
     <button class="btn btn-primary btn-block" id="go">Çalıştır</button>
@@ -482,11 +589,29 @@ function tabAnalyze(){
   </div>`;
   const setPh = () => { const t = $("#task").value; $("#txt").placeholder = TASKS[t][1]; $("#langBox").classList.toggle("hidden", t !== "ceviri"); };
   $("#task").onchange = setPh; setPh();
-  $("#file").onchange = e => {
-    const f = e.target.files[0]; if (!f) return;
-    if (f.size > 500000) return showMsg($("#m"), "Dosya çok büyük (en fazla 500 KB).");
-    const rd = new FileReader(); rd.onload = () => { $("#txt").value = rd.result; }; rd.readAsText(f, "utf-8");
+  const info = (t, ok) => { const el = $("#fileInfo"); el.textContent = t; el.classList.remove("hidden"); el.style.borderLeftColor = ok === false ? "var(--err)" : ""; };
+  const addText = (t, label) => {
+    const box = $("#txt"); const cur = box.value.trim();
+    box.value = (cur ? cur + "\n\n" : "") + t.trim();
+    info(`${label}: ${t.trim().length.toLocaleString("tr-TR")} karakter metne eklendi. Göndermeden önce okuyup gerekirse düzeltin.`);
   };
+  $("#file").onchange = async e => {
+    const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+    if (f.size > 25 * 1024 * 1024) return info("Dosya çok büyük (en fazla 25 MB).", false);
+    info(`"${f.name}" okunuyor…`);
+    try { addText(await fileText(f.name, await f.arrayBuffer()), `"${f.name}"`); }
+    catch (err) { info(err.message, false); }
+  };
+  const onImages = async e => {
+    const files = [...e.target.files]; e.target.value = ""; if (!files.length) return;
+    info("Yazı tanıma hazırlanıyor… (ilk kullanımda Türkçe dil dosyası indirilir, biraz sürebilir)");
+    try {
+      const t = await ocrImages(files, m => info(`${m.status}${m.progress ? " %" + Math.round(m.progress * 100) : ""}`));
+      if (t.replace(/---.*---/g, "").trim().length < 20) return info("Fotoğrafta okunabilir yazı bulunamadı. Belgeyi düz bir zemine koyup, iyi ışıkta ve yakından tekrar çekin.", false);
+      addText(t, files.length > 1 ? `${files.length} fotoğraf` : "Fotoğraf");
+    } catch (err) { info(err.message || "Fotoğraf okunamadı.", false); }
+  };
+  $("#cam").onchange = onImages; $("#gal").onchange = onImages;
   $("#go").onclick = async () => {
     const btn = $("#go"); busy(btn, true, "Çalışıyor…"); $("#m").classList.add("hidden");
     try { const r = await api("/api/ai", { task: $("#task").value, text: $("#txt").value, extra: $("#lang").value }); showAI($("#out"), r); }
@@ -609,6 +734,45 @@ function pageKvkk(){
   <h2>6. Haklarınız</h2>
   <p>KVKK m.11 uyarınca verilerinizin işlenip işlenmediğini öğrenme, bilgi talep etme, amacına uygun kullanılıp kullanılmadığını öğrenme, aktarıldığı üçüncü kişileri bilme, düzeltilmesini, silinmesini veya yok edilmesini isteme, itiraz etme ve zararın giderilmesini talep etme haklarına sahipsiniz. Başvurularınızı <a href="mailto:${m}">${m}</a> adresine iletebilirsiniz; en geç 30 gün içinde yanıtlanır.</p>`);
 }
+function feedbackLink(){
+  const u = state.user ? `${state.user.name || ""} <${state.user.email}>` : "";
+  const body = `Merhaba,\n\nHukuk Platformu ile ilgili geri bildirimim:\n\n1) Neyi denedim:\n\n2) Ne oldu / ne bekliyordum:\n\n3) Öneri:\n\n(Ekran görüntüsü ekleyebilirsiniz.)\n\n${u}`;
+  return `mailto:${CONFIG.SUPPORT_EMAIL}?subject=${encodeURIComponent(CONFIG.APP_NAME + " geri bildirim")}&body=${encodeURIComponent(body)}`;
+}
+function pageGuide(){
+  legalPage(`<h1>Nasıl kullanılır?</h1>
+  <p class="muted">${esc(CONFIG.APP_NAME)}; resmî karar bankalarında arama yapmanızı ve belgelerinizi yapay zekâ ile incelemenizi sağlar. Telefon, tablet ve bilgisayardan aynı hesapla kullanılabilir.</p>
+  <h2>1. Karar arama</h2>
+  <ol><li><b>Panelim → Karar ara</b> sekmesini açın.</li>
+  <li>Kaynağı seçin: <b>Yargıtay</b>, <b>UYAP Emsal</b> (Yargıtay, bölge adliye ve ilk derece kararları) veya <b>Danıştay</b>.</li>
+  <li>Arama ifadesini yazın (ör. <i>fazla mesai ispat yükü</i>). Tam ifade için tırnak kullanın: <i>"iş kazası"</i>.</li>
+  <li>Bir karara dokunun: tam metin açılır. <b>Künyeyi kopyala</b>, <b>Metni kopyala</b>, <b>Resmî kaynakta aç</b> ve <b>Yapay zekâ ile özetle</b> düğmeleri kullanılabilir.</li></ol>
+  <p class="small muted">Yargıtay'ın kendi sitesine ulaşılamadığında sonuçlar otomatik olarak UYAP Emsal'den getirilir; ekranda bununla ilgili not görürsünüz.</p>
+  <h2>2. Belge analizi</h2>
+  <ol><li><b>Panelim → Belge analizi</b> sekmesini açın ve işlemi seçin: karar özeti, sözleşme risk analizi, dilekçe taslağı, hukuki çeviri veya karar karşılaştırma.</li>
+  <li>Metni yapıştırın ya da belge ekleyin:
+    <ul><li><b>📄 Dosya yükle:</b> UYAP belgeleri (UDF), imzalı UYAP paketleri (EYP), PDF, Word (.docx) ve .txt.</li>
+    <li><b>📷 Fotoğraf çek:</b> Kâğıt belgenin fotoğrafını çekin; yazı otomatik okunur. Çok sayfalı belgede her sayfa için tekrarlayın.</li>
+    <li><b>🖼️ Galeriden seç:</b> Önceden çektiğiniz sayfa fotoğraflarını sırayla seçin.</li></ul></li>
+  <li>Okunan metni kontrol edin, gerekiyorsa düzeltin ve <b>Çalıştır</b>'a dokunun.</li></ol>
+  <h2>3. UYAP'tan belge almak</h2>
+  <ol><li>UYAP Avukat Portal'da veya UYAP Avukat mobil uygulamasında ilgili dosyayı açın.</li>
+  <li>Belgeyi telefonunuza indirin (UDF, EYP veya PDF olarak).</li>
+  <li>Platformda <b>📄 Dosya yükle</b>'ye dokunun ve indirdiğiniz belgeyi <i>İndirilenler</i> klasöründen seçin.</li></ol>
+  <p class="small muted">Platform UYAP'a bağlanmaz ve UYAP şifrenizi istemez; belgeyi siz indirip seçersiniz.</p>
+  <h2>4. İyi fotoğraf için</h2>
+  <ul><li>Belgeyi düz bir zemine koyun, gölge düşürmeden iyi ışıkta çekin.</li>
+  <li>Sayfanın tamamı kadrajda olsun, telefonu kâğıda paralel tutun.</li>
+  <li>El yazısı ve çok soluk fotokopilerde okuma hatalı olabilir; metni göndermeden önce kontrol edin.</li></ul>
+  <h2>5. Gizlilik</h2>
+  <ul><li>Dosya ve fotoğraflar <b>telefonunuzda</b> okunur; sunucuya yalnızca metin gider.</li>
+  <li>Analiz için gönderilen metinler saklanmaz.</li>
+  <li>Müvekkil adları, T.C. kimlik no, sağlık ve ceza bilgisi gibi verileri göndermeden önce maskeleyin (ör. "A.B.").</li></ul>
+  <h2>6. Önemli</h2>
+  <p>Yapay zekâ çıktıları taslaktır ve hata içerebilir; kullanmadan önce kontrol edin. Platform hukuki danışmanlık sunmaz.</p>
+  <h2>7. Geri bildirim</h2>
+  <p>Hata, eksik veya öneri için <a href="${feedbackLink()}">buraya dokunarak</a> e-posta gönderin. Ekran görüntüsü eklemeniz çok yardımcı olur.</p>`);
+}
 function pageDisclaimer(){
   legalPage(`<h1>Sorumluluk Reddi</h1>
   <p>${esc(CONFIG.APP_NAME)} bir araştırma ve metin analiz aracıdır; avukatlık hizmeti veya hukuki danışmanlık sunmaz ve bir avukatın değerlendirmesinin yerini tutmaz.</p>
@@ -622,7 +786,7 @@ function router(){
   if (h.startsWith("#sifirla=")) return pageReset(h.slice(9));
   const r = h.replace(/^#\/?/, "").split("?")[0];
   const routes = { "": pageHome, "giris": pageLogin, "kayit": pageRegister, "sifremi-unuttum": pageForgot,
-    "paketler": pagePlans, "panel": pagePanel, "kosullar": pageTerms, "kvkk": pageKvkk, "sorumluluk": pageDisclaimer };
+    "paketler": pagePlans, "panel": pagePanel, "kullanim": pageGuide, "kosullar": pageTerms, "kvkk": pageKvkk, "sorumluluk": pageDisclaimer };
   (routes[r] || pageHome)();
   if (!["panel"].includes(r)) window.scrollTo(0, 0);
 }
