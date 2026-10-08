@@ -146,7 +146,7 @@ async function useQuota(env, user, kind, commit = true) {
   if (commit) await env.DB.prepare(
     "INSERT INTO usage (user_id, day, kind, n) VALUES (?,?,?,1) ON CONFLICT(user_id, day, kind) DO UPDATE SET n = n + 1"
   ).bind(user.id, day, kind).run();
-  return { used: used + 1, limit };
+  return { used: commit ? used + 1 : used, limit };
 }
 
 // ---------- resmî kaynak erişimi ----------
@@ -293,13 +293,18 @@ const HF = "https://datasets-server.huggingface.co";
 
 async function hfGet(path, params) {
   const url = `${HF}/${path}?` + new URLSearchParams(params).toString();
-  const ctrl = new AbortController(); const timer = setTimeout(() => ctrl.abort(), 25000);
+  // Aynı arama tekrarlanınca 1 gün boyunca Cloudflare önbelleğinden anında döner.
+  const cache = caches.default; const key = new Request(url);
+  const hit = await cache.match(key); if (hit) return hit.json();
+  const ctrl = new AbortController(); const timer = setTimeout(() => ctrl.abort(), 20000);
   try {
-    const r = await fetch(url, { signal: ctrl.signal, headers: { Accept: "application/json" }, cf: { cacheTtl: 3600 } });
+    const r = await fetch(url, { signal: ctrl.signal, headers: { Accept: "application/json" } });
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+    if (!r.ok) { const e = new Error(j.error || `HTTP ${r.status}`); e.status = r.status; throw e; }
+    try { await cache.put(key, new Response(JSON.stringify(j), { headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=86400" } })); } catch {}
     return j;
-  } finally { clearTimeout(timer); }
+  } catch (e) { if (e.name === "AbortError") { const t = new Error("zaman aşımı"); t.timeout = true; throw t; } throw e; }
+  finally { clearTimeout(timer); }
 }
 const archRow = (cfg, it, dataset) => {
   const r = it.row || {};
@@ -330,7 +335,10 @@ async function searchArchive(env, query, page, cfg) {
       return { source: "arsiv", sourceLabel: `11M Arşiv · ${ARCHIVE_CONFIGS[cfg]}`, config: cfg, page: p,
         total: Number(j.num_rows_total || items.length) || 0, items,
         note: j.partial ? "Arşivin bu bölümünde arama kısmi dizin üzerinden yapıldı; bazı sonuçlar görünmeyebilir." : undefined };
-    } catch (e) { lastErr = String(e && e.message || e).slice(0, 120); }
+    } catch (e) {
+      lastErr = String(e && e.message || e).slice(0, 120);
+      if (e && e.timeout) break;   // yavaşlık tüm kopyalarda aynıdır; diğerlerini beklemeye gerek yok
+    }
   }
   throw new HttpError(502, `11M arşiv araması şu an yanıt vermedi (${lastErr}). UYAP Emsal kaynağını deneyin.`);
 }
@@ -593,8 +601,9 @@ async function route(req, env, ctx) {
 
   if (path === "/api/search" && req.method === "POST") {
     const b = await body(req);
-    const quota = await useQuota(env, user, "search");
     const src = String(b.source || "yargitay");
+    // Arşiv, UYAP aramasının yanında eşlik ederek çalışıyorsa ikinci kez hak düşülmez.
+    const quota = b.paired && src === "arsiv" ? await useQuota(env, user, "search", false) : await useQuota(env, user, "search");
     const result = src === "arsiv" ? await searchArchive(env, b.q, b.page, String(b.config || "yargitay"))
                                    : await searchOfficial(src, b.q, b.page);
     return { ...result, quota };

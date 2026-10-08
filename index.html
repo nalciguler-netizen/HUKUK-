@@ -396,26 +396,64 @@ function tabSearch(){
   $("#src").onclick = e => { const s = e.target.dataset.s; if (s){ state.source = s; document.querySelectorAll("#src button").forEach(x => x.classList.toggle("on", x.dataset.s === s)); $("#archBox").classList.toggle("hidden", s !== "arsiv"); } };
   $("#cfg").onchange = e => { state.archCfg = e.target.value; };
   $("#sf").onsubmit = e => { e.preventDefault(); doSearch($("#q").value, 1, $("#sf button")); };
-  if (state.lastSearch) drawResults(state.lastSearch.result, false);
+  if (state.lastSearch) drawAll(false);
 }
+// Arama: "11M Arşiv" seçiliyse UYAP Emsal sonuçları hemen gösterilir, arşiv sonuçları gelince altına eklenir.
 async function doSearch(q, page, btn){
   busy(btn, true, "Aranıyor…"); $("#m").classList.add("hidden");
+  const cfg = state.archCfg || "yargitay";
+  if (state.source !== "arsiv") {
+    try { const r = await api("/api/search", { source: state.source, q, page }); mergeSection("main", r, page); }
+    catch (err) { showMsg($("#m"), err.message); }
+    finally { busy(btn, false); }
+    return;
+  }
+  if (page === 1) { state.lastSearch = { q, sections: {} }; state.fastOpen = false; }
+  const fast = cfg === "danistay" ? "danistay" : "emsal";   // hızlı resmî kaynak
+  const pFast = api("/api/search", { source: fast, q, page: 1 }).then(r => mergeSection("fast", r, 1)).catch(e => mergeSection("fast", { error: e.message, sourceLabel: SOURCE_LABELS[fast] }, 1));
+  state.lastSearch.sections.arch = { pending: true, sourceLabel: "📚 11M Arşiv · " + ARCH_LABELS[cfg] };
+  drawAll(true);
+  pFast.finally(() => busy(btn, false));
+  try { const r = await api("/api/search", { source: "arsiv", q, page: 1, config: cfg, paired: true }); mergeSection("arch", r, 1); }
+  catch (err) { mergeSection("arch", { error: err.message, sourceLabel: "📚 11M Arşiv · " + ARCH_LABELS[cfg] }, 1); }
+}
+function mergeSection(key, r, page){
+  if (!state.lastSearch || (key === "main" && page === 1)) state.lastSearch = { q: $("#q") ? $("#q").value : "", sections: {} };
+  const old = state.lastSearch.sections[key];
+  if (page > 1 && old && old.items && r.items) r.items = old.items.concat(r.items);
+  state.lastSearch.sections[key] = r;
+  drawAll(page === 1 && key !== "arch");
+}
+async function moreSection(key, btn){
+  const sec = state.lastSearch.sections[key]; busy(btn, true, "Yükleniyor…");
   try {
-    const r = await api("/api/search", { source: state.source, q, page, config: state.archCfg || "yargitay" });
-    if (page > 1 && state.lastSearch) { r.items = state.lastSearch.result.items.concat(r.items); }
-    state.lastSearch = { q, result: r };
-    drawResults(r, true);
+    const body = { source: sec.source, q: state.lastSearch.q, page: sec.page + 1 };
+    if (sec.source === "arsiv") { body.config = sec.config; body.paired = key === "arch"; }
+    mergeSection(key, await api("/api/search", body), sec.page + 1);
   } catch (err) { showMsg($("#m"), err.message); }
   finally { busy(btn, false); }
 }
-function drawResults(r, scroll){
-  const box = $("#results");
-  if (!r.items.length){ box.innerHTML = `<p class="muted" style="margin-top:14px">Sonuç bulunamadı. Farklı kelimeler deneyin.</p>`; return; }
-  box.innerHTML = (r.note ? `<div class="notice">${esc(r.note)}</div>` : "") + `<p class="muted small" style="margin:14px 2px 0">${esc(r.sourceLabel)} · yaklaşık ${Number(r.total).toLocaleString("tr-TR")} sonuç${r.quota ? ` · bugünkü arama: ${r.quota.used}/${r.quota.limit}` : ""}</p>` +
-    r.items.map((it, i) => `<button class="result" data-i="${i}"><b>${esc(it.daire)}</b><span>E. ${esc(it.esas || "—")} · K. ${esc(it.karar || "—")} · ${esc(it.tarih || "")}</span></button>`).join("") +
-    (r.items.length < r.total ? `<div class="row"><button class="btn btn-ghost btn-block" id="more">Daha fazla sonuç</button></div>` : "");
-  box.onclick = e => { const el = e.target.closest(".result"); if (el) openDecision(r.source, r.items[+el.dataset.i]); };
-  const more = $("#more"); if (more) more.onclick = () => doSearch(state.lastSearch.q, r.page + 1, more);
+function drawAll(scroll){
+  const box = $("#results"); if (!box || !state.lastSearch) return;
+  const order = ["main", "fast", "arch"].filter(k => state.lastSearch.sections[k]);
+  box.innerHTML = order.map(k => {
+    const r = state.lastSearch.sections[k];
+    const head = `<h3 style="margin:18px 2px 0;font-size:1rem">${esc(r.sourceLabel || "")}</h3>`;
+    if (r.pending) return head + `<div class="card" style="margin-top:8px"><span class="muted"><span class="spinner" style="display:inline-block;vertical-align:middle;border-color:#0002;border-top-color:var(--gold)"></span> 11 milyon karar içinde aranıyor… (ilk aramada 10-20 saniye sürebilir, siz yukarıdaki sonuçlara bakabilirsiniz)</span></div>`;
+    if (r.error) return head + `<div class="msg err">${esc(r.error)}</div>`;
+    if (!r.items.length) return head + `<p class="muted" style="margin:6px 2px">Sonuç bulunamadı.</p>`;
+    return head + (r.note ? `<div class="notice">${esc(r.note)}</div>` : "") +
+      `<p class="muted small" style="margin:4px 2px 0">yaklaşık ${Number(r.total).toLocaleString("tr-TR")} sonuç${r.quota ? ` · bugünkü arama: ${r.quota.used}/${r.quota.limit}` : ""}</p>` +
+      (k === "fast" && !state.fastOpen ? r.items.slice(0, 5) : r.items).map((it, i) => `<button class="result" data-k="${k}" data-i="${i}"><b>${esc(it.daire)}</b><span>E. ${esc(it.esas || "—")} · K. ${esc(it.karar || "—")} · ${esc(it.tarih || "")}</span></button>`).join("") +
+      (k === "fast" && !state.fastOpen && r.items.length > 5 ? `<div class="row"><button class="btn btn-ghost btn-block" data-open="1">${esc(r.sourceLabel)}: diğer sonuçları göster</button></div>`
+        : r.items.length < r.total ? `<div class="row"><button class="btn btn-ghost btn-block" data-more="${k}">Daha fazla sonuç</button></div>` : "");
+  }).join("");
+  box.onclick = e => {
+    if (e.target.closest("[data-open]")) { state.fastOpen = true; return drawAll(false); }
+    const m = e.target.closest("[data-more]"); if (m) return moreSection(m.dataset.more, m);
+    const el = e.target.closest(".result"); if (!el) return;
+    const r = state.lastSearch.sections[el.dataset.k]; openDecision(r.source, r.items[+el.dataset.i]);
+  };
   if (scroll) box.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 async function openDecision(source, item){
