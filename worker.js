@@ -251,7 +251,40 @@ async function searchOfficial(sourceKey, query, page) {
   };
 }
 
+// Resmî siteden metin alınamazsa aynı kararı esas + karar numarasıyla 11M arşivde bul.
+async function archiveByNumbers(env, sourceKey, hint) {
+  const h = hint || {};
+  const esas = String(h.esas || "").trim(), karar = String(h.karar || "").trim();
+  if (!/^\d{4}\/\d{1,7}$/.test(esas) || !/^\d{4}\/\d{1,7}$/.test(karar)) return null;
+  const cfg = { yargitay: "yargitay", emsal: "emsal", danistay: "danistay" }[sourceKey];
+  if (!cfg) return null;
+  for (const ds of ARCHIVE_MIRRORS) {
+    try {
+      const j = await hfGet("filter", { dataset: ds, config: cfg, split: "train", offset: "0", length: "1",
+        where: `"esas_no"='${esas}' AND "karar_no"='${karar}'` });
+      const it = j.rows && j.rows[0];
+      if (it && it.row && it.row.text) return archRow(cfg, it, ds);
+      return null;   // arşivde yok (ör. arşivden yeni bir karar)
+    } catch (e) { if (e && e.timeout) return null; }
+  }
+  return null;
+}
+
 async function getDecision(env, sourceKey, id, hint) {
+  try { return await getDecisionOfficial(env, sourceKey, id, hint); }
+  catch (e) {
+    const row = await archiveByNumbers(env, sourceKey, hint).catch(() => null);
+    const s = SOURCES[sourceKey];
+    const kw = sourceKey === "danistay" ? `&arananKelime=${encodeURIComponent(String((hint && hint.q) || "").slice(0, 200))}` : "";
+    const officialUrl = s ? `${s.base}/getDokuman?id=${encodeURIComponent(String(id || ""))}${kw}` : "";
+    if (!row) { const err = new HttpError(e.status || 502, e.message); err.officialUrl = officialUrl; throw err; }
+    return { source: sourceKey, doc_id: String(id), title: row.daire, daire: row.daire, esas: row.esas, karar: row.karar,
+      tarih: row.tarih, text: String(row.text), fetched_at: now(), officialUrl, cached: false,
+      note: "Resmî siteden metin alınamadı; karar 11M arşivden getirildi." };
+  }
+}
+
+async function getDecisionOfficial(env, sourceKey, id, hint) {
   const s = SOURCES[sourceKey];
   if (!s) throw new HttpError(400, "Bilinmeyen kaynak.");
   const docId = String(id || "").trim();
@@ -259,7 +292,9 @@ async function getDecision(env, sourceKey, id, hint) {
   const cached = await env.DB.prepare("SELECT * FROM decisions WHERE source=? AND doc_id=?").bind(sourceKey, docId).first();
   if (cached) return { ...cached, officialUrl: `${s.base}/getDokuman?id=${docId}`, cached: true };
 
-  const res = await officialFetch(`${s.base}/getDokuman?id=${encodeURIComponent(docId)}`, {
+  // Danıştay, belge isteğinde aranan kelimeyi de zorunlu tutuyor (metinde vurgulamak için).
+  const kw = sourceKey === "danistay" ? `&arananKelime=${encodeURIComponent(String((hint && hint.q) || "").slice(0, 200))}` : "";
+  const res = await officialFetch(`${s.base}/getDokuman?id=${encodeURIComponent(docId)}${kw}`, {
     method: "GET", headers: { Referer: s.base + "/" },
   });
   const err = metaError(res);
@@ -705,7 +740,7 @@ export default {
       const status = e instanceof HttpError ? e.status : 500;
       const message = e instanceof HttpError ? e.message : "Beklenmeyen bir hata oluştu.";
       if (!(e instanceof HttpError)) console.error(e && e.stack || e);
-      return json({ error: message }, status, cors);
+      return json({ error: message, ...(e && e.officialUrl ? { officialUrl: e.officialUrl } : {}) }, status, cors);
     }
   },
 };

@@ -174,7 +174,7 @@ async function api(path, body){
   let data = {};
   try { data = await res.json(); } catch {}
   if (res.status === 401 && state.token && !["/api/login","/api/account/delete"].includes(path)) { logoutLocal(); }
-  if (!res.ok) throw new Error(data.error || `İşlem başarısız (HTTP ${res.status}).`);
+  if (!res.ok) { const er = new Error(data.error || `İşlem başarısız (HTTP ${res.status}).`); er.data = data; throw er; }
   return data;
 }
 
@@ -460,7 +460,7 @@ async function openDecision(source, item){
   const b = $("#tabbody");
   b.innerHTML = `<div class="card"><p class="muted">Karar resmî kaynaktan getiriliyor…</p></div>`;
   try {
-    const { decision: d } = await api("/api/decision", { source, id: item.id, hint: item });
+    const { decision: d } = await api("/api/decision", { source, id: item.id, hint: { ...item, q: (state.lastSearch && state.lastSearch.q) || "" } });
     const kunye = `${source === "arsiv" ? "" : SOURCE_LABELS[source] + " "}${item.daire ? item.daire + ", " : ""}E. ${item.esas || "—"}, K. ${item.karar || "—"}${item.tarih ? ", T. " + item.tarih : ""}`;
     b.innerHTML = `<div class="card">
       <button class="btn btn-ghost" id="back">← Sonuçlara dön</button>
@@ -472,6 +472,7 @@ async function openDecision(source, item){
         <button class="btn btn-ghost" id="copyT">Metni kopyala</button>
         ${d.officialUrl ? `<a class="btn btn-ghost" href="${esc(d.officialUrl)}" target="_blank" rel="noopener">Resmî kaynakta aç</a>` : ""}
       </div>
+      ${d.note ? `<div class="notice">${esc(d.note)}</div>` : ""}
       <div id="m" class="hidden"></div>
       <div id="sumOut" class="hidden card out" style="margin-top:14px"></div>
       <h3 style="margin-top:18px">Karar metni</h3>
@@ -488,7 +489,10 @@ async function openDecision(source, item){
       finally { busy(btn, false); }
     };
   } catch (err) {
-    b.innerHTML = `<div class="card"><div class="msg err">${esc(err.message)}</div><button class="btn btn-ghost" id="back">← Sonuçlara dön</button></div>`;
+    const off = err.data && err.data.officialUrl;
+    b.innerHTML = `<div class="card"><div class="msg err">${esc(err.message)}</div>
+      ${off ? `<p class="small muted">Kararın metni platforma aktarılamadı, ancak resmî sitede açılabilir:</p><a class="btn btn-gold" href="${esc(off)}" target="_blank" rel="noopener">Resmî sitede aç</a>` : ""}
+      <div class="row"><button class="btn btn-ghost" id="back">← Sonuçlara dön</button></div></div>`;
     $("#back").onclick = () => renderTab();
   }
 }
