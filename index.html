@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hukuk Platformu</title>
+<meta name="description" content="Resmî kaynaklara dayalı hukuk araştırma ve metin analiz platformu: Yargıtay, UYAP Emsal ve Danıştay kararlarında arama, yapay zekâ ile karar özeti, sözleşme analizi ve dilekçe taslağı.">
+<meta name="theme-color" content="#14213d">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#14213d; --navy-2:#1f3160; --gold:#c9a24b; --gold-soft:#f4ead3;
+  --bg:#f7f6f2; --card:#ffffff; --text:#1d2433; --muted:#5d6678; --line:#e3e1da;
+  --ok:#1f7a4d; --err:#b3261e; --radius:14px;
+  --serif:"Source Serif 4", Georgia, serif; --sans:Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#0f1524; --card:#18213a; --text:#e8eaf0; --muted:#a3abbd; --line:#2a3555; --gold-soft:#2e2a1f; --navy-2:#273b73; }
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-text-size-adjust:100%}
+a{color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:980px;margin:0 auto;padding:0 16px}
+h1,h2,h3{font-family:var(--serif);line-height:1.2;margin:0 0 .5em}
+.muted{color:var(--muted)}
+.small{font-size:.875rem}
+.hidden{display:none!important}
+
+/* üst bar */
+.top{position:sticky;top:0;z-index:20;background:var(--navy);color:#fff;padding-top:env(safe-area-inset-top)}
+.top .wrap{display:flex;align-items:center;justify-content:space-between;height:58px;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--serif);font-weight:700;font-size:1.1rem}
+.brand-mark{width:32px;height:32px;border-radius:8px;background:var(--gold);color:var(--navy);display:grid;place-items:center;font-size:1.05rem}
+.top nav{display:flex;gap:6px}
+.top nav a{text-decoration:none;padding:7px 12px;border-radius:999px;font-size:.92rem}
+.top nav a.primary{background:var(--gold);color:var(--navy);font-weight:600}
+
+/* düğmeler ve form */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:10px;padding:12px 18px;font-weight:600;cursor:pointer;text-decoration:none;min-height:46px}
+.btn-primary{background:var(--navy);color:#fff}
+.btn-gold{background:var(--gold);color:var(--navy)}
+.btn-ghost{background:transparent;border:1px solid var(--line)}
+.btn[disabled]{opacity:.55;cursor:wait}
+.btn-block{width:100%}
+label{display:block;font-size:.9rem;font-weight:500;margin:14px 0 6px}
+input[type=email],input[type=password],input[type=text],input[type=url],select,textarea{
+  width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--card);min-height:46px}
+textarea{min-height:180px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--gold);outline-offset:1px}
+.check{display:flex;gap:10px;align-items:flex-start;margin-top:14px;font-size:.9rem}
+.check input{margin-top:4px;width:18px;height:18px;flex:none}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+.narrow{max-width:440px;margin:28px auto}
+.msg{padding:12px 14px;border-radius:10px;margin:12px 0;font-size:.93rem}
+.msg.err{background:#fde8e6;color:var(--err)}
+.msg.ok{background:#e2f3ea;color:var(--ok)}
+@media (prefers-color-scheme: dark){ .msg.err{background:#3b1f20;color:#ffb4ab} .msg.ok{background:#173326;color:#9fe0bd} }
+
+/* açılış */
+.hero{background:linear-gradient(160deg,var(--navy),var(--navy-2));color:#fff;padding:56px 0 64px}
+.eyebrow{display:inline-block;font-size:.75rem;letter-spacing:.12em;font-weight:600;color:var(--gold);margin-bottom:14px}
+.hero h1{font-size:clamp(1.9rem,6vw,3rem);max-width:720px}
+.hero p{max-width:640px;color:#d7dcea;font-size:1.05rem}
+.hero .cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.hero .btn-ghost{color:#fff;border-color:#ffffff55}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:34px;max-width:620px}
+.stats div{background:#ffffff12;border-radius:12px;padding:12px}
+.stats b{display:block;font-family:var(--serif);font-size:1.35rem;color:var(--gold)}
+.stats span{font-size:.8rem;color:#c8cfe0}
+section.block{padding:44px 0}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.feature .ico{width:40px;height:40px;border-radius:10px;background:var(--gold-soft);display:grid;place-items:center;font-size:1.2rem;margin-bottom:10px}
+.feature p{margin:0;color:var(--muted);font-size:.95rem}
+.trust{background:var(--card);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.plans .plan{position:relative}
+.plan .price{font-family:var(--serif);font-size:2rem;font-weight:700}
+.plan .price small{font-size:.9rem;font-weight:400;color:var(--muted)}
+.plan ul{padding-left:18px;margin:12px 0 18px;color:var(--muted)}
+.plan.featured{border:2px solid var(--gold)}
+.plan .tag{position:absolute;top:-11px;right:16px;background:var(--gold);color:var(--navy);font-size:.75rem;font-weight:700;padding:3px 10px;border-radius:999px}
+footer.site{padding:28px 0 calc(28px + env(safe-area-inset-bottom));color:var(--muted);font-size:.88rem;border-top:1px solid var(--line)}
+footer.site nav{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:10px}
+
+/* panel */
+.tabs{display:flex;gap:6px;overflow-x:auto;padding:14px 0 4px;scrollbar-width:none}
+.tabs button{flex:none;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:9px 16px;cursor:pointer;font-weight:500}
+.tabs button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 4px}
+.chips button{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:8px 14px;cursor:pointer;font-size:.92rem}
+.chips button.on{background:var(--gold-soft);border-color:var(--gold);font-weight:600}
+.searchrow{display:flex;gap:8px;margin-top:10px}
+.searchrow input{flex:1}
+.result{display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-top:10px;cursor:pointer}
+.result b{display:block;font-weight:600}
+.result span{color:var(--muted);font-size:.9rem}
+.doc{white-space:pre-wrap;font-family:var(--serif);font-size:1.02rem;line-height:1.7;max-height:60vh;overflow:auto;padding:16px;background:var(--bg);border-radius:10px;border:1px solid var(--line)}
+.out{white-space:pre-wrap;line-height:1.65}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.meter{height:8px;background:var(--line);border-radius:99px;overflow:hidden;margin:6px 0 14px}
+.meter i{display:block;height:100%;background:var(--gold)}
+.notice{background:var(--gold-soft);border-left:4px solid var(--gold);padding:12px 14px;border-radius:8px;font-size:.9rem;margin:14px 0}
+.legal h2{margin-top:1.4em;font-size:1.2rem}
+.legal p,.legal li{color:var(--text)}
+.spinner{width:18px;height:18px;border:2px solid #ffffff66;border-top-color:#fff;border-radius:50%;animation:sp .8s linear infinite}
+.btn-ghost .spinner,.btn-gold .spinner{border-color:#0002;border-top-color:currentColor}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (max-width:520px){ .top nav a:not(.primary){display:none} .stats{grid-template-columns:repeat(3,1fr)} }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#/"><span class="brand-mark">⚖</span><span id="brandName">Hukuk Platformu</span></a>
+    <nav id="topnav"></nav>
+  </div>
+</header>
+<main id="app"></main>
+<footer class="site">
+  <div class="wrap">
+    <nav>
+      <a href="#/paketler">Paketler</a>
+      <a href="#/kosullar">Kullanım Koşulları</a>
+      <a href="#/kvkk">KVKK Aydınlatma Metni</a>
+      <a href="#/sorumluluk">Sorumluluk Reddi</a>
+      <a id="supportLink" href="#">İletişim</a>
+    </nav>
+    <div>© <span id="year"></span> <span class="ownerName"></span>. Tüm hakları saklıdır.</div>
+    <div class="small">Bu platform avukatlık veya hukuki danışmanlık hizmeti sunmaz; bir araştırma ve metin analiz aracıdır.</div>
+  </div>
+</footer>
+
+<script>
+"use strict";
+// ================== AYARLAR ==================
+const CONFIG = {
+  APP_NAME: "Hukuk Platformu",            // yayın adı netleşince değiştirin
+  OWNER: "Yurdagül Güler",                // hak sahibi / hizmet sağlayıcı / veri sorumlusu
+  SUPPORT_EMAIL: "yolhava.destek@gmail.com",
+  API_URL: "",                            // Cloudflare Worker adresi, ör. https://hukuk-api.KULLANICI.workers.dev
+  TERMS_DATE: "08.10.2026",
+};
+// ============================================
+
+const $ = (s, el = document) => el.querySelector(s);
+const app = $("#app");
+const store = {
+  get(k){ try { return localStorage.getItem(k); } catch { return null; } },
+  set(k,v){ try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} },
+};
+const state = { token: store.get("hp_token"), user: null, source: "yargitay", lastSearch: null, tab: "ara" };
+
+function apiBase(){ return (CONFIG.API_URL || store.get("hp_api") || "").replace(/\/+$/, ""); }
+function esc(s){ return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function fmtDate(ts){ return ts ? new Date(ts * 1000).toLocaleString("tr-TR", {dateStyle:"medium", timeStyle:"short"}) : ""; }
+
+async function api(path, body){
+  const base = apiBase();
+  if (!base) throw new Error("Sunucu adresi ayarlanmamış. Hesap > Sunucu ayarı bölümünden girin.");
+  const headers = { "Content-Type": "application/json" };
+  if (state.token) headers.Authorization = "Bearer " + state.token;
+  let res;
+  try {
+    res = await fetch(base + path, { method: body ? "POST" : "GET", headers, body: body ? JSON.stringify(body) : undefined });
+  } catch { throw new Error("Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edin."); }
+  let data = {};
+  try { data = await res.json(); } catch {}
+  if (res.status === 401 && state.token && !["/api/login","/api/account/delete"].includes(path)) { logoutLocal(); }
+  if (!res.ok) throw new Error(data.error || `İşlem başarısız (HTTP ${res.status}).`);
+  return data;
+}
+
+function busy(btn, on, label){
+  if (!btn) return;
+  if (on){ btn.dataset.label = btn.innerHTML; btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>${label || "Bekleyin…"}`; }
+  else { btn.disabled = false; if (btn.dataset.label) btn.innerHTML = btn.dataset.label; }
+}
+function showMsg(el, text, ok){ el.className = "msg " + (ok ? "ok" : "err"); el.textContent = text; el.classList.remove("hidden"); }
+
+function logoutLocal(){ state.token = null; state.user = null; store.set("hp_token", null); renderNav(); }
+
+function renderNav(){
+  const nav = $("#topnav");
+  nav.innerHTML = state.token
+    ? `<a href="#/paketler">Paketler</a><a href="#/panel" class="primary">Panelim</a>`
+    : `<a href="#/paketler">Paketler</a><a href="#/giris">Giriş</a><a href="#/kayit" class="primary">Ücretsiz dene</a>`;
+}
+
+// ================== SAYFALAR ==================
+function pageHome(){
+  app.innerHTML = `
+  <section class="hero"><div class="wrap">
+    <span class="eyebrow">KAYNAK DOĞRULAMALI HUKUK ARAŞTIRMASI</span>
+    <h1>İçtihat araştırmanızı dakikalardan saniyelere indirin.</h1>
+    <p>Yargıtay, UYAP Emsal ve Danıştay kararlarında doğrudan resmî kaynaktan arama yapın. Bulduğunuz kararı yapay zekâyla özetleyin, sözleşmeleri risk açısından inceleyin, dilekçe taslağının iskeletini çıkarın.</p>
+    <div class="cta"><a class="btn btn-gold" href="#/kayit">1 gün ücretsiz deneyin</a><a class="btn btn-ghost" href="#/paketler">Paketleri görün</a></div>
+    <div class="stats">
+      <div><b>11M+</b><span>karar hedefi</span></div>
+      <div><b>3</b><span>resmî karar bankası</span></div>
+      <div><b>0</b><span>uydurma künye</span></div>
+    </div>
+  </div></section>
+
+  <section class="block"><div class="wrap">
+    <h2>Neler yapabilirsiniz?</h2>
+    <div class="grid">
+      ${feature("🔎","Resmî kaynakta karar arama","Yargıtay, UYAP Emsal ve Danıştay karar bankalarında tek ekrandan arama. Künye her zaman resmî kaynaktan gelir.")}
+      ${feature("📝","Karar özeti","Uzun kararların uyuşmazlık, gerekçe ve hüküm kısımlarını tek tıkla çıkarın.")}
+      ${feature("📑","Sözleşme risk analizi","Tek taraflı ve riskli maddeleri, eksik hükümleri ve müzakere önerilerini görün.")}
+      ${feature("✍️","Dilekçe taslağı","Olayları yazın; başlık, açıklamalar, deliller ve istem bölümleriyle iskelet hazırlansın.")}
+      ${feature("🌐","Hukuki çeviri","Hukuki metinleri terim tutarlılığını koruyarak çevirin.")}
+      ${feature("⚖️","Karar karşılaştırma","Benzer kararlar arasındaki farkı ve sonucu değiştiren olguyu görün.")}
+    </div>
+  </div></section>
+
+  <section class="block trust"><div class="wrap">
+    <h2>Güvenle çalışın</h2>
+    <div class="grid">
+      ${feature("✅","Uydurma içtihat yok","Yapay zekâ yalnızca sizin verdiğiniz veya resmî kaynaktan gelen metinle çalışır; hafızasından karar numarası üretmez.")}
+      ${feature("🔒","Metinleriniz saklanmaz","Analiz için gönderdiğiniz metinler işlenir ve kaydedilmez. Şifreniz geri çözülemez biçimde saklanır.")}
+      ${feature("📜","KVKK'ya uygun yapı","Hesabınızı ve verilerinizi dilediğiniz an tek tuşla silebilirsiniz.")}
+    </div>
+  </div></section>
+
+  <section class="block"><div class="wrap" style="text-align:center">
+    <h2>Büronuzun araştırma yükünü hafifletin</h2>
+    <p class="muted">Kayıt olun, Optimus paketinin tüm özelliklerini 1 gün boyunca ücretsiz kullanın.</p>
+    <a class="btn btn-primary" href="#/kayit">Hemen başlayın</a>
+  </div></section>`;
+}
+function feature(ico, title, text){ return `<article class="card feature"><div class="ico">${ico}</div><h3>${esc(title)}</h3><p>${esc(text)}</p></article>`; }
+
+const PLAN_INFO = [
+  { key:"basic", name:"Basic", price:"0 ₺", items:["Günde 10 karar araması","Günde 3 yapay zekâ işlemi","6.000 karaktere kadar metin"] },
+  { key:"optimus", name:"Optimus", price:"400 ₺", featured:true, items:["Günde 200 karar araması","Günde 50 yapay zekâ işlemi","15.000 karaktere kadar metin","Tüm analiz araçları"] },
+  { key:"maximus", name:"Maximus", price:"1.000 ₺", items:["Günde 1.000 karar araması","Günde 200 yapay zekâ işlemi","30.000 karaktere kadar metin","Öncelikli destek"] },
+];
+function pagePlans(){
+  app.innerHTML = `<section class="block plans"><div class="wrap">
+    <h1>Paketler</h1>
+    <p class="muted">Her yeni hesap Optimus paketini <b>1 gün ücretsiz</b> dener. Fiyatlara KDV dahildir; aylık abonelik.</p>
+    <div class="notice">Platform şu an <b>test aşamasındadır</b>; ücretli paketlerin satışı henüz açılmamıştır. Test kullanıcısı olmak için <a href="mailto:${esc(CONFIG.SUPPORT_EMAIL)}">${esc(CONFIG.SUPPORT_EMAIL)}</a> adresine yazabilirsiniz.</div>
+    <div class="grid">${PLAN_INFO.map(p => `
+      <article class="card plan ${p.featured ? "featured" : ""}">
+        ${p.featured ? `<span class="tag">En çok tercih edilen</span>` : ""}
+        <h3>${p.name}</h3>
+        <div class="price">${p.price} <small>/ ay</small></div>
+        <ul>${p.items.map(i => `<li>${esc(i)}</li>`).join("")}</ul>
+        ${p.key === "basic"
+          ? `<a class="btn btn-ghost btn-block" href="#/kayit">Ücretsiz başla</a>`
+          : `<button class="btn btn-primary btn-block" disabled>Satış yakında</button>`}
+      </article>`).join("")}</div>
+  </div></section>`;
+}
+
+function pageLogin(){
+  app.innerHTML = `<div class="wrap"><div class="card narrow">
+    <h1>Giriş yap</h1>
+    <form id="f">
+      <label for="email">E-posta</label><input id="email" type="email" autocomplete="email" required>
+      <label for="pw">Şifre</label><input id="pw" type="password" autocomplete="current-password" required>
+      <div id="m" class="hidden"></div>
+      <button class="btn btn-primary btn-block" style="margin-top:16px">Giriş yap</button>
+    </form>
+    <p class="small"><a href="#/sifremi-unuttum">Şifremi unuttum</a> · <a href="#/kayit">Hesap oluştur</a></p>
+  </div>${setupCard()}</div>`;
+  bindServerBox();
+  $("#f").onsubmit = async e => {
+    e.preventDefault(); const btn = e.submitter || $("#f button");
+    busy(btn, true);
+    try {
+      const r = await api("/api/login", { email: $("#email").value, password: $("#pw").value });
+      onLoggedIn(r);
+    } catch (err) { showMsg($("#m"), err.message); }
+    finally { busy(btn, false); }
+  };
+}
+
+function pageRegister(){
+  app.innerHTML = `<div class="wrap"><div class="card narrow">
+    <h1>Hesap oluştur</h1>
+    <p class="muted small">Kayıt olduğunuzda Optimus paketi 1 gün ücretsiz tanımlanır. Kart bilgisi istenmez.</p>
+    <form id="f">
+      <label for="name">Ad soyad</label><input id="name" type="text" autocomplete="name" maxlength="100">
+      <label for="email">E-posta</label><input id="email" type="email" autocomplete="email" required>
+      <label for="pw">Şifre (en az 8 karakter)</label><input id="pw" type="password" autocomplete="new-password" minlength="8" required>
+      <div class="check"><input id="terms" type="checkbox" required>
+        <span><a href="#/kosullar" target="_blank">Kullanım Koşulları</a>'nı okudum, kabul ediyorum; <a href="#/kvkk" target="_blank">KVKK Aydınlatma Metni</a>'ni okudum.</span></div>
+      <div id="m" class="hidden"></div>
+      <button class="btn btn-primary btn-block" style="margin-top:16px">Hesabı oluştur</button>
+    </form>
+    <p class="small">Zaten hesabınız var mı? <a href="#/giris">Giriş yapın</a></p>
+  </div>${setupCard()}</div>`;
+  bindServerBox();
+  $("#f").onsubmit = async e => {
+    e.preventDefault(); const btn = $("#f button");
+    busy(btn, true);
+    try {
+      const r = await api("/api/register", { name: $("#name").value, email: $("#email").value, password: $("#pw").value, acceptTerms: $("#terms").checked });
+      onLoggedIn(r);
+    } catch (err) { showMsg($("#m"), err.message); }
+    finally { busy(btn, false); }
+  };
+}
+
+function pageForgot(){
+  app.innerHTML = `<div class="wrap"><div class="card narrow">
+    <h1>Şifremi unuttum</h1>
+    <p class="muted small">Kayıtlı e-posta adresinizi girin; şifre sıfırlama bağlantısı gönderelim.</p>
+    <form id="f">
+      <label for="email">E-posta</label><input id="email" type="email" autocomplete="email" required>
+      <div id="m" class="hidden"></div>
+      <button class="btn btn-primary btn-block" style="margin-top:16px">Bağlantı gönder</button>
+    </form>
+    <p class="small"><a href="#/giris">Girişe dön</a></p>
+  </div></div>`;
+  $("#f").onsubmit = async e => {
+    e.preventDefault(); const btn = $("#f button"); busy(btn, true);
+    try { const r = await api("/api/forgot", { email: $("#email").value }); showMsg($("#m"), r.message, true); }
+    catch (err) { showMsg($("#m"), err.message); }
+    finally { busy(btn, false); }
+  };
+}
+
+function pageReset(token){
+  app.innerHTML = `<div class="wrap"><div class="card narrow">
+    <h1>Yeni şifre belirle</h1>
+    <form id="f">
+      <label for="pw">Yeni şifre (en az 8 karakter)</label><input id="pw" type="password" autocomplete="new-password" minlength="8" required>
+      <label for="pw2">Yeni şifre (tekrar)</label><input id="pw2" type="password" autocomplete="new-password" minlength="8" required>
+      <div id="m" class="hidden"></div>
+      <button class="btn btn-primary btn-block" style="margin-top:16px">Şifreyi güncelle</button>
+    </form>
+  </div></div>`;
+  $("#f").onsubmit = async e => {
+    e.preventDefault(); const btn = $("#f button");
+    if ($("#pw").value !== $("#pw2").value) return showMsg($("#m"), "Şifreler birbirini tutmuyor.");
+    busy(btn, true);
+    try {
+      const r = await api("/api/reset", { token, password: $("#pw").value });
+      showMsg($("#m"), r.message, true); $("#f button").classList.add("hidden");
+      setTimeout(() => location.hash = "#/giris", 1800);
+    } catch (err) { showMsg($("#m"), err.message); }
+    finally { busy(btn, false); }
+  };
+}
+
+function onLoggedIn(r){
+  state.token = r.token; state.user = r.user; store.set("hp_token", r.token);
+  renderNav(); location.hash = "#/panel";
+}
+
+// ================== PANEL ==================
+async function pagePanel(){
+  if (!state.token){ location.hash = "#/giris"; return; }
+  app.innerHTML = `<div class="wrap">
+    <div class="tabs" id="tabs">
+      <button data-t="ara">Karar ara</button>
+      <button data-t="analiz">Belge analizi</button>
+      <button data-t="hesap">Hesabım</button>
+    </div>
+    <div id="tabbody" style="padding-bottom:30px"></div>
+  </div>`;
+  $("#tabs").onclick = e => { const t = e.target.dataset.t; if (t){ state.tab = t; renderTab(); } };
+  renderTab();
+}
+function renderTab(){
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.t === state.tab));
+  ({ ara: tabSearch, analiz: tabAnalyze, hesap: tabAccount })[state.tab]();
+}
+
+const SOURCE_LABELS = { yargitay: "Yargıtay", emsal: "UYAP Emsal", danistay: "Danıştay" };
+function tabSearch(){
+  const b = $("#tabbody");
+  b.innerHTML = `<div class="card">
+    <h2>Karar ara</h2>
+    <div class="chips" id="src">${Object.entries(SOURCE_LABELS).map(([k,v]) => `<button data-s="${k}" class="${k===state.source?"on":""}">${v}</button>`).join("")}</div>
+    <form id="sf" class="searchrow"><input id="q" type="text" placeholder="ör. fazla mesai ispat yükü" maxlength="300" required value="${esc(state.lastSearch?.q || "")}"><button class="btn btn-primary">Ara</button></form>
+    <p class="muted small" style="margin:8px 0 0">Sonuçlar doğrudan ilgili resmî karar bankasından gelir. Tırnak içinde yazarak tam ifade arayabilirsiniz.</p>
+    <div id="m" class="hidden"></div>
+  </div>
+  <div id="results"></div>`;
+  $("#src").onclick = e => { const s = e.target.dataset.s; if (s){ state.source = s; document.querySelectorAll("#src button").forEach(x => x.classList.toggle("on", x.dataset.s === s)); } };
+  $("#sf").onsubmit = e => { e.preventDefault(); doSearch($("#q").value, 1, $("#sf button")); };
+  if (state.lastSearch) drawResults(state.lastSearch.result, false);
+}
+async function doSearch(q, page, btn){
+  busy(btn, true, "Aranıyor…"); $("#m").classList.add("hidden");
+  try {
+    const r = await api("/api/search", { source: state.source, q, page });
+    if (page > 1 && state.lastSearch) { r.items = state.lastSearch.result.items.concat(r.items); }
+    state.lastSearch = { q, result: r };
+    drawResults(r, true);
+  } catch (err) { showMsg($("#m"), err.message); }
+  finally { busy(btn, false); }
+}
+function drawResults(r, scroll){
+  const box = $("#results");
+  if (!r.items.length){ box.innerHTML = `<p class="muted" style="margin-top:14px">Sonuç bulunamadı. Farklı kelimeler deneyin.</p>`; return; }
+  box.innerHTML = `<p class="muted small" style="margin:14px 2px 0">${esc(r.sourceLabel)} · yaklaşık ${Number(r.total).toLocaleString("tr-TR")} sonuç${r.quota ? ` · bugünkü arama: ${r.quota.used}/${r.quota.limit}` : ""}</p>` +
+    r.items.map((it, i) => `<button class="result" data-i="${i}"><b>${esc(it.daire)}</b><span>E. ${esc(it.esas || "—")} · K. ${esc(it.karar || "—")} · ${esc(it.tarih || "")}</span></button>`).join("") +
+    (r.items.length < r.total ? `<div class="row"><button class="btn btn-ghost btn-block" id="more">Daha fazla sonuç</button></div>` : "");
+  box.onclick = e => { const el = e.target.closest(".result"); if (el) openDecision(r.source, r.items[+el.dataset.i]); };
+  const more = $("#more"); if (more) more.onclick = () => doSearch(state.lastSearch.q, r.page + 1, more);
+  if (scroll) box.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+async function openDecision(source, item){
+  const b = $("#tabbody");
+  b.innerHTML = `<div class="card"><p class="muted">Karar resmî kaynaktan getiriliyor…</p></div>`;
+  try {
+    const { decision: d } = await api("/api/decision", { source, id: item.id, hint: item });
+    const kunye = `${SOURCE_LABELS[source]} ${item.daire ? item.daire + ", " : ""}E. ${item.esas || "—"}, K. ${item.karar || "—"}${item.tarih ? ", T. " + item.tarih : ""}`;
+    b.innerHTML = `<div class="card">
+      <button class="btn btn-ghost" id="back">← Sonuçlara dön</button>
+      <h2 style="margin-top:14px">${esc(item.daire || SOURCE_LABELS[source])}</h2>
+      <p class="muted">E. ${esc(item.esas || "—")} · K. ${esc(item.karar || "—")} · ${esc(item.tarih || "")}</p>
+      <div class="row">
+        <button class="btn btn-gold" id="sum">Yapay zekâ ile özetle</button>
+        <button class="btn btn-ghost" id="copyK">Künyeyi kopyala</button>
+        <button class="btn btn-ghost" id="copyT">Metni kopyala</button>
+        <a class="btn btn-ghost" href="${esc(d.officialUrl)}" target="_blank" rel="noopener">Resmî kaynakta aç</a>
+      </div>
+      <div id="m" class="hidden"></div>
+      <div id="sumOut" class="hidden card out" style="margin-top:14px"></div>
+      <h3 style="margin-top:18px">Karar metni</h3>
+      <div class="doc" id="doc"></div>
+    </div>`;
+    $("#doc").textContent = d.text;
+    $("#back").onclick = () => renderTab();
+    $("#copyK").onclick = () => copy(kunye, $("#copyK"));
+    $("#copyT").onclick = () => copy(kunye + "\n\n" + d.text, $("#copyT"));
+    $("#sum").onclick = async () => {
+      const btn = $("#sum"); busy(btn, true, "Özetleniyor…");
+      try { const r = await api("/api/ai", { task: "ozet", text: d.text }); showAI($("#sumOut"), r); }
+      catch (err) { showMsg($("#m"), err.message); }
+      finally { busy(btn, false); }
+    };
+  } catch (err) {
+    b.innerHTML = `<div class="card"><div class="msg err">${esc(err.message)}</div><button class="btn btn-ghost" id="back">← Sonuçlara dön</button></div>`;
+    $("#back").onclick = () => renderTab();
+  }
+}
+function showAI(el, r){
+  el.classList.remove("hidden");
+  el.innerHTML = esc(r.answer).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>") +
+    (r.note ? `<p class="muted small">${esc(r.note)}</p>` : "") +
+    `<p class="muted small">Bugünkü yapay zekâ kullanımı: ${r.quota.used}/${r.quota.limit}</p>` +
+    `<div class="row"><button class="btn btn-ghost" data-copy>Sonucu kopyala</button></div>`;
+  el.querySelector("[data-copy]").onclick = e => copy(r.answer, e.target);
+}
+async function copy(text, btn){
+  try { await navigator.clipboard.writeText(text); const o = btn.textContent; btn.textContent = "Kopyalandı ✓"; setTimeout(() => btn.textContent = o, 1500); }
+  catch { alert("Kopyalanamadı; metni basılı tutarak seçebilirsiniz."); }
+}
+
+const TASKS = {
+  ozet: ["Karar özeti", "Özetlenecek karar metnini yapıştırın…"],
+  sozlesme: ["Sözleşme risk analizi", "İncelenecek sözleşme metnini yapıştırın…"],
+  dilekce: ["Dilekçe taslağı", "Olayları, tarafları ve taleplerinizi yazın. Varsa dayanmak istediğiniz kanun maddelerini ve kararları da ekleyin…"],
+  ceviri: ["Hukuki çeviri", "Çevrilecek metni yapıştırın…"],
+  karsilastir: ["Karar karşılaştırma", "Karşılaştırılacak kararların metinlerini art arda yapıştırın…"],
+};
+function tabAnalyze(){
+  const b = $("#tabbody");
+  b.innerHTML = `<div class="card">
+    <h2>Belge analizi</h2>
+    <label for="task">İşlem</label>
+    <select id="task">${Object.entries(TASKS).map(([k,v]) => `<option value="${k}">${v[0]}</option>`).join("")}</select>
+    <div id="langBox" class="hidden"><label for="lang">Hedef dil</label>
+      <select id="lang"><option>İngilizce</option><option>Almanca</option><option>Fransızca</option><option>Arapça</option><option>Rusça</option><option>Türkçe</option></select></div>
+    <label for="txt">Metin</label>
+    <textarea id="txt"></textarea>
+    <div class="row"><label class="btn btn-ghost" style="margin:0">Dosyadan yükle (.txt)<input id="file" type="file" accept=".txt,text/plain" class="hidden"></label></div>
+    <div class="notice">Gizlilik için müvekkil adları, T.C. kimlik numarası, sağlık ve ceza kaydı gibi bilgileri göndermeden önce maskeleyin (ör. "A.B."). Gönderilen metinler saklanmaz.</div>
+    <div id="m" class="hidden"></div>
+    <button class="btn btn-primary btn-block" id="go">Çalıştır</button>
+    <div id="out" class="hidden card out" style="margin-top:14px"></div>
+  </div>`;
+  const setPh = () => { const t = $("#task").value; $("#txt").placeholder = TASKS[t][1]; $("#langBox").classList.toggle("hidden", t !== "ceviri"); };
+  $("#task").onchange = setPh; setPh();
+  $("#file").onchange = e => {
+    const f = e.target.files[0]; if (!f) return;
+    if (f.size > 500000) return showMsg($("#m"), "Dosya çok büyük (en fazla 500 KB).");
+    const rd = new FileReader(); rd.onload = () => { $("#txt").value = rd.result; }; rd.readAsText(f, "utf-8");
+  };
+  $("#go").onclick = async () => {
+    const btn = $("#go"); busy(btn, true, "Çalışıyor…"); $("#m").classList.add("hidden");
+    try { const r = await api("/api/ai", { task: $("#task").value, text: $("#txt").value, extra: $("#lang").value }); showAI($("#out"), r); }
+    catch (err) { showMsg($("#m"), err.message); }
+    finally { busy(btn, false); }
+  };
+}
+
+async function tabAccount(){
+  const b = $("#tabbody");
+  b.innerHTML = `<div class="card"><p class="muted">Yükleniyor…</p></div>`;
+  let me;
+  try { me = await api("/api/me"); state.user = me.user; }
+  catch (err) {
+    b.innerHTML = `<div class="card"><div class="msg err">${esc(err.message)}</div>${serverBox()}</div>`; bindServerBox(); return;
+  }
+  const u = me.user, L = me.limits, U = me.usage;
+  const trial = u.trialUntil && u.trialUntil * 1000 > Date.now();
+  b.innerHTML = `<div class="card">
+    <h2>Hesabım</h2>
+    <p><b>${esc(u.name || u.email)}</b><br><span class="muted">${esc(u.email)}</span></p>
+    <p>Paketiniz: <b>${esc(u.planLabel)}</b>${trial ? ` <span class="muted small">(ücretsiz deneme — ${esc(fmtDate(u.trialUntil))} tarihine kadar)</span>` : ""}${u.planUntil && u.planUntil * 1000 > Date.now() ? ` <span class="muted small">(${esc(fmtDate(u.planUntil))} tarihine kadar)</span>` : ""}</p>
+    <div class="small">Bugünkü arama: ${U.search}/${L.search}</div><div class="meter"><i style="width:${Math.min(100, U.search / L.search * 100)}%"></i></div>
+    <div class="small">Bugünkü yapay zekâ işlemi: ${U.ai}/${L.ai}</div><div class="meter"><i style="width:${Math.min(100, U.ai / L.ai * 100)}%"></i></div>
+    <div class="row"><a class="btn btn-ghost" href="#/paketler">Paketleri gör</a><button class="btn btn-ghost" id="logout">Çıkış yap</button></div>
+  </div>
+  ${u.isAdmin ? `<div class="card" style="margin-top:14px">
+    <h3>Yönetici: paket tanımla</h3>
+    <label for="ae">Kullanıcı e-postası</label><input id="ae" type="email">
+    <label for="ap">Paket</label><select id="ap"><option value="optimus">Optimus</option><option value="maximus">Maximus</option><option value="basic">Basic</option></select>
+    <label for="ad">Gün</label><input id="ad" type="text" inputmode="numeric" value="30">
+    <div id="am" class="hidden"></div>
+    <button class="btn btn-primary" id="aset" style="margin-top:12px">Tanımla</button>
+  </div>` : ""}
+  <div class="card" style="margin-top:14px">${serverBox()}</div>
+  <div class="card" style="margin-top:14px">
+    <h3>Hesabı sil</h3>
+    <p class="muted small">Hesabınız ve tüm kişisel verileriniz kalıcı olarak silinir. Bu işlem geri alınamaz.</p>
+    <label for="dp">Onay için şifreniz</label><input id="dp" type="password" autocomplete="current-password">
+    <div id="dm" class="hidden"></div>
+    <button class="btn btn-ghost" id="del" style="margin-top:12px;color:var(--err)">Hesabımı kalıcı olarak sil</button>
+  </div>`;
+  $("#logout").onclick = async () => { try { await api("/api/logout", {}); } catch {} logoutLocal(); location.hash = "#/"; };
+  $("#del").onclick = async () => {
+    if (!confirm("Hesabınız kalıcı olarak silinecek. Emin misiniz?")) return;
+    const btn = $("#del"); busy(btn, true);
+    try { const r = await api("/api/account/delete", { password: $("#dp").value }); alert(r.message); logoutLocal(); location.hash = "#/"; }
+    catch (err) { showMsg($("#dm"), err.message); }
+    finally { busy(btn, false); }
+  };
+  if (u.isAdmin) $("#aset").onclick = async () => {
+    const btn = $("#aset"); busy(btn, true);
+    try { const r = await api("/api/admin/set-plan", { email: $("#ae").value, plan: $("#ap").value, days: $("#ad").value }); showMsg($("#am"), r.message, true); }
+    catch (err) { showMsg($("#am"), err.message); }
+    finally { busy(btn, false); }
+  };
+  bindServerBox();
+}
+function serverBox(){
+  if (CONFIG.API_URL) return `<h3>Sunucu</h3><p class="muted small">${esc(CONFIG.API_URL)}</p>`;
+  return `<h3>Sunucu ayarı</h3><p class="muted small">Test için Cloudflare Worker adresinizi girin (bir kez yeterli).</p>
+    <input id="apiu" type="url" placeholder="https://hukuk-api.….workers.dev" value="${esc(store.get("hp_api") || "")}">
+    <div id="sm" class="hidden"></div>
+    <button class="btn btn-ghost" id="apis" style="margin-top:10px">Kaydet ve test et</button>`;
+}
+function setupCard(){ return CONFIG.API_URL ? "" : `<div class="card narrow">${serverBox()}</div>`; }
+function bindServerBox(){
+  const btn = $("#apis"); if (!btn) return;
+  btn.onclick = async () => {
+    store.set("hp_api", $("#apiu").value.trim());
+    busy(btn, true);
+    try { const r = await api("/api/health"); showMsg($("#sm"), `Bağlantı başarılı: ${r.app}`, true); }
+    catch (err) { showMsg($("#sm"), err.message); }
+    finally { busy(btn, false); }
+  };
+}
+
+// ================== YASAL METİNLER ==================
+function legalPage(html){ app.innerHTML = `<div class="wrap"><article class="card legal" style="margin:24px 0">${html}</article></div>`; window.scrollTo(0, 0); }
+function pageTerms(){
+  const o = esc(CONFIG.OWNER), n = esc(CONFIG.APP_NAME), m = esc(CONFIG.SUPPORT_EMAIL);
+  legalPage(`<h1>Kullanım Koşulları</h1><p class="muted small">Son güncelleme: ${CONFIG.TERMS_DATE}</p>
+  <h2>1. Taraflar ve hizmet</h2>
+  <p>${n} ("Platform"), ${o} ("Hizmet Sağlayıcı") tarafından sunulan, hukuki araştırma ve metin analizine yönelik çevrimiçi bir yazılım hizmetidir. Platformu kullanan gerçek veya tüzel kişi ("Kullanıcı") bu koşulları kabul etmiş sayılır. İletişim: <a href="mailto:${m}">${m}</a></p>
+  <h2>2. Hizmetin niteliği</h2>
+  <p>Platform; kamuya açık resmî karar bankalarında arama yapılmasını, kararların görüntülenmesini ve Kullanıcının sağladığı metinlerin yapay zekâ yardımıyla özetlenmesi, incelenmesi, taslak hâline getirilmesi ve çevrilmesini sağlar. <b>Platform avukatlık hizmeti veya hukuki danışmanlık sunmaz.</b> Üretilen çıktılar bilgi amaçlı taslaklardır; hata, eksik veya güncel olmayan bilgi içerebilir. Hukuki bir işlemde kullanılmadan önce bir avukat tarafından kontrol edilmeleri gerekir.</p>
+  <h2>3. Kaynaklar</h2>
+  <p>Mahkeme kararları, ilgili kurumların kamuya açık resmî karar bankalarından alınır. Resmî kaynakların erişilebilirliği, doğruluğu ve güncelliği Hizmet Sağlayıcının kontrolünde değildir. Kararın kesinleşme durumu ve somut olaya uygunluğu Kullanıcı tarafından ayrıca değerlendirilmelidir.</p>
+  <h2>4. Hesap ve güvenlik</h2>
+  <p>Kullanıcı, kayıt bilgilerinin doğru olmasından ve şifresinin gizliliğinden sorumludur. Hesabın üçüncü kişilerle paylaşılması yasaktır. Hesap, Hesabım sayfasından her zaman silinebilir.</p>
+  <h2>5. Kullanıcı içeriği</h2>
+  <p>Kullanıcı, analiz için gönderdiği metinler üzerinde gerekli haklara sahip olduğunu ve bu metinlerin hukuka aykırı içerik barındırmadığını kabul eder. Kişisel verileri, özellikle özel nitelikli kişisel verileri (sağlık, ceza mahkûmiyeti vb.) göndermeden önce anonimleştirmek Kullanıcının sorumluluğundadır. Analiz için gönderilen metinler işlendikten sonra saklanmaz.</p>
+  <h2>6. Paketler ve ücretlendirme</h2>
+  <p>Platform Basic (ücretsiz), Optimus ve Maximus paketleriyle sunulur; paket kapsamları Paketler sayfasında belirtilir. Yeni hesaplara bir defaya mahsus 1 günlük ücretsiz deneme tanımlanır. Ücretli paketlerin satışı başladığında, satış öncesinde ön bilgilendirme formu ve mesafeli satış sözleşmesi ayrıca sunulacaktır. Hizmet Sağlayıcı, paket kapsam ve fiyatlarını önceden duyurmak kaydıyla değiştirebilir; yürürlükteki abonelik dönemi için değişiklik uygulanmaz.</p>
+  <h2>7. Yasak kullanımlar</h2>
+  <p>Platformun otomatik araçlarla toplu veri çekmek, resmî kaynaklara aşırı yük bindirmek, güvenliğini aşmaya çalışmak, tersine mühendislik yapmak veya hukuka aykırı amaçlarla kullanılması yasaktır. Bu durumlarda hesap uyarısız askıya alınabilir.</p>
+  <h2>8. Fikrî mülkiyet</h2>
+  <p>Platformun yazılımı, tasarımı, adı, logosu ve içeriğinin (resmî kaynaklardan alınan karar metinleri hariç) tüm fikrî ve sınai hakları ${o}'a aittir. Mahkeme kararları 5846 sayılı Fikir ve Sanat Eserleri Kanunu m.31 kapsamında serbestçe kullanılabilen resmî metinlerdir.</p>
+  <h2>9. Sorumluluğun sınırlandırılması</h2>
+  <p>Hizmet "olduğu gibi" sunulur. Hizmet Sağlayıcı; çıktıların kullanılmasından doğan doğrudan veya dolaylı zararlardan, kesintilerden ve resmî kaynaklardaki aksaklıklardan, kasıt veya ağır ihmali bulunmadıkça sorumlu tutulamaz. Tüketici sıfatına sahip Kullanıcıların kanundan doğan hakları saklıdır.</p>
+  <h2>10. Değişiklikler ve uygulanacak hukuk</h2>
+  <p>Bu koşullar Platformda yayımlanarak güncellenebilir. Uyuşmazlıklarda Türk hukuku uygulanır; tüketici işlemlerinde Tüketici Hakem Heyetleri ve Tüketici Mahkemeleri yetkilidir.</p>`);
+}
+function pageKvkk(){
+  const o = esc(CONFIG.OWNER), m = esc(CONFIG.SUPPORT_EMAIL);
+  legalPage(`<h1>KVKK Aydınlatma Metni</h1><p class="muted small">Son güncelleme: ${CONFIG.TERMS_DATE}</p>
+  <p>6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") m.10 uyarınca, veri sorumlusu sıfatıyla ${o} olarak kişisel verilerinizin işlenmesine ilişkin sizi bilgilendiririz.</p>
+  <h2>1. Veri sorumlusu</h2><p>${o} — İletişim: <a href="mailto:${m}">${m}</a></p>
+  <h2>2. İşlenen veriler</h2>
+  <ul><li>Kimlik ve iletişim: ad soyad, e-posta adresi</li>
+  <li>Hesap güvenliği: geri çözülemez biçimde saklanan şifre özeti, oturum kayıtları</li>
+  <li>Kullanım: paket bilgisi, günlük arama ve işlem sayıları</li>
+  <li>Analiz için gönderdiğiniz metinler: yalnızca işlem anında işlenir, kaydedilmez</li></ul>
+  <h2>3. Amaçlar ve hukuki sebepler</h2>
+  <p>Verileriniz; üyelik sözleşmesinin kurulması ve ifası (KVKK m.5/2-c), hesap güvenliğinin ve hizmet sürekliliğinin sağlanması ile kötüye kullanımın önlenmesi için veri sorumlusunun meşru menfaati (m.5/2-f) ve yasal yükümlülüklerin yerine getirilmesi (m.5/2-ç) hukuki sebeplerine dayanılarak işlenir.</p>
+  <h2>4. Aktarım</h2>
+  <p>Platform altyapısı; barındırma, veritabanı ve yapay zekâ işlemleri için Cloudflare, Inc. (ABD), şifre sıfırlama e-postaları için Brevo (Fransa) hizmet sağlayıcılarını kullanır. Bu nedenle verileriniz yurt dışındaki sunuculara aktarılabilir. Yurt dışına aktarım, KVKK m.9'da öngörülen uygun güvencelere dayanılarak gerçekleştirilir. Verileriniz bunun dışında, kanunen yetkili kurumların talepleri hariç, üçüncü kişilerle paylaşılmaz ve satılmaz.</p>
+  <h2>5. Toplama yöntemi ve saklama süresi</h2>
+  <p>Veriler kayıt formu ve Platform kullanımı sırasında elektronik ortamda toplanır. Hesap verileri hesabınız açık kaldığı sürece saklanır; hesabınızı sildiğinizde kalıcı olarak silinir. Kanunen saklanması zorunlu kayıtlar ilgili süre boyunca tutulur.</p>
+  <h2>6. Haklarınız</h2>
+  <p>KVKK m.11 uyarınca verilerinizin işlenip işlenmediğini öğrenme, bilgi talep etme, amacına uygun kullanılıp kullanılmadığını öğrenme, aktarıldığı üçüncü kişileri bilme, düzeltilmesini, silinmesini veya yok edilmesini isteme, itiraz etme ve zararın giderilmesini talep etme haklarına sahipsiniz. Başvurularınızı <a href="mailto:${m}">${m}</a> adresine iletebilirsiniz; en geç 30 gün içinde yanıtlanır.</p>`);
+}
+function pageDisclaimer(){
+  legalPage(`<h1>Sorumluluk Reddi</h1>
+  <p>${esc(CONFIG.APP_NAME)} bir araştırma ve metin analiz aracıdır; avukatlık hizmeti veya hukuki danışmanlık sunmaz ve bir avukatın değerlendirmesinin yerini tutmaz.</p>
+  <p>Yapay zekâ çıktıları hatalı, eksik veya bağlamdan kopuk olabilir. Platform, yapay zekânın kendi hafızasından karar numarası veya içtihat üretmesini engelleyecek şekilde tasarlanmıştır; yine de her çıktı resmî kaynakla karşılaştırılarak kontrol edilmelidir.</p>
+  <p>Karar metinleri resmî karar bankalarından anlık alınır. Kararın kesinleşip kesinleşmediği, sonradan bozulup bozulmadığı ve güncel içtihatla uyumu Kullanıcı tarafından ayrıca araştırılmalıdır.</p>`);
+}
+
+// ================== YÖNLENDİRME ==================
+function router(){
+  const h = location.hash || "#/";
+  if (h.startsWith("#sifirla=")) return pageReset(h.slice(9));
+  const r = h.replace(/^#\/?/, "").split("?")[0];
+  const routes = { "": pageHome, "giris": pageLogin, "kayit": pageRegister, "sifremi-unuttum": pageForgot,
+    "paketler": pagePlans, "panel": pagePanel, "kosullar": pageTerms, "kvkk": pageKvkk, "sorumluluk": pageDisclaimer };
+  (routes[r] || pageHome)();
+  if (!["panel"].includes(r)) window.scrollTo(0, 0);
+}
+
+document.title = CONFIG.APP_NAME;
+$("#brandName").textContent = CONFIG.APP_NAME;
+document.querySelectorAll(".ownerName").forEach(e => e.textContent = CONFIG.OWNER);
+$("#year").textContent = new Date().getFullYear();
+$("#supportLink").href = "mailto:" + CONFIG.SUPPORT_EMAIL;
+renderNav();
+window.addEventListener("hashchange", router);
+router();
+</script>
+</body>
+</html>

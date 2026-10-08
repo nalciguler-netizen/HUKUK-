@@ -1,0 +1,14 @@
+{
+  "name": "Hukuk Platformu",
+  "short_name": "Hukuk",
+  "description": "Resmî kaynaklara dayalı hukuk araştırma ve metin analiz platformu",
+  "lang": "tr",
+  "start_url": "./#/panel",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f6f2",
+  "theme_color": "#14213d",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
