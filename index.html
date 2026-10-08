@@ -106,6 +106,7 @@ footer.site nav{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:10px}
 .meter i{display:block;height:100%;background:var(--gold)}
 .notice{background:var(--gold-soft);border-left:4px solid var(--gold);padding:12px 14px;border-radius:8px;font-size:.9rem;margin:14px 0}
 .legal h2{margin-top:1.4em;font-size:1.2rem}
+.legal h3{margin:1.1em 0 .3em;font-size:1.05rem}
 .legal p,.legal li{color:var(--text)}
 .spinner{width:18px;height:18px;border:2px solid #ffffff66;border-top-color:#fff;border-radius:50%;animation:sp .8s linear infinite}
 .btn-ghost .spinner,.btn-gold .spinner{border-color:#0002;border-top-color:currentColor}
@@ -755,22 +756,41 @@ function pageGuide(){
     <li><b>📷 Fotoğraf çek:</b> Kâğıt belgenin fotoğrafını çekin; yazı otomatik okunur. Çok sayfalı belgede her sayfa için tekrarlayın.</li>
     <li><b>🖼️ Galeriden seç:</b> Önceden çektiğiniz sayfa fotoğraflarını sırayla seçin.</li></ul></li>
   <li>Okunan metni kontrol edin, gerekiyorsa düzeltin ve <b>Çalıştır</b>'a dokunun.</li></ol>
-  <h2>3. UYAP'tan belge almak</h2>
+  <h2>3. Araçlar tek tek</h2>
+  <h3>📝 Karar özeti <span class="small muted">(tüm paketler)</span></h3>
+  <p><b>Ne girilir:</b> Bir mahkeme kararının tam metni. Karar arama ekranındaki <b>Yapay zekâ ile özetle</b> düğmesi bunu kendiliğinden yapar; elinizdeki bir kararı da yapıştırabilir veya yükleyebilirsiniz.<br>
+  <b>Ne verir:</b> Künye, taraflar, olay ve talep, yargılama süreci, mahkemenin gerekçesi (en önemli cümle karardan aynen alıntılanır), hüküm, dayanılan mevzuat ve kararın içtihat değeri.</p>
+  <h3>📑 Sözleşme risk analizi <span class="small muted">(Optimus ve Maximus)</span></h3>
+  <p><b>Ne girilir:</b> İncelenecek sözleşmenin tamamı: kira, iş, satış, hizmet, gizlilik sözleşmesi vb. Word, PDF, UDF dosyası veya fotoğraf olarak eklenebilir.<br>
+  <b>Ne verir:</b> Taraflar ve konu, tarafların temel yükümlülükleri, <b>riskli veya tek taraflı maddeler</b> (madde metninden alıntıyla), eksik görünen hükümler (cezai şart, fesih, yetkili mahkeme vb.), müzakere önerileri ve genel risk seviyesi (Yüksek / Orta / Düşük).<br>
+  <b>İpucu:</b> Sözleşmenin tamamını ekleyin; tek bir madde gönderildiğinde eksik hüküm değerlendirmesi yapılamaz.</p>
+  <h3>✍️ Dilekçe taslağı <span class="small muted">(Optimus ve Maximus)</span></h3>
+  <p><b>Ne girilir:</b> Olayları tarih sırasıyla, tarafları (maskeleyerek), talebinizi ve varsa dayanmak istediğiniz kanun maddeleri ile kararları yazın.<br>
+  <b>Ne verir:</b> Başlık, taraflar, konu, açıklamalar, hukuki nedenler, deliller, sonuç ve istem bölümlerinden oluşan bir dilekçe <b>iskeleti</b>. Doldurulması gereken yerler [ ] ile işaretlenir.<br>
+  <b>Önemli:</b> Yapay zekâ kendi hafızasından kanun maddesi veya karar numarası eklemez; yalnızca sizin yazdıklarınızı kullanır. Mevzuat atıfları sizin tarafınızdan tamamlanmalıdır.</p>
+  <h3>🌐 Hukuki çeviri <span class="small muted">(Optimus ve Maximus)</span></h3>
+  <p><b>Ne girilir:</b> Çevrilecek metin. Açılan <b>Hedef dil</b> kutusundan dili seçin: İngilizce, Almanca, Fransızca, Arapça, Rusça veya Türkçe (yabancı dildeki bir belgeyi Türkçeye çevirmek için).<br>
+  <b>Ne verir:</b> Hukuki terimleri karşılıklarıyla kullanan çeviri. Karşılığından emin olunmayan terimlerin yanına parantez içinde Türkçe aslı yazılır.<br>
+  <b>İpucu:</b> Resmî işlemlerde kullanılacak çevirilerde yeminli tercüman onayı gerekir; bu çeviri taslak niteliğindedir.</p>
+  <h3>⚖️ Karar karşılaştırma <span class="small muted">(Maximus)</span></h3>
+  <p><b>Ne girilir:</b> Karşılaştırmak istediğiniz iki veya daha fazla kararın metni, art arda. Karar arama ekranındaki <b>Metni kopyala</b> düğmesiyle kararları buraya taşıyabilirsiniz.<br>
+  <b>Ne verir:</b> Kararlar arasındaki benzerlikler, farklılıklar ve sonucu değiştiren olgu.</p>
+  <h2>4. UYAP'tan belge almak</h2>
   <ol><li>UYAP Avukat Portal'da veya UYAP Avukat mobil uygulamasında ilgili dosyayı açın.</li>
   <li>Belgeyi telefonunuza indirin (UDF, EYP veya PDF olarak).</li>
   <li>Platformda <b>📄 Dosya yükle</b>'ye dokunun ve indirdiğiniz belgeyi <i>İndirilenler</i> klasöründen seçin.</li></ol>
   <p class="small muted">Platform UYAP'a bağlanmaz ve UYAP şifrenizi istemez; belgeyi siz indirip seçersiniz.</p>
-  <h2>4. İyi fotoğraf için</h2>
+  <h2>5. İyi fotoğraf için</h2>
   <ul><li>Belgeyi düz bir zemine koyun, gölge düşürmeden iyi ışıkta çekin.</li>
   <li>Sayfanın tamamı kadrajda olsun, telefonu kâğıda paralel tutun.</li>
   <li>El yazısı ve çok soluk fotokopilerde okuma hatalı olabilir; metni göndermeden önce kontrol edin.</li></ul>
-  <h2>5. Gizlilik</h2>
+  <h2>6. Gizlilik</h2>
   <ul><li>Dosya ve fotoğraflar <b>telefonunuzda</b> okunur; sunucuya yalnızca metin gider.</li>
   <li>Analiz için gönderilen metinler saklanmaz.</li>
   <li>Müvekkil adları, T.C. kimlik no, sağlık ve ceza bilgisi gibi verileri göndermeden önce maskeleyin (ör. "A.B.").</li></ul>
-  <h2>6. Önemli</h2>
+  <h2>7. Önemli</h2>
   <p>Yapay zekâ çıktıları taslaktır ve hata içerebilir; kullanmadan önce kontrol edin. Platform hukuki danışmanlık sunmaz.</p>
-  <h2>7. Geri bildirim</h2>
+  <h2>8. Geri bildirim</h2>
   <p>Hata, eksik veya öneri için <a href="${feedbackLink()}">buraya dokunarak</a> e-posta gönderin. Ekran görüntüsü eklemeniz çok yardımcı olur.</p>`);
 }
 function pageDisclaimer(){
