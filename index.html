@@ -484,7 +484,7 @@ async function openDecision(source, item){
     $("#copyT").onclick = () => copy(kunye + "\n\n" + d.text, $("#copyT"));
     $("#sum").onclick = async () => {
       const btn = $("#sum"); busy(btn, true, "Özetleniyor…");
-      try { const r = await api("/api/ai", { task: "ozet", text: d.text }); showAI($("#sumOut"), r); }
+      try { await streamAI({ task: "ozet", text: d.text }, $("#sumOut")); }
       catch (err) { showMsg($("#m"), err.message); }
       finally { busy(btn, false); }
     };
@@ -496,9 +496,38 @@ async function openDecision(source, item){
     $("#back").onclick = () => renderTab();
   }
 }
+// Canlı yapay zekâ yanıtı: metin üretildikçe ekrana akar.
+const fmtAI = t => esc(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/^#{1,4}\s*(.+)$/gm, "<b>$1</b>");
+async function streamAI(body, el){
+  el.classList.remove("hidden");
+  el.innerHTML = `<span class="muted">Yapay zekâ yazıyor…</span>`;
+  const headers = { "Content-Type": "application/json" };
+  if (state.token) headers.Authorization = "Bearer " + state.token;
+  let res;
+  try { res = await fetch(apiBase() + "/api/ai-stream", { method: "POST", headers, body: JSON.stringify(body) }); }
+  catch { el.classList.add("hidden"); throw new Error("Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edin."); }
+  if (!res.ok) {
+    let d = {}; try { d = await res.json(); } catch {}
+    el.classList.add("hidden");
+    if (res.status === 401) logoutLocal();
+    throw new Error(d.error || `İşlem başarısız (HTTP ${res.status}).`);
+  }
+  const note = decodeURIComponent(res.headers.get("X-Note") || "");
+  const quota = { used: res.headers.get("X-Quota-Used"), limit: res.headers.get("X-Quota-Limit") };
+  let text = "";
+  if (res.body && res.body.getReader) {
+    const rd = res.body.getReader(), dec = new TextDecoder();
+    for (;;) {
+      const { value, done } = await rd.read(); if (done) break;
+      text += dec.decode(value, { stream: true });
+      el.innerHTML = fmtAI(text) + `<span class="muted"> ▍</span>`;
+    }
+  } else { text = await res.text(); }
+  showAI(el, { answer: text.trim(), note, quota });
+}
 function showAI(el, r){
   el.classList.remove("hidden");
-  el.innerHTML = esc(r.answer).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>") +
+  el.innerHTML = fmtAI(r.answer) +
     (r.note ? `<p class="muted small">${esc(r.note)}</p>` : "") +
     `<p class="muted small">Bugünkü yapay zekâ kullanımı: ${r.quota.used}/${r.quota.limit}</p>` +
     `<div class="row"><button class="btn btn-ghost" data-copy>Sonucu kopyala</button></div>`;
@@ -662,7 +691,7 @@ function tabAnalyze(){
   $("#cam").onchange = onImages; $("#gal").onchange = onImages;
   $("#go").onclick = async () => {
     const btn = $("#go"); busy(btn, true, "Çalışıyor…"); $("#m").classList.add("hidden");
-    try { const r = await api("/api/ai", { task: $("#task").value, text: $("#txt").value, extra: $("#lang").value }); showAI($("#out"), r); }
+    try { await streamAI({ task: $("#task").value, text: $("#txt").value, extra: $("#lang").value }, $("#out")); }
     catch (err) { showMsg($("#m"), err.message); }
     finally { busy(btn, false); }
   };

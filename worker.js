@@ -150,16 +150,38 @@ async function useQuota(env, user, kind, commit = true) {
 }
 
 // ---------- resmî kaynak erişimi ----------
+function decodeEntities(v) {
+  return v.replace(/&nbsp;/g, " ").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'").replace(/&#(\d+);/g, (_, d) => String.fromCharCode(+d))
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16))).replace(/&amp;/g, "&");
+}
+const JS_LINE = /^\s*(\/\/|\/\*|var |let |const |function\b|\$\(|jQuery|options\[|return |if ?\(|else\b|\}\)?;?\s*$|\{\s*$|window\.|document\.|[A-Za-z_$][\w$.]*\s*=\s*[^=].*;\s*$|[A-Za-z_$][\w$.]*\(.*\);\s*$)/;
+// Resmî sitelerden gelen HTML'i düz metne çevirir. Danıştay belgeyi tam sayfa olarak ve
+// etiketleri bir kez daha kodlanmış (&lt;script&gt;) gönderdiği için işlem birkaç tur tekrarlanır.
 function cleanHtml(raw) {
   let v = String(raw || "");
-  // Biçim/kod bloklarını içerikleriyle birlikte at (Danıştay metnin başına CSS ekliyor).
-  v = v.replace(/<(style|script|head|title)[^>]*>[\s\S]*?<\/\1>/gi, " ").replace(/<!--[\s\S]*?-->/g, " ");
-  // Etiketsiz gelen CSS kalıntıları: ".highlight { ... }" / "mark { ... }"
+  // Karar metni bir program satırının içinde gömülü gelebilir: stringToHTML("...metin...")
+  for (let round = 0; round < 2; round++) {
+    const m = v.match(/stringToHTML\(\s*(["'`])((?:\\[\s\S]|(?!\1)[\s\S]){200,}?)\1\s*\)/);
+    if (m) {
+      const inner = m[2].replace(/\\n/g, "\n").replace(/\\t/g, " ").replace(/\\u([0-9a-f]{4})/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
+        .replace(/\\(["'`\\/])/g, "$1");
+      v = inner; break;
+    }
+    const d = decodeEntities(v); if (d === v) break; v = d;
+  }
+  for (let round = 0; round < 3; round++) {
+    v = v.replace(/<(style|script|head|title|noscript|template)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, " ")
+         .replace(/<!--[\s\S]*?-->/g, " ")
+         .replace(/<[^>]*id=["']?hidden[A-Za-z]*["']?[^>]*>[\s\S]*?<\/[a-z]+>/gi, " ");   // gizli yardımcı alanlar
+    v = v.replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|div|tr|li|h\d|table)>/gi, "\n").replace(/<[^>]+>/g, " ");
+    const before = v;
+    v = decodeEntities(v);
+    if (v === before && !/<\/?[a-z][^>]*>/i.test(v)) break;   // çözülecek bir şey kalmadı
+  }
+  // Etiketsiz kalmış CSS kuralları (".highlight { ... }") ve program satırları
   v = v.replace(/^\s*(?:[.#]?[a-z][\w\-]*\s*(?:,\s*[.#]?[a-z][\w\-]*\s*)*)\{[^{}]*\}\s*/gim, "");
-  v = v.replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|div|tr|h\d)>/gi, "\n").replace(/<[^>]+>/g, " ");
-  v = v.replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
-       .replace(/&quot;/g, '"').replace(/&#39;/g, "'")
-       .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(+d));
+  v = v.split("\n").filter(line => !JS_LINE.test(line)).join("\n");
   v = v.replace(/[ \t]+/g, " ").replace(/\n[ \t]+/g, "\n").replace(/\n{3,}/g, "\n\n");
   return v.trim();
 }
@@ -432,7 +454,7 @@ const AI_TASKS = {
   karsilastir: "Aşağıdaki metinlerdeki kararları karşılaştır: benzerlikler, farklılıklar, hangi olgunun sonucu değiştirdiği.",
 };
 
-async function runAI(env, task, text, extra, maxText) {
+function buildAI(task, text, extra, maxText) {
   const instruction = AI_TASKS[task];
   if (!instruction) throw new HttpError(400, "Bilinmeyen işlem.");
   let t = String(text || "").trim();
@@ -449,6 +471,11 @@ async function runAI(env, task, text, extra, maxText) {
     { role: "system", content: AI_RULES },
     { role: "user", content: `${instruction}${target}\n\n--- METİN ---\n${t}` },
   ];
+  return { messages, note };
+}
+
+async function runAI(env, task, text, extra, maxText) {
+  const { messages, note } = buildAI(task, text, extra, maxText);
   if (!env.AI) throw new HttpError(500, "Yapay zekâ bağlantısı (AI) tanımlı değil.");
   let lastErr = "";
   for (const { id: model, opts } of AI_MODELS) {
@@ -460,6 +487,57 @@ async function runAI(env, task, text, extra, maxText) {
       if (answer) return { answer, note };
       lastErr = "boş yanıt";
     } catch (e) { lastErr = String(e && e.message || e).slice(0, 200); console.error("AI", model, lastErr); }
+  }
+  throw new HttpError(502, "Yapay zekâ servisi şu an yanıt vermedi, biraz sonra tekrar deneyin. (" + lastErr + ")");
+}
+
+
+// Canlı yanıt: yapay zekânın yazdığı metin üretildikçe parça parça gönderilir.
+async function streamAI(env, task, text, extra, maxText) {
+  const { messages, note } = buildAI(task, text, extra, maxText);
+  if (!env.AI) throw new HttpError(500, "Yapay zekâ bağlantısı (AI) tanımlı değil.");
+  const dec = new TextDecoder();
+  const pick = j => (j && (j.response ?? (j.choices && j.choices[0] && ((j.choices[0].delta && j.choices[0].delta.content) ?? j.choices[0].text)))) || "";
+  let lastErr = "";
+  for (const { id: model, opts } of AI_MODELS) {
+    try {
+      const src = await env.AI.run(model, { messages, temperature: 0.2, stream: true, ...opts });
+      if (!src || typeof src.getReader !== "function") throw new Error("akış desteklenmiyor");
+      const reader = src.getReader();
+      let buf = "", first = "", done = false;
+      const parse = (chunkText, out) => {
+        buf += chunkText; let i;
+        while ((i = buf.indexOf("\n")) >= 0) {
+          const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+          if (!line.startsWith("data:")) continue;
+          const data = line.slice(5).trim();
+          if (data === "[DONE]") { done = true; continue; }
+          try { out.push(pick(JSON.parse(data))); } catch {}
+        }
+      };
+      // İlk anlamlı parçayı bekle: model hiç yanıt vermezse sıradakine geç
+      while (!first && !done) {
+        const r = await reader.read(); if (r.done) break;
+        const out = []; parse(dec.decode(r.value, { stream: true }), out); first += out.join("");
+      }
+      if (!first) { lastErr = "boş yanıt"; continue; }
+      const enc2 = new TextEncoder();
+      const stream = new ReadableStream({
+        start(c) { c.enqueue(enc2.encode(first)); },
+        async pull(c) {
+          // Bir parça metin bulana ya da akış bitene kadar oku (boş parçada durursa akış takılır).
+          for (;;) {
+            if (done) { c.close(); return; }
+            const r = await reader.read();
+            if (r.done) { c.close(); return; }
+            const out = []; parse(dec.decode(r.value, { stream: true }), out);
+            const t = out.join(""); if (t) { c.enqueue(enc2.encode(t)); return; }
+          }
+        },
+        cancel() { try { reader.cancel(); } catch {} },
+      });
+      return { stream, note, model };
+    } catch (e) { lastErr = String(e && e.message || e).slice(0, 200); console.error("AI stream", model, lastErr); }
   }
   throw new HttpError(502, "Yapay zekâ servisi şu an yanıt vermedi, biraz sonra tekrar deneyin. (" + lastErr + ")");
 }
@@ -654,6 +732,23 @@ async function route(req, env, ctx) {
     return { decision: src === "arsiv" ? await getArchiveDecision(env, b.id, b.hint) : await getDecision(env, src, b.id, b.hint) };
   }
 
+  if (path === "/api/ai-stream" && req.method === "POST") {
+    const b = await body(req);
+    const plan = effectivePlan(user);
+    const task = String(b.task || "");
+    if (AI_TASKS[task] && !PLANS[plan].tasks.includes(task)) {
+      const need = PLANS.optimus.tasks.includes(task) ? "Optimus" : "Maximus";
+      throw new HttpError(403, `Bu araç ${need} ve üzeri paketlerde kullanılabilir.`);
+    }
+    await useQuota(env, user, "ai", false);
+    const r = await streamAI(env, task, b.text, b.extra, PLANS[plan].maxText);
+    const quota = await useQuota(env, user, "ai");      // yanıt başladıysa hak düşülür
+    return new Response(r.stream, { headers: {
+      "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store",
+      "X-Note": encodeURIComponent(r.note || ""), "X-Quota-Used": String(quota.used), "X-Quota-Limit": String(quota.limit),
+    } });
+  }
+
   if (path === "/api/ai" && req.method === "POST") {
     const b = await body(req);
     const plan = effectivePlan(user);
@@ -739,7 +834,14 @@ export default {
     if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
     try {
       if (!env.DB) throw new HttpError(500, "Veritabanı bağlantısı (DB) tanımlı değil.");
-      return json(await route(req, env, ctx), 200, cors);
+      const out = await route(req, env, ctx);
+      if (out instanceof Response) {
+        const h = new Headers(out.headers);
+        for (const [k, v] of Object.entries(cors)) h.set(k, v);
+        h.set("Access-Control-Expose-Headers", "X-Note, X-Quota-Used, X-Quota-Limit");
+        return new Response(out.body, { status: out.status, headers: h });
+      }
+      return json(out, 200, cors);
     } catch (e) {
       const status = e instanceof HttpError ? e.status : 500;
       const message = e instanceof HttpError ? e.message : "Beklenmeyen bir hata oluştu.";
