@@ -283,6 +283,82 @@ async function getDecision(env, sourceKey, id, hint) {
   return { ...rec, officialUrl: `${s.base}/getDokuman?id=${docId}`, cached: false };
 }
 
+
+// ---------- 11 milyon kararlık arşiv (Hugging Face veri seti; yedeği GitHub "veri-11m" sürümünde) ----------
+// Arama, veri setinin kamuya açık arama servisi üzerinden yapılır; ayna kaldırılırsa sıradakine geçilir.
+const ARCHIVE_MIRRORS = ["esnucil/turkish-court-decisions", "geginhug/turkish-court-decisions", "Alptekinege/turkish-court-decisions",
+  "Gyrevortex/turkish-court-decisions", "mrfg/turkish-court-decisions", "serdarsrts/turkish-court-decisions-duplicate"];
+const ARCHIVE_CONFIGS = { yargitay: "Yargıtay", emsal: "UYAP Emsal", danistay: "Danıştay", aym_bb: "AYM Bireysel Başvuru", aym_norm: "AYM Norm Denetimi" };
+const HF = "https://datasets-server.huggingface.co";
+
+async function hfGet(path, params) {
+  const url = `${HF}/${path}?` + new URLSearchParams(params).toString();
+  const ctrl = new AbortController(); const timer = setTimeout(() => ctrl.abort(), 25000);
+  try {
+    const r = await fetch(url, { signal: ctrl.signal, headers: { Accept: "application/json" }, cf: { cacheTtl: 3600 } });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+    return j;
+  } finally { clearTimeout(timer); }
+}
+const archRow = (cfg, it, dataset) => {
+  const r = it.row || {};
+  return {
+    id: `${cfg}.${it.row_idx}`,
+    daire: String(r.court || ARCHIVE_CONFIGS[cfg]).trim(),
+    esas: String(r.esas_no || ""), karar: String(r.karar_no || ""),
+    tarih: String(r.karar_tarihi || r.year || ""), text: r.text, dataset,
+  };
+};
+
+async function searchArchive(env, query, page, cfg) {
+  const q = String(query || "").trim();
+  if (q.length < 2) throw new HttpError(400, "En az 2 karakterlik bir arama ifadesi girin.");
+  if (q.length > 300) throw new HttpError(400, "Arama ifadesi çok uzun.");
+  if (!ARCHIVE_CONFIGS[cfg]) cfg = "yargitay";
+  const p = Math.max(1, Math.min(parseInt(page) || 1, 50));
+  // Esas/karar numarası gibi görünüyorsa (2020/123) doğrudan filtreyle ara.
+  const num = q.match(/^(\d{4})\s*\/\s*(\d{1,6})$/);
+  let lastErr = "";
+  for (const ds of ARCHIVE_MIRRORS) {
+    try {
+      const params = { dataset: ds, config: cfg, split: "train", offset: String((p - 1) * 20), length: "20" };
+      const j = num
+        ? await hfGet("filter", { ...params, where: `"esas_no"='${num[1]}/${num[2]}' OR "karar_no"='${num[1]}/${num[2]}'` })
+        : await hfGet("search", { ...params, query: q });
+      const items = (j.rows || []).map(it => { const x = archRow(cfg, it, ds); delete x.text; return x; });
+      return { source: "arsiv", sourceLabel: `11M Arşiv · ${ARCHIVE_CONFIGS[cfg]}`, config: cfg, page: p,
+        total: Number(j.num_rows_total || items.length) || 0, items,
+        note: j.partial ? "Arşivin bu bölümünde arama kısmi dizin üzerinden yapıldı; bazı sonuçlar görünmeyebilir." : undefined };
+    } catch (e) { lastErr = String(e && e.message || e).slice(0, 120); }
+  }
+  throw new HttpError(502, `11M arşiv araması şu an yanıt vermedi (${lastErr}). UYAP Emsal kaynağını deneyin.`);
+}
+
+async function getArchiveDecision(env, id, hint) {
+  const m = String(id || "").match(/^([a-z_]+)\.(\d{1,9})$/);
+  if (!m || !ARCHIVE_CONFIGS[m[1]]) throw new HttpError(400, "Geçersiz arşiv kimliği.");
+  const cached = await env.DB.prepare("SELECT * FROM decisions WHERE source='arsiv' AND doc_id=?").bind(id).first();
+  if (cached) return { ...cached, officialUrl: "", cached: true };
+  const order = hint && hint.dataset && ARCHIVE_MIRRORS.includes(hint.dataset) ? [hint.dataset, ...ARCHIVE_MIRRORS.filter(x => x !== hint.dataset)] : ARCHIVE_MIRRORS;
+  let row = null;
+  for (const ds of order) {
+    try {
+      const j = await hfGet("rows", { dataset: ds, config: m[1], split: "train", offset: m[2], length: "1" });
+      if (j.rows && j.rows[0]) { row = archRow(m[1], j.rows[0], ds); break; }
+    } catch {}
+  }
+  if (!row || !row.text) throw new HttpError(502, "Karar metni arşivden alınamadı, biraz sonra tekrar deneyin.");
+  const rec = { source: "arsiv", doc_id: id,
+    title: `${row.daire}${row.esas ? " · E. " + row.esas : ""}${row.karar ? " · K. " + row.karar : ""}`.slice(0, 300),
+    daire: row.daire.slice(0, 200), esas: row.esas.slice(0, 50), karar: row.karar.slice(0, 50), tarih: row.tarih.slice(0, 30),
+    text: String(row.text), fetched_at: now() };
+  await env.DB.prepare(
+    "INSERT OR IGNORE INTO decisions (source, doc_id, title, daire, esas, karar, tarih, text, fetched_at) VALUES (?,?,?,?,?,?,?,?,?)"
+  ).bind(rec.source, rec.doc_id, rec.title, rec.daire, rec.esas, rec.karar, rec.tarih, rec.text, rec.fetched_at).run();
+  return { ...rec, officialUrl: "", cached: false };
+}
+
 // ---------- yapay zekâ ----------
 const AI_RULES =
   "Sen Türk hukuku alanında çalışan bir metin analiz asistanısın. Kurallar: " +
@@ -518,13 +594,16 @@ async function route(req, env, ctx) {
   if (path === "/api/search" && req.method === "POST") {
     const b = await body(req);
     const quota = await useQuota(env, user, "search");
-    const result = await searchOfficial(String(b.source || "yargitay"), b.q, b.page);
+    const src = String(b.source || "yargitay");
+    const result = src === "arsiv" ? await searchArchive(env, b.q, b.page, String(b.config || "yargitay"))
+                                   : await searchOfficial(src, b.q, b.page);
     return { ...result, quota };
   }
 
   if (path === "/api/decision" && req.method === "POST") {
     const b = await body(req);
-    return { decision: await getDecision(env, String(b.source || ""), b.id, b.hint) };
+    const src = String(b.source || "");
+    return { decision: src === "arsiv" ? await getArchiveDecision(env, b.id, b.hint) : await getDecision(env, src, b.id, b.hint) };
   }
 
   if (path === "/api/ai" && req.method === "POST") {

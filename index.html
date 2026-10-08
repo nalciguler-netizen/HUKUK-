@@ -8,6 +8,7 @@
 <meta name="theme-color" content="#14213d">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -155,7 +156,7 @@ const store = {
   get(k){ try { return localStorage.getItem(k); } catch { return null; } },
   set(k,v){ try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} },
 };
-const state = { token: store.get("hp_token"), user: null, source: "yargitay", lastSearch: null, tab: "ara" };
+const state = { token: store.get("hp_token"), user: null, source: "arsiv", archCfg: "yargitay", lastSearch: null, tab: "ara" };
 
 function apiBase(){ return (CONFIG.API_URL || store.get("hp_api") || "").replace(/\/+$/, ""); }
 function esc(s){ return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
@@ -378,25 +379,29 @@ function renderTab(){
   ({ ara: tabSearch, analiz: tabAnalyze, hesap: tabAccount })[state.tab]();
 }
 
-const SOURCE_LABELS = { yargitay: "Yargıtay", emsal: "UYAP Emsal", danistay: "Danıştay" };
+const SOURCE_LABELS = { arsiv: "📚 11M Arşiv", yargitay: "Yargıtay", emsal: "UYAP Emsal", danistay: "Danıştay" };
+const ARCH_LABELS = { yargitay: "Yargıtay", emsal: "UYAP Emsal", danistay: "Danıştay", aym_bb: "AYM Bireysel Başvuru", aym_norm: "AYM Norm Denetimi" };
 function tabSearch(){
   const b = $("#tabbody");
   b.innerHTML = `<div class="card">
     <h2>Karar ara</h2>
     <div class="chips" id="src">${Object.entries(SOURCE_LABELS).map(([k,v]) => `<button data-s="${k}" class="${k===state.source?"on":""}">${v}</button>`).join("")}</div>
+    <div id="archBox" class="${state.source === "arsiv" ? "" : "hidden"}"><label for="cfg" style="margin-top:8px">Arşivde mahkeme</label>
+      <select id="cfg">${Object.entries(ARCH_LABELS).map(([k,v]) => `<option value="${k}" ${k === (state.archCfg || "yargitay") ? "selected" : ""}>${v}</option>`).join("")}</select></div>
     <form id="sf" class="searchrow"><input id="q" type="text" placeholder="ör. fazla mesai ispat yükü" maxlength="300" required value="${esc(state.lastSearch?.q || "")}"><button class="btn btn-primary">Ara</button></form>
-    <p class="muted small" style="margin:8px 0 0">Sonuçlar doğrudan ilgili resmî karar bankasından gelir. Tırnak içinde yazarak tam ifade arayabilirsiniz.</p>
+    <p class="muted small" style="margin:8px 0 0">📚 11M Arşiv: 11 milyon Yargıtay, UYAP Emsal, Danıştay ve AYM kararında arama; esas veya karar no ile de arayabilirsiniz (ör. 2021/1234). Diğer kaynaklar doğrudan resmî karar bankasından gelir.</p>
     <div id="m" class="hidden"></div>
   </div>
   <div id="results"></div>`;
-  $("#src").onclick = e => { const s = e.target.dataset.s; if (s){ state.source = s; document.querySelectorAll("#src button").forEach(x => x.classList.toggle("on", x.dataset.s === s)); } };
+  $("#src").onclick = e => { const s = e.target.dataset.s; if (s){ state.source = s; document.querySelectorAll("#src button").forEach(x => x.classList.toggle("on", x.dataset.s === s)); $("#archBox").classList.toggle("hidden", s !== "arsiv"); } };
+  $("#cfg").onchange = e => { state.archCfg = e.target.value; };
   $("#sf").onsubmit = e => { e.preventDefault(); doSearch($("#q").value, 1, $("#sf button")); };
   if (state.lastSearch) drawResults(state.lastSearch.result, false);
 }
 async function doSearch(q, page, btn){
   busy(btn, true, "Aranıyor…"); $("#m").classList.add("hidden");
   try {
-    const r = await api("/api/search", { source: state.source, q, page });
+    const r = await api("/api/search", { source: state.source, q, page, config: state.archCfg || "yargitay" });
     if (page > 1 && state.lastSearch) { r.items = state.lastSearch.result.items.concat(r.items); }
     state.lastSearch = { q, result: r };
     drawResults(r, true);
@@ -418,7 +423,7 @@ async function openDecision(source, item){
   b.innerHTML = `<div class="card"><p class="muted">Karar resmî kaynaktan getiriliyor…</p></div>`;
   try {
     const { decision: d } = await api("/api/decision", { source, id: item.id, hint: item });
-    const kunye = `${SOURCE_LABELS[source]} ${item.daire ? item.daire + ", " : ""}E. ${item.esas || "—"}, K. ${item.karar || "—"}${item.tarih ? ", T. " + item.tarih : ""}`;
+    const kunye = `${source === "arsiv" ? "" : SOURCE_LABELS[source] + " "}${item.daire ? item.daire + ", " : ""}E. ${item.esas || "—"}, K. ${item.karar || "—"}${item.tarih ? ", T. " + item.tarih : ""}`;
     b.innerHTML = `<div class="card">
       <button class="btn btn-ghost" id="back">← Sonuçlara dön</button>
       <h2 style="margin-top:14px">${esc(item.daire || SOURCE_LABELS[source])}</h2>
@@ -427,7 +432,7 @@ async function openDecision(source, item){
         <button class="btn btn-gold" id="sum">Yapay zekâ ile özetle</button>
         <button class="btn btn-ghost" id="copyK">Künyeyi kopyala</button>
         <button class="btn btn-ghost" id="copyT">Metni kopyala</button>
-        <a class="btn btn-ghost" href="${esc(d.officialUrl)}" target="_blank" rel="noopener">Resmî kaynakta aç</a>
+        ${d.officialUrl ? `<a class="btn btn-ghost" href="${esc(d.officialUrl)}" target="_blank" rel="noopener">Resmî kaynakta aç</a>` : ""}
       </div>
       <div id="m" class="hidden"></div>
       <div id="sumOut" class="hidden card out" style="margin-top:14px"></div>
@@ -774,7 +779,8 @@ function pageGuide(){
   <p class="muted">${esc(CONFIG.APP_NAME)}; resmî karar bankalarında arama yapmanızı ve belgelerinizi yapay zekâ ile incelemenizi sağlar. Telefon, tablet ve bilgisayardan aynı hesapla kullanılabilir.</p>
   <h2>1. Karar arama</h2>
   <ol><li><b>Panelim → Karar ara</b> sekmesini açın.</li>
-  <li>Kaynağı seçin: <b>Yargıtay</b>, <b>UYAP Emsal</b> (Yargıtay, bölge adliye ve ilk derece kararları) veya <b>Danıştay</b>.</li>
+  <li>Kaynağı seçin: <b>📚 11M Arşiv</b> (11 milyon Yargıtay, UYAP Emsal, Danıştay ve Anayasa Mahkemesi kararı; açılan kutudan mahkemeyi seçin), <b>Yargıtay</b>, <b>UYAP Emsal</b> (Yargıtay, bölge adliye ve ilk derece kararları) veya <b>Danıştay</b>.</li>
+  <li>Arşivde esas veya karar numarasıyla da arayabilirsiniz: yalnızca <i>2021/1234</i> yazın.</li>
   <li>Arama ifadesini yazın (ör. <i>fazla mesai ispat yükü</i>). Tam ifade için tırnak kullanın: <i>"iş kazası"</i>.</li>
   <li>Bir karara dokunun: tam metin açılır. <b>Künyeyi kopyala</b>, <b>Metni kopyala</b>, <b>Resmî kaynakta aç</b> ve <b>Yapay zekâ ile özetle</b> düğmeleri kullanılabilir.</li></ol>
   <p class="small muted">Yargıtay'ın kendi sitesine ulaşılamadığında sonuçlar otomatik olarak UYAP Emsal'den getirilir; ekranda bununla ilgili not görürsünüz.</p>
@@ -848,6 +854,7 @@ $("#supportLink").href = "mailto:" + CONFIG.SUPPORT_EMAIL;
 renderNav();
 window.addEventListener("hashchange", router);
 router();
+if ("serviceWorker" in navigator) { try { navigator.serviceWorker.register("sw.js"); } catch {} }
 </script>
 </body>
 </html>
