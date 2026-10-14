@@ -15,7 +15,7 @@ import { connect } from "cloudflare:sockets";
 
 const PBKDF2_ITER = 50000;         // ücretsiz plan CPU sınırı için; hash ile birlikte saklanır, sonradan artırılabilir
 const SESSION_DAYS = 30;
-const TRIAL_HOURS = 24;
+const TRIAL_HOURS = 24 * 7;           // yeni hesaplara 7 gün Optimus denemesi
 const RESET_MINUTES = 30;
 // Sırayla denenir. Düşünen (reasoning) modeller yavaş ve boş yanıt verebildiği için doğrudan yanıt veren modeller önde.
 const AI_MODELS = [
@@ -26,12 +26,12 @@ const AI_MODELS = [
 
 // Paket sınırları (günlük)
 const PLANS = {
-  basic:   { label: "Basic",   price: 0,    search: 10,   ai: 3,   maxText: 12000, files: false,
+  basic:   { label: "Basic",   price: 0,    search: 10,   ai: 3,   maxText: 12000, files: false, refs: 0,
              tasks: ["ozet"] },
-  optimus: { label: "Optimus", price: 400,  search: 200,  ai: 50,  maxText: 40000, files: true,
-             tasks: ["ozet", "sozlesme", "dilekce", "ceviri"] },
-  maximus: { label: "Maximus", price: 1000, search: 1000, ai: 200, maxText: 80000, files: true,
-             tasks: ["ozet", "sozlesme", "dilekce", "ceviri", "karsilastir"] },
+  optimus: { label: "Optimus", price: 700,  search: 200,  ai: 50,  maxText: 40000, files: true, refs: 5,
+             tasks: ["ozet", "sozlesme", "sozlesme_revize", "dilekce", "ceviri", "degisiklik", "dava_analiz", "dilekce_yaz"] },
+  maximus: { label: "Maximus", price: 1200, search: 1000, ai: 200, maxText: 80000, files: true, refs: 10,
+             tasks: ["ozet", "sozlesme", "sozlesme_revize", "dilekce", "ceviri", "karsilastir", "degisiklik", "dava_analiz", "dilekce_yaz"] },
 };
 
 // Resmî karar bankaları (kamuya açık arama arayüzleri)
@@ -67,6 +67,13 @@ function safeEqual(a, b) {
 }
 
 class HttpError extends Error { constructor(status, msg) { super(msg); this.status = status; } }
+
+const trLower = s => String(s || "").replace(/İ/g, "i").replace(/I/g, "ı").toLowerCase();
+// Birden fazla ifade: "kıdem tazminatı + fazla mesai, tanık" veya "a - b" (tire iki yanında boşlukla)
+function splitPhrases(q) {
+  const parts = String(q || "").split(/\s*[+,]\s*|\s+[-\u2013]\s+/).map(x => x.trim().replace(/^"|"$/g, "")).filter(x => x.length >= 2);
+  return parts.slice(0, 4);
+}
 
 function corsHeaders(req, env) {
   const origin = req.headers.get("Origin") || "";
@@ -236,13 +243,17 @@ async function searchOfficial(sourceKey, query, page) {
     return r;
   };
 
+  const phrases = splitPhrases(q);
+  const multi = phrases.length > 1;
+  // Resmî sitelerde tam ifade tırnakla aranır; ifadeler boşlukla birleştirilir (sitelerin "ve" araması).
+  const qq = multi ? phrases.map(x => /\s/.test(x) ? `"${x}"` : x).join(" ") : q;
   let res;
   if (sourceKey === "yargitay") {
     try {
-      res = await post(s.search, { arananKelime: q, birimYrgKurulDaire: "", ...common });
+      res = await post(s.search, { arananKelime: qq, birimYrgKurulDaire: "", ...common });
     } catch (e) {
       // Yargıtay sitesi bulut bağlantılarını reddedebiliyor; Yargıtay kararları UYAP Emsal'de de yayımlanır.
-      const alt = await searchOfficial("emsal", q, p);
+      const alt = await searchOfficial("emsal", q, p);   // emsal kendi içinde çoklu ifadeyi işler
       // UYAP Emsal tüm mahkemeleri verir; Yargıtay seçildiğinde bölge adliye ve ilk derece kararlarını ayıkla.
       const only = alt.items.filter(it => !/bölge adliye|mahkemesi/i.test(it.daire));
       const items = only.length ? only : alt.items;
@@ -253,19 +264,20 @@ async function searchOfficial(sourceKey, query, page) {
     }
   } else if (sourceKey === "danistay") {
     // Danıştay iki arama biçimi sunar: önce basit kelime araması, olmazsa ayrıntılı arama.
-    const words = q.startsWith('"') && q.endsWith('"') ? [q.slice(1, -1)] : q.split(/\s+/).filter(Boolean);
+    const words = multi ? phrases : q.startsWith('"') && q.endsWith('"') ? [q.slice(1, -1)] : q.split(/\s+/).filter(Boolean);
     try {
       res = await post("/aramalist", { andKelimeler: words, orKelimeler: [], notAndKelimeler: [], notOrKelimeler: [], pageSize: 20, pageNumber: p });
     } catch {
-      res = await post(s.search, { aranan: q, arananKelime: q, daire: "", ...common });
+      res = await post(s.search, { aranan: qq, arananKelime: qq, daire: "", ...common });
     }
   } else {
-    res = await post(s.search, { aranan: q, arananKelime: q, pageSize: 20, pageNumber: p });
+    res = await post(s.search, { aranan: qq, arananKelime: qq, pageSize: 20, pageNumber: p });
   }
   const inner = res && res.data && typeof res.data === "object" ? res.data : {};
   const rows = Array.isArray(inner.data) ? inner.data : [];
   return {
-    source: sourceKey, sourceLabel: s.label, page: p,
+    source: sourceKey, sourceLabel: s.label, page: p, phrases: multi ? phrases : undefined,
+    note: multi ? `Aranan ifadeler: ${phrases.map(x => "“" + x + "”").join(" + ")}. Resmî site sonuçları ifadelerin hepsini içermeyebilir; kararı açınca ifadeler renkli gösterilir.` : undefined,
     total: Number(inner.recordsTotal || inner.recordsFiltered || rows.length) || 0,
     items: rows.map(r => ({
       id: String(r.id || r.kararId || r.dokumanId || ""),
@@ -389,6 +401,18 @@ async function searchArchive(env, query, page, cfg) {
   for (const ds of ARCHIVE_MIRRORS) {
     try {
       const params = { dataset: ds, config: cfg, split: "train", offset: String((p - 1) * 20), length: "20" };
+      const phrases = num ? [] : splitPhrases(q);
+      if (phrases.length > 1) {
+        // Çoklu ifade: 50 sonuç alınır, metninde ifadelerin HEPSİ geçenler bırakılır (kesin filtre).
+        const jm = await hfGet("search", { ...params, offset: String((p - 1) * 50), length: "50", query: phrases.join(" ") });
+        const need = phrases.map(trLower);
+        const hits = (jm.rows || []).filter(it => { const t = trLower(it.row && it.row.text); return need.every(w => t.includes(w)); });
+        const items = hits.map(it => { const x = archRow(cfg, it, ds); delete x.text; return x; });
+        const scanned = Math.min(50, (jm.rows || []).length);
+        return { source: "arsiv", sourceLabel: `11M Arşiv · ${ARCHIVE_CONFIGS[cfg]}`, config: cfg, page: p, phrases,
+          total: items.length, items, more: scanned >= 50,
+          note: `${phrases.map(x => "“" + x + "”").join(" + ")} ifadelerinin hepsini içeren kararlar: en ilgili ${scanned} sonuç içinden ${items.length} karar.` };
+      }
       const j = num
         ? await hfGet("filter", { ...params, where: `"esas_no"='${num[1]}/${num[2]}' OR "karar_no"='${num[1]}/${num[2]}'` })
         : await hfGet("search", { ...params, query: q });
@@ -452,6 +476,41 @@ const AI_TASKS = {
   dilekce: "Aşağıda verilen olay ve taleplere göre bir dilekçe TASLAĞI iskeleti hazırla: başlık, taraflar (boş alanlar [ ] ile), konu, açıklamalar (olaylar sırasıyla), hukuki nedenler (yalnızca kullanıcının metninde geçen kanun/karar atıflarını kullan; yoksa '[ilgili mevzuat avukat tarafından eklenecek]' yaz), deliller, sonuç ve istem.",
   ceviri: "Aşağıdaki hukuki metni hedef dile çevir. Hukuki terimleri doğru karşılıklarıyla kullan; emin olmadığın terimin yanına parantez içinde Türkçe aslını yaz.",
   karsilastir: "Aşağıdaki metinlerdeki kararları karşılaştır: benzerlikler, farklılıklar, hangi olgunun sonucu değiştirdiği.",
+  sozlesme_revize: "Aşağıda bir sözleşme ve ona yapılmış risk analizi var. Analizdeki önerileri uygulayarak sözleşmenin DÜZELTİLMİŞ TAM METNİNİ yaz:\n" +
+    "- Orijinal madde numaralarını ve sırasını koru; değişmeyen maddeleri kelimesi kelimesine aynen bırak.\n" +
+    "- Yalnızca analizde riskli veya eksik bulunan noktaları değiştir; eksik hükümleri uygun yere yeni madde olarak ekle.\n" +
+    "- Tutar, tarih, oran, süre gibi tarafların belirlemesi gereken değerleri uydurma; [ ] ile boş bırak.\n" +
+    "- Kanun maddesi numarası veya karar atfı ekleme.\n" +
+    "- Önce yalnızca düzeltilmiş sözleşme metnini yaz. Metin bittikten sonra '--- YAPILAN DEĞİŞİKLİKLER ---' başlığı altında her değişikliği tek satırla ve gerekçesiyle listele.",
+  dava_analiz: "Aşağıda bir avukatın davası (olay, talep, deliller) ile avukatın seçtiği mahkeme kararlarının künyeleri, bilgisayarca çıkarılmış sonuçları (onama/bozma vb.) ve gerekçe/hüküm kısımları var. DAVA ANALİZİ yaz:\n" +
+    "1. İçtihat tablosu: seçilen kararlar ne yönde (verilen sayımları kullan; kendin sayı uydurma), en güçlü kaynak hangisi (İBK/Genel Kurul > daire > bölge adliye), kararlar ne kadar güncel.\n" +
+    "2. Olayla benzerlik: her karar için olaya benzeyen ve ayrışan yön; karara künyesiyle atıf yap.\n" +
+    "3. Lehe noktalar ve aleyhe noktalar (karşı tarafın muhtemel savunması dahil).\n" +
+    "4. İspat: hangi vakıa kimin tarafından, hangi delille ispatlanmalı; eksik görünen deliller.\n" +
+    "5. Usul kontrolü: süre, görev/yetki, dava şartları (ör. arabuluculuk) gibi kontrol edilmesi gereken noktalar — yalnızca soru olarak belirt, kesin hüküm kurma.\n" +
+    "6. Değerlendirme: davanın güçlü ve zayıf yanlarını nitel olarak özetle (güçlü / orta / zayıf). YÜZDE veya kazanma olasılığı rakamı VERME.\n" +
+    "Yalnızca verilen künyelere atıf yap; listede olmayan karar, esas/karar numarası veya kanun maddesi yazma.",
+  dilekce_yaz: "Aşağıdaki bilgilerle bir DAVA DİLEKÇESİ TASLAĞI yaz. Biçim:\n" +
+    "[MAHKEME ADI] başlığı; DAVACI, VEKİLİ, DAVALI, DAVA DEĞERİ (gerekirse), KONU satırları; AÇIKLAMALAR (numaralı paragraflar, olaylar tarih sırasıyla); HUKUKİ DEĞERLENDİRME ve EMSAL KARARLAR; HUKUKİ NEDENLER; DELİLLER; SONUÇ VE İSTEM; tarih ve imza alanı.\n" +
+    "Kurallar:\n" +
+    "- Emsal karar olarak YALNIZCA 'SEÇİLEN KARARLAR' listesindeki künyeleri kullan; her atıfta künyeyi aynen yaz (daire, E., K., tarih) ve kararın olaya nasıl uyduğunu bir-iki cümleyle açıkla. Listede olmayan karar yazma.\n" +
+    "- Kanun maddesini yalnızca kullanıcının metninde veya seçilen kararların metninde geçiyorsa yaz; yoksa '[ilgili mevzuat avukat tarafından eklenecek]' yaz.\n" +
+    "- Ad, T.C. kimlik no, adres, tutar, tarih gibi bilinmeyen her bilgiyi [ ] ile boş bırak; uydurma.\n" +
+    "- Dava analizi verilmişse onun lehe noktalarını öne çıkar, aleyhe noktalara karşı açıklama yap.\n" +
+    "- Resmî, açık ve ölçülü dilekçe dili kullan; abartılı ifade kullanma.",
+  degisiklik: "Aşağıda bir mevzuat hükmünün ESKİ ve YENİ metni ile bilgisayarın otomatik çıkardığı kelime farkları var. Şu başlıklarla yaz:\n" +
+    "1. Değişikliğin özü: 1-2 cümle.\n" +
+    "2. Değişen noktalar: her biri için 'eski → yeni' ve hukuki anlamı (hak, yükümlülük, süre, miktar, oran, kapsam veya yaptırım genişledi mi, daraldı mı, kaldırıldı mı).\n" +
+    "3. Etkilenenler: kimin lehine, kimin aleyhine olabileceği; yalnızca metinden çıkarılabiliyorsa yaz.\n" +
+    "4. Uygulamada dikkat: metinde yürürlük tarihi veya geçiş hükmü varsa belirt, yoksa 'metinde belirtilmemiş' de. Hüküm ceza veya yaptırım içeriyorsa lehe kanun değerlendirmesinin avukat tarafından yapılması gerektiğini hatırlat.\n" +
+    "Yalnızca verilen iki metne ve fark listesine dayan; listede olmayan bir değişiklik uydurma.",
+};
+
+// Uzun çıktı gereken görevlerde yanıt sınırı yükseltilir.
+const TASK_TOKENS = { dilekce_yaz: 2600, sozlesme_revize: 3000, dava_analiz: 1800 };
+const modelOpts = (opts, task) => {
+  const t = TASK_TOKENS[task]; if (!t) return opts;
+  return opts.max_tokens ? { ...opts, max_tokens: t } : { ...opts, max_completion_tokens: Math.max(t, opts.max_completion_tokens || 0) };
 };
 
 function buildAI(task, text, extra, maxText) {
@@ -474,17 +533,23 @@ function buildAI(task, text, extra, maxText) {
   return { messages, note };
 }
 
+// Maliyet ölçümü: her yapay zekâ işleminin boyutu Cloudflare günlüklerine (Observability) yazılır.
+function logAI(model, task, messages, outChars, usage) {
+  const inChars = messages.reduce((n, m) => n + String(m.content || "").length, 0);
+  console.log(JSON.stringify({ ai: model.split("/").pop(), task, inChars, outChars, usage: usage || undefined }));
+}
+
 async function runAI(env, task, text, extra, maxText) {
   const { messages, note } = buildAI(task, text, extra, maxText);
   if (!env.AI) throw new HttpError(500, "Yapay zekâ bağlantısı (AI) tanımlı değil.");
   let lastErr = "";
   for (const { id: model, opts } of AI_MODELS) {
     try {
-      const out = await env.AI.run(model, { messages, temperature: 0.2, ...opts });
+      const out = await env.AI.run(model, { messages, temperature: 0.2, ...modelOpts(opts, task) });
       const c = out && Array.isArray(out.choices) && out.choices[0];
       let answer = (out && out.response) || (c && ((c.message && c.message.content) || c.text)) || "";
       answer = String(answer).replace(/<think>[\s\S]*?<\/think>/g, "").trim();
-      if (answer) return { answer, note };
+      if (answer) { logAI(model, task, messages, answer.length, out && out.usage); return { answer, note }; }
       lastErr = "boş yanıt";
     } catch (e) { lastErr = String(e && e.message || e).slice(0, 200); console.error("AI", model, lastErr); }
   }
@@ -501,7 +566,7 @@ async function streamAI(env, task, text, extra, maxText) {
   let lastErr = "";
   for (const { id: model, opts } of AI_MODELS) {
     try {
-      const src = await env.AI.run(model, { messages, temperature: 0.2, stream: true, ...opts });
+      const src = await env.AI.run(model, { messages, temperature: 0.2, stream: true, ...modelOpts(opts, task) });
       if (!src || typeof src.getReader !== "function") throw new Error("akış desteklenmiyor");
       const reader = src.getReader();
       let buf = "", first = "", done = false;
@@ -522,16 +587,18 @@ async function streamAI(env, task, text, extra, maxText) {
       }
       if (!first) { lastErr = "boş yanıt"; continue; }
       const enc2 = new TextEncoder();
+      let outChars = first.length;
+      const finish = c => { logAI(model, task, messages, outChars); c.close(); };
       const stream = new ReadableStream({
         start(c) { c.enqueue(enc2.encode(first)); },
         async pull(c) {
           // Bir parça metin bulana ya da akış bitene kadar oku (boş parçada durursa akış takılır).
           for (;;) {
-            if (done) { c.close(); return; }
+            if (done) { finish(c); return; }
             const r = await reader.read();
-            if (r.done) { c.close(); return; }
+            if (r.done) { finish(c); return; }
             const out = []; parse(dec.decode(r.value, { stream: true }), out);
-            const t = out.join(""); if (t) { c.enqueue(enc2.encode(t)); return; }
+            const t = out.join(""); if (t) { outChars += t.length; c.enqueue(enc2.encode(t)); return; }
           }
         },
         cancel() { try { reader.cancel(); } catch {} },
@@ -620,6 +687,108 @@ function mailTemplate(env, title, inner) {
   <p style="color:#5d6678;font-size:13px;margin-top:20px">Sorularınız için: ${supportEmail(env)}</p></div></div>`;
 }
 
+// ---------- Dilekçe Asistanı yardımcıları ----------
+async function planQueries(env, tur, olay, talep) {
+  const messages = [
+    { role: "system", content: "Türk hukuku için karar arama ifadeleri üreten bir asistansın. Yalnızca istenen biçimde yanıt ver." },
+    { role: "user", content: `Aşağıdaki dava için Yargıtay/Danıştay karar arama motorunda kullanılacak 3 kısa arama ifadesi yaz. Her ifade 2-5 kelime olsun, hukuki terim kullansın (ör. "fazla mesai ispat yükü"). Kişi adı, tarih, tutar yazma. Her satıra bir ifade yaz; başka hiçbir şey yazma.\n\nDava türü: ${tur || "-"}\nTalep: ${talep || "-"}\nOlay: ${olay}` },
+  ];
+  for (const { id: model, opts } of AI_MODELS) {
+    try {
+      const o = { ...opts }; if (o.max_tokens) o.max_tokens = 120; else o.max_completion_tokens = 400;
+      const out = await env.AI.run(model, { messages, temperature: 0.1, ...o });
+      const c = out && Array.isArray(out.choices) && out.choices[0];
+      const text = String((out && out.response) || (c && ((c.message && c.message.content) || c.text)) || "").replace(/<think>[\s\S]*?<\/think>/g, "");
+      const qs = text.split("\n").map(l => l.replace(/^[\s\d.)\-*•"“]+|["”\s]+$/g, "").trim())
+        .filter(l => l.length >= 4 && l.length <= 80 && !/[:]$/.test(l)).slice(0, 3);
+      logAI(model, "dilekce_plan", messages, text.length);
+      if (qs.length) return qs;
+    } catch (e) { console.error("AI plan", model, String(e && e.message || e).slice(0, 120)); }
+  }
+  return [];
+}
+
+// Mahkeme düzeyi: yüksek değer = daha güçlü kaynak
+function courtLevel(daire, text) {
+  const d = trLower(daire), head = trLower(String(text || "").slice(0, 1500));
+  if (/içtihatları birleştirme|ictihatlari birlestirme/.test(d + " " + head)) return { rank: 5, label: "İçtihadı Birleştirme" };
+  if (/genel kurul/.test(d)) return { rank: 4, label: "Genel Kurul" };
+  if (/anayasa mahkemesi|aym/.test(d)) return { rank: 4, label: "Anayasa Mahkemesi" };
+  if (/bölge adliye|bölge idare|istinaf/.test(d)) return { rank: 2, label: "Bölge Adliye / İstinaf" };
+  if (/daire/.test(d)) return { rank: 3, label: "Yüksek Mahkeme Dairesi" };
+  if (/mahkemesi/.test(d)) return { rank: 1, label: "İlk Derece" };
+  return { rank: 3, label: "Yüksek Mahkeme" };
+}
+// Hüküm kısmından sonucu çıkar (son 2.500 karakterde, sona en yakın ifade esas alınır)
+const OUTCOMES = [
+  ["ihlal_yok", /ihlal\s+edilmediğine/g, "İhlal yok"],
+  ["ihlal", /ihlal\s+edildiğine/g, "İhlal"],
+  ["bozma", /bozulmasına|bozmaya/g, "Bozma"],
+  ["onama", /onanmasına|onamaya/g, "Onama"],
+  ["kaldirma", /kaldırılmasına/g, "Kaldırma"],
+  ["ret", /reddine|reddedilmesine/g, "Ret"],
+  ["kabul", /kabulüne|kabulü ile/g, "Kabul"],
+];
+function decisionOutcome(text) {
+  const tail = trLower(String(text || "").slice(-2500));
+  let best = { key: "belirsiz", label: "Belirlenemedi", pos: -1 };
+  for (const [key, re, label] of OUTCOMES) {
+    for (const m of tail.matchAll(re)) if (m.index > best.pos) best = { key, label, pos: m.index };
+  }
+  if (best.key === "onama" && /düzeltilerek\s+onanmasına/.test(tail)) best.label = "Düzelterek onama";
+  if (best.key === "bozma" && /kısmen/.test(tail.slice(Math.max(0, best.pos - 80), best.pos + 40))) best.label = "Kısmen bozma";
+  return { key: best.key, label: best.label };
+}
+function decisionFacts(d, ref) {
+  const text = String(d.text || "");
+  const year = +((/(\d{4})/.exec(String(d.tarih || "")) || /(\d{4})\s*\//.exec(String(d.karar || "")) || [])[1]) || null;
+  const kunye = [d.daire, d.esas && "E. " + d.esas, d.karar && "K. " + d.karar, d.tarih && "T. " + d.tarih].filter(Boolean).join(", ");
+  // Gerekçe ve hüküm sondadır: baştan kısa giriş + sondan 2.200 karakter
+  const excerpt = text.length > 3000 ? text.slice(0, 500).trim() + "\n[...]\n" + text.slice(-2200).trim() : text.trim();
+  return { ok: true, ref, kunye, daire: d.daire || "", esas: d.esas || "", karar: d.karar || "", tarih: d.tarih || "",
+           year, level: courtLevel(d.daire, text), outcome: decisionOutcome(text), excerpt, chars: text.length };
+}
+
+// ---------- mevzuat (Mevzuat Bilgi Sistemi) ----------
+const MEVZUAT_BASE = "https://www.mevzuat.gov.tr";
+const MEVZUAT_TERTIPS = [5, 4, 3, 2, 1];     // hangi tertipte olduğu bilinmiyorsa sırayla denenir
+const mevzuatPage = (no, tur, tertip) => `${MEVZUAT_BASE}/mevzuat?MevzuatNo=${no}&MevzuatTur=${tur}&MevzuatTertip=${tertip}`;
+
+// tur: Mevzuat Bilgi Sistemi'nin tür kodu (1 = Kanun; diğerleri kullanıcının yapıştırdığı mevzuat.gov.tr bağlantısından gelir)
+async function getMevzuat(no, tur, tertipHint, ctx) {
+  const cache = caches.default;
+  const key = new Request(`https://cache.hukuk.local/mevzuat/${tur}/${no}`);
+  const hit = await cache.match(key);
+  if (hit) return hit;
+  const tertips = tertipHint ? [tertipHint, ...MEVZUAT_TERTIPS.filter(t => t !== tertipHint)] : MEVZUAT_TERTIPS;
+  let lastErr = "";
+  for (const tertip of tertips) {
+    const src = `${MEVZUAT_BASE}/anasayfa/MevzuatFihristDetayIframe?MevzuatTur=${tur}&MevzuatNo=${no}&MevzuatTertip=${tertip}`;
+    let res;
+    try {
+      res = await fetch(src, { headers: { "User-Agent": UA, "Accept": "text/html", "Accept-Language": "tr-TR,tr;q=0.9" },
+                               signal: AbortSignal.timeout(20000) });
+    } catch (e) { lastErr = "bağlantı kurulamadı"; continue; }
+    if (!res.ok) { lastErr = `HTTP ${res.status}`; if (res.status >= 500) break; continue; }
+    const buf = await res.arrayBuffer();
+    const probe = new TextDecoder("latin1").decode(buf.slice(0, Math.min(buf.byteLength, 400000)));
+    if (buf.byteLength < 1500 || !/madde\s*1\b/i.test(probe)) { lastErr = "metin bulunamadı"; continue; }
+    const ct = res.headers.get("Content-Type") || "text/html";
+    const out = new Response(buf, { headers: {
+      "Content-Type": "text/html; charset=" + ((/charset=([\w-]+)/i.exec(ct) || [])[1] || "utf-8"),
+      "Cache-Control": "public, max-age=86400",
+      "X-Mevzuat-Url": mevzuatPage(no, tur, tertip),
+    } });
+    ctx.waitUntil(cache.put(key, out.clone()));
+    return out;
+  }
+  const err = new HttpError(502, lastErr === "metin bulunamadı"
+    ? `Bu numarayla bir metin Mevzuat Bilgi Sistemi'nde bulunamadı. Numarayı kontrol edin veya mevzuat.gov.tr'deki bağlantıyı yapıştırın.`
+    : `Mevzuat Bilgi Sistemi'ne şu an ulaşılamadı (${lastErr}). Biraz sonra tekrar deneyin.`);
+  err.officialUrl = mevzuatPage(no, tur, tertipHint || 5);
+  throw err;
+}
+
 // ---------- yönlendirme ----------
 async function route(req, env, ctx) {
   const url = new URL(req.url);
@@ -656,9 +825,22 @@ async function route(req, env, ctx) {
     const u = await env.DB.prepare("SELECT * FROM users WHERE email=?").bind(email).first();
     const fail = new HttpError(401, "E-posta veya şifre hatalı.");
     if (!u) { await hashPassword(password, newSalt(), PBKDF2_ITER); throw fail; } // zamanlama farkını gizle
+    // Şifre tahmin saldırısına karşı: 15 dakikada en fazla 10 hatalı deneme
+    const slot = "lf" + Math.floor((Date.now() / 60000) / 15);
+    const tries = await env.DB.prepare("SELECT n FROM usage WHERE user_id=? AND day=? AND kind=?").bind(u.id, today(), slot).first();
+    if (tries && tries.n >= 10) throw new HttpError(429, "Çok fazla hatalı deneme yapıldı. Güvenliğiniz için 15 dakika sonra tekrar deneyin veya şifrenizi sıfırlayın.");
     const h = await hashPassword(password, u.pass_salt, u.pass_iter);
-    if (!safeEqual(h, u.pass_hash)) throw fail;
-    ctx.waitUntil(env.DB.prepare("DELETE FROM sessions WHERE expires_at < ?").bind(now()).run());
+    if (!safeEqual(h, u.pass_hash)) {
+      await env.DB.prepare("INSERT INTO usage (user_id, day, kind, n) VALUES (?,?,?,1) ON CONFLICT(user_id, day, kind) DO UPDATE SET n = n + 1").bind(u.id, today(), slot).run();
+      throw fail;
+    }
+    // Saklama süreleri (KVKK metninde yazdığı gibi): süresi dolan oturumlar, 90 günden eski sayaçlar, kullanılmış sıfırlama bağlantıları
+    const cutoff = new Date(Date.now() + 3 * 3600e3 - 90 * 86400e3).toISOString().slice(0, 10);
+    ctx.waitUntil(env.DB.batch([
+      env.DB.prepare("DELETE FROM sessions WHERE expires_at < ?").bind(now()),
+      env.DB.prepare("DELETE FROM usage WHERE day < ?").bind(cutoff),
+      env.DB.prepare("DELETE FROM resets WHERE expires_at < ?").bind(now()),
+    ]).catch(e => console.error("cleanup", String(e && e.message || e))));
     return { token: await createSession(env, u.id), user: publicUser(u) };
   }
 
@@ -676,6 +858,10 @@ async function route(req, env, ctx) {
     const u = await env.DB.prepare("SELECT id FROM users WHERE email=?").bind(email).first();
     const generic = { ok: true, message: "Bu e-posta kayıtlıysa şifre sıfırlama bağlantısı gönderildi. Gelen kutunuzu ve spam (istenmeyen) klasörünü kontrol edin." };
     if (!u) return generic;
+    // Aynı hesaba günde en fazla 5 sıfırlama e-postası (kötüye kullanım ve Gmail sınırı için)
+    const sent5 = await env.DB.prepare("SELECT n FROM usage WHERE user_id=? AND day=? AND kind='fg'").bind(u.id, today()).first();
+    if (sent5 && sent5.n >= 5) return generic;
+    await env.DB.prepare("INSERT INTO usage (user_id, day, kind, n) VALUES (?,?,'fg',1) ON CONFLICT(user_id, day, kind) DO UPDATE SET n = n + 1").bind(u.id, today()).run();
     const token = randomToken();
     await env.DB.prepare("INSERT INTO resets (token_hash, user_id, expires_at) VALUES (?,?,?)")
       .bind(await sha256(token), u.id, now() + RESET_MINUTES * 60).run();
@@ -730,6 +916,55 @@ async function route(req, env, ctx) {
     const b = await body(req);
     const src = String(b.source || "");
     return { decision: src === "arsiv" ? await getArchiveDecision(env, b.id, b.hint) : await getDecision(env, src, b.id, b.hint) };
+  }
+
+  // ---- Dilekçe Asistanı ----
+  // 1) Olaydan arama ifadeleri çıkarır (kısa yapay zekâ çağrısı; günlük hak düşmez, paket kontrolü yapılır)
+  if (path === "/api/dilekce/plan" && req.method === "POST") {
+    const b = await body(req);
+    const plan = effectivePlan(user);
+    if (!PLANS[plan].tasks.includes("dilekce_yaz")) throw new HttpError(403, "Dilekçe Asistanı Optimus ve üzeri paketlerde kullanılabilir.");
+    await useQuota(env, user, "ai", false);
+    const olay = String(b.olay || "").trim().slice(0, 4000);
+    if (olay.length < 30) throw new HttpError(400, "Lütfen olayı biraz daha ayrıntılı yazın (en az 30 karakter).");
+    return { queries: await planQueries(env, String(b.tur || "").slice(0, 80), olay, String(b.talep || "").slice(0, 1000)) };
+  }
+  // 2) Avukatın seçtiği kararların metnini getirir, sonucu (onama/bozma…) ve mahkeme düzeyini bilgisayarla çıkarır
+  if (path === "/api/dilekce/kaynak" && req.method === "POST") {
+    const b = await body(req);
+    const plan = effectivePlan(user);
+    const max = PLANS[plan].refs || 0;
+    if (!max) throw new HttpError(403, "Dilekçe Asistanı Optimus ve üzeri paketlerde kullanılabilir.");
+    const refs = (Array.isArray(b.refs) ? b.refs : []).slice(0, max);
+    if (!refs.length) throw new HttpError(400, "En az bir karar seçin.");
+    const got = await Promise.allSettled(refs.map(r => String(r.source) === "arsiv"
+      ? getArchiveDecision(env, r.id, r.hint) : getDecision(env, String(r.source || ""), r.id, r.hint)));
+    const items = got.map((g, i) => g.status === "fulfilled" ? decisionFacts(g.value, refs[i]) : { ok: false, ref: refs[i], error: "Karar metni alınamadı." });
+    const ok = items.filter(x => x.ok);
+    const count = k => ok.filter(x => x.outcome.key === k).length;
+    const ozet = { toplam: ok.length, alinamayan: items.length - ok.length,
+      onama: count("onama"), bozma: count("bozma"), kaldirma: count("kaldirma"), kabul: count("kabul"), ret: count("ret"),
+      ihlal: count("ihlal"), ihlalYok: count("ihlal_yok"), belirsiz: count("belirsiz"),
+      ibkGk: ok.filter(x => x.level.rank >= 4).length, enYeni: ok.reduce((m, x) => Math.max(m, x.year || 0), 0) || null };
+    return { items, ozet };
+  }
+
+  // Mevzuat Bilgi Sistemi'nden güncel kanun metni (yalnızca mevzuat.gov.tr; açık vekil sunucu değildir).
+  // Metin olduğu gibi aktarılır, madde ayrıştırması tarayıcıda yapılır (sunucu işlemci süresi harcanmaz).
+  if (path === "/api/mevzuat" && req.method === "POST") {
+    const b = await body(req);
+    const no = String(b.no || "").trim();
+    const tur = String(b.tur || "1").trim();
+    const tertip = Number(b.tertip) || 0;
+    if (!/^\d{1,7}$/.test(no)) throw new HttpError(400, "Geçerli bir mevzuat numarası girin (ör. 6098).");
+    if (!/^\d{1,2}$/.test(tur)) throw new HttpError(400, "Geçersiz mevzuat türü.");
+    if (tertip && !(tertip >= 1 && tertip <= 9)) throw new HttpError(400, "Geçersiz tertip.");
+    await useQuota(env, user, "search", false);
+    const r = await getMevzuat(no, tur, tertip, ctx);
+    const quota = await useQuota(env, user, "search");
+    const h = new Headers(r.headers);
+    h.set("X-Quota-Used", String(quota.used)); h.set("X-Quota-Limit", String(quota.limit));
+    return new Response(r.body, { headers: h });
   }
 
   if (path === "/api/ai-stream" && req.method === "POST") {
@@ -838,7 +1073,7 @@ export default {
       if (out instanceof Response) {
         const h = new Headers(out.headers);
         for (const [k, v] of Object.entries(cors)) h.set(k, v);
-        h.set("Access-Control-Expose-Headers", "X-Note, X-Quota-Used, X-Quota-Limit");
+        h.set("Access-Control-Expose-Headers", "X-Note, X-Quota-Used, X-Quota-Limit, X-Mevzuat-Url");
         return new Response(out.body, { status: out.status, headers: h });
       }
       return json(out, 200, cors);

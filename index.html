@@ -112,7 +112,38 @@ footer.site nav{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:10px}
 .spinner{width:18px;height:18px;border:2px solid #ffffff66;border-top-color:#fff;border-radius:50%;animation:sp .8s linear infinite}
 .btn-ghost .spinner,.btn-gold .spinner{border-color:#0002;border-top-color:currentColor}
 @keyframes sp{to{transform:rotate(360deg)}}
-@media (max-width:520px){ .top nav a:not(.primary){display:none} .stats{grid-template-columns:repeat(3,1fr)} }
+del{background:#fde8e6;color:#8c1d18;text-decoration:line-through;border-radius:3px;padding:0 2px}
+ins{background:#dff3e6;color:#145c38;text-decoration:none;border-radius:3px;padding:0 2px;font-weight:600}
+mark{background:var(--gold-soft);color:inherit;border-radius:3px;padding:0 2px}
+.diff{white-space:normal}
+.hist{padding-left:20px;margin:6px 0}.hist li{margin:6px 0}
+.sugg button{display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-top:0;padding:10px 12px;cursor:pointer;font-size:.95rem}
+.sugg button:first-child{border-top:1px solid var(--line);border-radius:10px 10px 0 0;margin-top:4px}.sugg button:last-child{border-radius:0 0 10px 10px}
+.sugg button:only-child{border-radius:10px}
+details summary{cursor:pointer;color:var(--muted)}
+.steps{display:flex;gap:6px;overflow-x:auto;margin:6px 0 4px;scrollbar-width:none}
+.steps button{flex:1 0 auto;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px 10px;font-size:.88rem;cursor:pointer;color:var(--text)}
+.steps button b{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--line);margin-right:4px;font-size:.78rem}
+.steps button.on{border-color:var(--navy);background:var(--navy);color:#fff}.steps button.on b{background:var(--gold);color:var(--navy)}
+.steps button.off{opacity:.45;cursor:default}
+.pick{display:flex;align-items:stretch;gap:0;margin-top:8px;border:1px solid var(--line);border-radius:12px;background:var(--card);overflow:hidden}
+.pick.on{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
+.pick .chk{display:grid;place-items:center;padding:0 12px;margin:0;border-right:1px solid var(--line);cursor:pointer}
+.pick .chk input{width:22px;height:22px;min-height:0;accent-color:var(--navy)}
+.pick .pbody{flex:1;text-align:left;background:none;border:0;padding:12px;cursor:pointer;color:var(--text)}
+.pick .pbody b{display:block;font-weight:600}.pick .pbody span{color:var(--muted);font-size:.88rem}
+.peek{margin-top:6px;max-height:45vh;font-size:.95rem}
+.pickbar{position:sticky;bottom:0;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:12px;box-shadow:0 -4px 14px #0000000f}
+.tbl .trow{display:flex;justify-content:space-between;align-items:center;gap:10px;border-bottom:1px solid var(--line);padding:10px 2px}
+.tbl .trow span{display:block}
+.tag2{flex:none;font-size:.8rem;font-weight:700;border-radius:999px;padding:4px 10px;background:var(--line)}
+.o-onama,.o-kabul,.o-ihlal{background:#dff3e6;color:#145c38}.o-bozma,.o-ret,.o-kaldirma,.o-ihlal_yok{background:#fde8e6;color:#8c1d18}
+@media (prefers-color-scheme:dark){ .o-onama,.o-kabul,.o-ihlal{background:#173a28;color:#9be0b4} .o-bozma,.o-ret,.o-kaldirma,.o-ihlal_yok{background:#4a1f1c;color:#ffb4ab} }
+.hist-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;align-items:center}
+.hist-row button{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 12px;font-size:.88rem;cursor:pointer;color:var(--text);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist-row .clr{border:0;background:none;color:var(--err);text-decoration:underline;padding:6px 4px}
+@media (prefers-color-scheme:dark){ del{background:#4a1f1c;color:#ffb4ab} ins{background:#173a28;color:#9be0b4} }
+@media (max-width:520px){ .tabs button{padding:8px 12px;font-size:.93rem} .top nav a:not(.primary){display:none} .stats{grid-template-columns:repeat(3,1fr)} }
 </style>
 </head>
 <body>
@@ -146,7 +177,8 @@ const CONFIG = {
   OWNER: "Yurdagül Güler",                // hak sahibi / hizmet sağlayıcı / veri sorumlusu
   SUPPORT_EMAIL: "yolhava.destek@gmail.com",
   API_URL: "https://hukuk-api.yolhava-destek.workers.dev",   // Cloudflare Worker adresi
-  TERMS_DATE: "08.10.2026",
+  TERMS_DATE: "14.10.2026",
+  FEATURES: { mevzuat: false },   // Mevzuat sekmesi test sonrasında açılacak
 };
 // ============================================
 
@@ -232,7 +264,7 @@ function pageHome(){
 
   <section class="block"><div class="wrap" style="text-align:center">
     <h2>Büronuzun araştırma yükünü hafifletin</h2>
-    <p class="muted">Kayıt olun, Optimus paketinin tüm özelliklerini 1 gün boyunca ücretsiz kullanın.</p>
+    <p class="muted">Kayıt olun, Optimus paketinin tüm özelliklerini 7 gün boyunca ücretsiz kullanın.</p>
     <a class="btn btn-primary" href="#/kayit">Hemen başlayın</a>
   </div></section>`;
 }
@@ -240,24 +272,40 @@ function feature(ico, title, text){ return `<article class="card feature"><div c
 
 const PLAN_INFO = [
   { key:"basic", name:"Basic", price:"0 ₺", items:["Günde 10 karar araması","Günde 3 karar özeti","Metin yapıştırarak kullanım"] },
-  { key:"optimus", name:"Optimus", price:"400 ₺", featured:true, items:["Günde 200 karar araması","Günde 50 yapay zekâ işlemi","Sözleşme analizi, dilekçe taslağı, hukuki çeviri","UYAP (UDF/EYP), PDF, Word ve fotoğraf yükleme","40.000 karaktere kadar belge"] },
-  { key:"maximus", name:"Maximus", price:"1.000 ₺", items:["Günde 1.000 karar araması","Günde 200 yapay zekâ işlemi","Optimus'un tüm özellikleri + karar karşılaştırma","80.000 karaktere kadar belge","Öncelikli destek"] },
+  { key:"optimus", name:"Optimus", price:"700 ₺", year:"7.000 ₺", featured:true, items:["Günde 200 karar araması","Günde 50 yapay zekâ işlemi","Dilekçe Asistanı (5 emsal kararla)","Sözleşme analizi ve düzeltilmiş yeni versiyon, hukuki çeviri","UYAP (UDF/EYP), PDF, Word ve fotoğraf yükleme","40.000 karaktere kadar belge"] },
+  { key:"maximus", name:"Maximus", price:"1.200 ₺", year:"12.000 ₺", items:["Günde 1.000 karar araması","Günde 200 yapay zekâ işlemi","Dilekçe Asistanı (10 emsal kararla)","Optimus'un tüm özellikleri + karar karşılaştırma","80.000 karaktere kadar belge","Öncelikli destek"] },
 ];
 function pagePlans(){
   app.innerHTML = `<section class="block plans"><div class="wrap">
     <h1>Paketler</h1>
-    <p class="muted">Her yeni hesap Optimus paketini <b>7 gün ücretsiz</b> dener. Fiyatlara KDV dahildir; aylık abonelik.</p>
+    <p class="muted">Her yeni hesap Optimus paketini <b>7 gün ücretsiz</b> dener. Fiyatlara KDV dahildir. <b>Yıllık ödemede 2 ay bedava.</b></p>
     <div class="notice">Platform şu an <b>test aşamasındadır</b>; ücretli paketlerin satışı henüz açılmamıştır. Test kullanıcısı olmak için <a href="mailto:${esc(CONFIG.SUPPORT_EMAIL)}">${esc(CONFIG.SUPPORT_EMAIL)}</a> adresine yazabilirsiniz.</div>
     <div class="grid">${PLAN_INFO.map(p => `
       <article class="card plan ${p.featured ? "featured" : ""}">
         ${p.featured ? `<span class="tag">En çok tercih edilen</span>` : ""}
         <h3>${p.name}</h3>
         <div class="price">${p.price} <small>/ ay</small></div>
+        ${p.year ? `<p class="muted small" style="margin:2px 0 0">Yıllık ${p.year} (2 ay bedava)</p>` : ""}
         <ul>${p.items.map(i => `<li>${esc(i)}</li>`).join("")}</ul>
         ${p.key === "basic"
           ? `<a class="btn btn-ghost btn-block" href="#/kayit">Ücretsiz başla</a>`
           : `<button class="btn btn-primary btn-block" disabled>Satış yakında</button>`}
       </article>`).join("")}</div>
+  <h2 style="margin-top:28px">Ekip ve ofis paketleri</h2>
+    <p class="muted small">2 kişilik ekiplere %10, 3 kişilik ekiplere %15 indirim. 4-5 kişilik bürolar için Ofis paketleri.</p>
+    <div class="card" style="margin-bottom:12px"><div class="tbl">
+      <div class="trow"><div><b>Kişi</b></div><div><b>Optimus</b></div><div><b>Maximus</b></div></div>
+      <div class="trow"><div>2 kişi (%10)</div><div>1.260 ₺ / ay</div><div>2.160 ₺ / ay</div></div>
+      <div class="trow"><div>3 kişi (%15)</div><div>1.785 ₺ / ay</div><div>3.060 ₺ / ay</div></div>
+      <div class="trow"><div>4-5 kişi (Ofis)</div><div>2.250 ₺ / ay</div><div>4.200 ₺ / ay</div></div>
+    </div><p class="muted small" style="margin:8px 0 0">Ekip ve ofis paketleri için <a href="mailto:${esc(CONFIG.SUPPORT_EMAIL)}?subject=${encodeURIComponent("Ekip paketi")}">${esc(CONFIG.SUPPORT_EMAIL)}</a> adresine yazın. Yıllık ödemede 2 ay bedava.</p></div>
+    <h3>Ofis paketleri <span class="muted small" style="font-weight:400">(4-5 kullanıcı)</span></h3>
+    <div class="grid">
+      <article class="card plan"><h3>Optimus Ofis</h3><div class="price">2.250 ₺ <small>/ ay</small></div><p class="muted small" style="margin:2px 0 0">Yıllık 22.500 ₺ (2 ay bedava)</p>
+        <ul><li>4-5 avukat için Optimus</li><li>5 kişide kişi başı 450 ₺'ye denk gelir</li></ul><a class="btn btn-ghost btn-block" href="mailto:${esc(CONFIG.SUPPORT_EMAIL)}?subject=${encodeURIComponent("Optimus Ofis paketi")}">İletişime geçin</a></article>
+      <article class="card plan"><h3>Maximus Ofis</h3><div class="price">4.200 ₺ <small>/ ay</small></div><p class="muted small" style="margin:2px 0 0">Yıllık 42.000 ₺ (2 ay bedava)</p>
+        <ul><li>4-5 avukat için Maximus</li><li>5 kişide kişi başı 840 ₺'ye denk gelir</li></ul><a class="btn btn-ghost btn-block" href="mailto:${esc(CONFIG.SUPPORT_EMAIL)}?subject=${encodeURIComponent("Maximus Ofis paketi")}">İletişime geçin</a></article>
+    </div>
   </div></section>`;
 }
 
@@ -287,7 +335,7 @@ function pageLogin(){
 function pageRegister(){
   app.innerHTML = `<div class="wrap"><div class="card narrow">
     <h1>Hesap oluştur</h1>
-    <p class="muted small">Kayıt olduğunuzda Optimus paketi 1 gün ücretsiz tanımlanır. Kart bilgisi istenmez.</p>
+    <p class="muted small">Kayıt olduğunuzda Optimus paketi 7 gün ücretsiz tanımlanır. Kart bilgisi istenmez.</p>
     <form id="f">
       <label for="name">Ad soyad</label><input id="name" type="text" autocomplete="name" maxlength="100">
       <label for="email">E-posta</label><input id="email" type="email" autocomplete="email" required>
@@ -366,6 +414,8 @@ async function pagePanel(){
     <div class="tabs" id="tabs">
       <button data-t="ara">Karar ara</button>
       <button data-t="analiz">Belge analizi</button>
+      <button data-t="dilekce">Dilekçe</button>
+      ${CONFIG.FEATURES.mevzuat ? `<button data-t="mevzuat">Mevzuat</button>` : ""}
       <button data-t="hesap">Hesabım</button>
     </div>
     <p class="small" style="margin:6px 2px 0"><a href="#/kullanim">📘 Nasıl kullanılır?</a> · <a href="${feedbackLink()}">✉️ Geri bildirim gönder</a></p>
@@ -376,7 +426,7 @@ async function pagePanel(){
 }
 function renderTab(){
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.t === state.tab));
-  ({ ara: tabSearch, analiz: tabAnalyze, hesap: tabAccount })[state.tab]();
+  (({ ara: tabSearch, analiz: tabAnalyze, dilekce: tabDilekce, mevzuat: tabMevzuat, hesap: tabAccount })[state.tab] || tabSearch)();
 }
 
 const SOURCE_LABELS = { arsiv: "📚 11M Arşiv", yargitay: "Yargıtay", emsal: "UYAP Emsal", danistay: "Danıştay" };
@@ -389,16 +439,33 @@ function tabSearch(){
     <div id="archBox" class="${state.source === "arsiv" ? "" : "hidden"}"><label for="cfg" style="margin-top:8px">Arşivde mahkeme</label>
       <select id="cfg">${Object.entries(ARCH_LABELS).map(([k,v]) => `<option value="${k}" ${k === (state.archCfg || "yargitay") ? "selected" : ""}>${v}</option>`).join("")}</select></div>
     <form id="sf" class="searchrow"><input id="q" type="text" placeholder="ör. fazla mesai ispat yükü" maxlength="300" required value="${esc(state.lastSearch?.q || "")}"><button class="btn btn-primary">Ara</button></form>
-    <p class="muted small" style="margin:8px 0 0">📚 11M Arşiv: 11 milyon Yargıtay, UYAP Emsal, Danıştay ve AYM kararında arama; esas veya karar no ile de arayabilirsiniz (ör. 2021/1234). Diğer kaynaklar doğrudan resmî karar bankasından gelir.</p>
+    <p class="muted small" style="margin:8px 0 0">📚 11M Arşiv: 11 milyon Yargıtay, UYAP Emsal, Danıştay ve AYM kararında arama; esas veya karar no ile de arayabilirsiniz (ör. 2021/1234). Birden fazla ifade için "+", virgül veya tire kullanın: <i>kıdem tazminatı + fazla mesai</i>.</p>
+    <div id="hist"></div>
     <div id="m" class="hidden"></div>
   </div>
   <div id="results"></div>`;
+  drawHist();
   $("#src").onclick = e => { const s = e.target.dataset.s; if (s){ state.source = s; document.querySelectorAll("#src button").forEach(x => x.classList.toggle("on", x.dataset.s === s)); $("#archBox").classList.toggle("hidden", s !== "arsiv"); } };
   $("#cfg").onchange = e => { state.archCfg = e.target.value; };
-  $("#sf").onsubmit = e => { e.preventDefault(); doSearch($("#q").value, 1, $("#sf button")); };
+  $("#sf").onsubmit = e => { e.preventDefault(); const q = $("#q").value.trim(); if (q) { addHist(q, state.source, state.archCfg || "yargitay"); drawHist(); } doSearch(q, 1, $("#sf button")); };
   if (state.lastSearch) drawAll(false);
 }
 // Arama: "11M Arşiv" seçiliyse UYAP Emsal sonuçları hemen gösterilir, arşiv sonuçları gelince altına eklenir.
+function drawHist(){
+  const box = $("#hist"); if (!box) return;
+  const h = getHist();
+  if (!h.length) { box.innerHTML = ""; return; }
+  box.innerHTML = `<div class="hist-row"><span class="muted small">Son aramalar:</span>${h.slice(0, 8).map((x, i) => `<button data-h="${i}" title="${esc(x.q)}">${esc(x.q.length > 32 ? x.q.slice(0, 32) + "…" : x.q)}</button>`).join("")}<button class="clr" id="hclr">Geçmişi temizle</button></div>`;
+  box.onclick = e => {
+    if (e.target.id === "hclr") { if (confirm("Arama geçmişi silinsin mi?")) { clearHist(); drawHist(); } return; }
+    const b = e.target.closest("[data-h]"); if (!b) return;
+    const x = getHist()[+b.dataset.h]; if (!x) return;
+    state.source = x.s; state.archCfg = x.c;
+    document.querySelectorAll("#src button").forEach(y => y.classList.toggle("on", y.dataset.s === x.s));
+    $("#archBox").classList.toggle("hidden", x.s !== "arsiv"); if ($("#cfg")) $("#cfg").value = x.c;
+    $("#q").value = x.q; addHist(x.q, x.s, x.c); drawHist(); doSearch(x.q, 1, $("#sf button"));
+  };
+}
 async function doSearch(q, page, btn){
   busy(btn, true, "Aranıyor…"); $("#m").classList.add("hidden");
   const cfg = state.archCfg || "yargitay";
@@ -446,7 +513,7 @@ function drawAll(scroll){
       `<p class="muted small" style="margin:4px 2px 0">yaklaşık ${Number(r.total).toLocaleString("tr-TR")} sonuç${r.quota ? ` · bugünkü arama: ${r.quota.used}/${r.quota.limit}` : ""}</p>` +
       (k === "fast" && !state.fastOpen ? r.items.slice(0, 5) : r.items).map((it, i) => `<button class="result" data-k="${k}" data-i="${i}"><b>${esc(it.daire)}</b><span>E. ${esc(it.esas || "—")} · K. ${esc(it.karar || "—")} · ${esc(it.tarih || "")}</span></button>`).join("") +
       (k === "fast" && !state.fastOpen && r.items.length > 5 ? `<div class="row"><button class="btn btn-ghost btn-block" data-open="1">${esc(r.sourceLabel)}: diğer sonuçları göster</button></div>`
-        : r.items.length < r.total ? `<div class="row"><button class="btn btn-ghost btn-block" data-more="${k}">Daha fazla sonuç</button></div>` : "");
+        : (r.items.length < r.total || r.more) ? `<div class="row"><button class="btn btn-ghost btn-block" data-more="${k}">Daha fazla sonuç</button></div>` : "");
   }).join("");
   box.onclick = e => {
     if (e.target.closest("[data-open]")) { state.fastOpen = true; return drawAll(false); }
@@ -471,6 +538,7 @@ async function openDecision(source, item){
         <button class="btn btn-ghost" id="copyK">Künyeyi kopyala</button>
         <button class="btn btn-ghost" id="copyT">Metni kopyala</button>
         ${d.officialUrl ? `<a class="btn btn-ghost" href="${esc(d.officialUrl)}" target="_blank" rel="noopener">Resmî kaynakta aç</a>` : ""}
+        ${dlMax() ? `<button class="btn btn-ghost" id="toDlRef">+ Dilekçeye ekle</button>` : ""}
       </div>
       ${d.note ? `<div class="notice">${esc(d.note)}</div>` : ""}
       <div id="m" class="hidden"></div>
@@ -478,7 +546,16 @@ async function openDecision(source, item){
       <h3 style="margin-top:18px">Karar metni</h3>
       <div class="doc" id="doc"></div>
     </div>`;
-    $("#doc").textContent = d.text;
+    const qNow = (state.lastSearch && state.lastSearch.q) || "";
+    $("#doc").innerHTML = highlightPhrases(d.text, hlTerms(qNow));
+    const addBtn = $("#toDlRef");
+    if (addBtn) addBtn.onclick = () => {
+      const dl = dlState(), k = refKey(source, item.id);
+      if (dl.picked[k]) { addBtn.textContent = "Dilekçede ✓"; return; }
+      if (dlPickedList().length >= dlMax()) return showMsg($("#m"), `Dilekçe Asistanı'nda en fazla ${dlMax()} karar seçilebilir.`);
+      dl.picked[k] = { source, label: SOURCE_LABELS[source] || "", q: qNow, item };
+      addBtn.textContent = "Dilekçeye eklendi ✓";
+    };
     $("#back").onclick = () => renderTab();
     $("#copyK").onclick = () => copy(kunye, $("#copyK"));
     $("#copyT").onclick = () => copy(kunye + "\n\n" + d.text, $("#copyT"));
@@ -524,6 +601,7 @@ async function streamAI(body, el){
     }
   } else { text = await res.text(); }
   showAI(el, { answer: text.trim(), note, quota });
+  return text.trim();
 }
 function showAI(el, r){
   el.classList.remove("hidden");
@@ -541,12 +619,11 @@ async function copy(text, btn){
 const TASKS = {
   ozet: ["Karar özeti", "Özetlenecek karar metnini yapıştırın veya dosya / fotoğraf yükleyin…"],
   sozlesme: ["Sözleşme risk analizi", "İncelenecek sözleşme metnini yapıştırın veya dosya / fotoğraf yükleyin…"],
-  dilekce: ["Dilekçe taslağı", "Olayları, tarafları ve taleplerinizi yazın. Varsa dayanmak istediğiniz kanun maddelerini ve kararları da ekleyin…"],
   ceviri: ["Hukuki çeviri", "Çevrilecek metni yapıştırın veya dosya / fotoğraf yükleyin…"],
   karsilastir: ["Karar karşılaştırma", "Karşılaştırılacak kararların metinlerini art arda yapıştırın…"],
 };
 const PLAN_RANK = { basic: 0, optimus: 1, maximus: 2 };
-const TASK_MIN = { ozet: "basic", sozlesme: "optimus", dilekce: "optimus", ceviri: "optimus", karsilastir: "maximus" };
+const TASK_MIN = { ozet: "basic", sozlesme: "optimus", sozlesme_revize: "optimus", ceviri: "optimus", karsilastir: "maximus", degisiklik: "optimus", dava_analiz: "optimus", dilekce_yaz: "optimus" };
 const PLAN_NAME = { basic: "Basic", optimus: "Optimus", maximus: "Maximus" };
 function myPlan(){ return (state.user && state.user.plan) || "basic"; }
 function allowed(min){ return PLAN_RANK[myPlan()] >= PLAN_RANK[min]; }
@@ -663,7 +740,11 @@ function tabAnalyze(){
     <div id="m" class="hidden"></div>
     <button class="btn btn-primary btn-block" id="go">Çalıştır</button>
     <div id="out" class="hidden card out" style="margin-top:14px"></div>
-  </div>`;
+    <div id="rev" class="hidden"></div>
+  </div>
+  <div class="card" style="margin-top:12px"><b>✍️ Dilekçe mi hazırlayacaksınız?</b> <span class="muted small">Dilekçe artık kendi sekmesinde: olayınıza uygun kararları bulur ve yalnızca gerçek kararlara atıf yapar.</span>
+    <div class="row"><button class="btn btn-ghost" id="toDl">Dilekçe Asistanı'na git →</button></div></div>`;
+  $("#toDl").onclick = () => { state.tab = "dilekce"; renderTab(); window.scrollTo(0, 0); };
   const setPh = () => { const t = $("#task").value; $("#txt").placeholder = TASKS[t][1]; $("#langBox").classList.toggle("hidden", t !== "ceviri"); };
   $("#task").onchange = setPh; setPh();
   const info = (t, ok) => { const el = $("#fileInfo"); el.textContent = t; el.classList.remove("hidden"); el.style.borderLeftColor = ok === false ? "var(--err)" : ""; };
@@ -691,11 +772,810 @@ function tabAnalyze(){
   $("#cam").onchange = onImages; $("#gal").onchange = onImages;
   $("#go").onclick = async () => {
     const btn = $("#go"); busy(btn, true, "Çalışıyor…"); $("#m").classList.add("hidden");
-    try { await streamAI({ task: $("#task").value, text: $("#txt").value, extra: $("#lang").value }, $("#out")); }
+    const task = $("#task").value, src = $("#txt").value;
+    $("#rev").classList.add("hidden"); $("#rev").innerHTML = "";
+    try {
+      const answer = await streamAI({ task, text: src, extra: $("#lang").value }, $("#out"));
+      if (task === "sozlesme" && answer) offerRevision(src, answer);
+    }
     catch (err) { showMsg($("#m"), err.message); }
     finally { busy(btn, false); }
   };
 }
+// Sözleşme risk analizinden sonra: önerileri uygulayan yeni versiyon + değişikliklerin kırmızı/yeşil gösterimi
+function offerRevision(original, analysis){
+  const box = $("#rev");
+  const can = allowed(TASK_MIN.sozlesme_revize);
+  box.classList.remove("hidden");
+  box.innerHTML = `<div class="notice" style="margin-top:14px"><b>Önerileri sözleşmeye uygulayalım mı?</b> Yapay zekâ, analizdeki önerilere göre sözleşmenin düzeltilmiş tam metnini yazar; değişiklikler kırmızı/yeşil gösterilir. Tutar, tarih gibi değerler [ ] olarak bırakılır.</div>
+    <button class="btn btn-gold btn-block" id="revGo" ${can ? "" : "disabled"}>✍️ Önerileri uygula — yeni versiyon oluştur</button>
+    <div id="revM" class="hidden"></div><div id="revOut" class="hidden card out" style="margin-top:14px"></div><div id="revDiff"></div>`;
+  $("#revGo").onclick = async () => {
+    const btn = $("#revGo"); busy(btn, true, "Yeni versiyon yazılıyor…"); $("#revM").classList.add("hidden"); $("#revDiff").innerHTML = "";
+    try {
+      const out = await streamAI({ task: "sozlesme_revize", text: `SÖZLEŞME:\n${original}\n\nRİSK ANALİZİ:\n${analysis}` }, $("#revOut"));
+      const parts = out.split(/-{2,}\s*YAPILAN DEĞİŞİKLİKLER\s*-{2,}/i);
+      const revised = parts[0].trim();
+      const g = wordDiff(original, revised);
+      const ch = diffSummary(g).length;
+      $("#revDiff").innerHTML = `<div class="card" style="margin-top:14px"><h3>Değişiklikler (eski → yeni)</h3>
+        <p class="small">${ch} değişiklik · <del>çıkarılan</del> · <ins>eklenen</ins></p><div class="doc diff">${diffHtml(g)}</div>
+        <div class="row"><button class="btn btn-ghost" id="revCopy">Yeni sözleşmeyi kopyala</button><button class="btn btn-ghost" id="revDocx">Word (.docx) indir</button></div></div>`;
+      $("#revCopy").onclick = e => copy(revised, e.target);
+      $("#revDocx").onclick = () => downloadDocx(revised, "sozlesme-yeni-versiyon.docx").catch(err => showMsg($("#revM"), err.message));
+    } catch (err) { showMsg($("#revM"), err.message); }
+    finally { busy(btn, false); }
+  };
+}
+
+// ---------- Mevzuat: madde değişiklik geçmişi + metin karşılaştırma ----------
+// Sık kullanılan kanunlar (ad → numara). Listede olmayanlar numarayla veya mevzuat.gov.tr bağlantısıyla açılır.
+const LAWS = `2709|Türkiye Cumhuriyeti Anayasası
+4721|Türk Medeni Kanunu
+4722|Türk Medeni Kanununun Yürürlüğü ve Uygulama Şekli Hakkında Kanun
+6098|Türk Borçlar Kanunu
+6101|Türk Borçlar Kanununun Yürürlüğü ve Uygulama Şekli Hakkında Kanun
+5237|Türk Ceza Kanunu
+5252|Türk Ceza Kanununun Yürürlük ve Uygulama Şekli Hakkında Kanun
+5271|Ceza Muhakemesi Kanunu
+5320|Ceza Muhakemesi Kanununun Yürürlük ve Uygulama Şekli Hakkında Kanun
+6100|Hukuk Muhakemeleri Kanunu
+2004|İcra ve İflas Kanunu
+7201|Tebligat Kanunu
+4857|İş Kanunu
+1475|İş Kanunu (eski; kıdem tazminatı 14. madde)
+7036|İş Mahkemeleri Kanunu
+6331|İş Sağlığı ve Güvenliği Kanunu
+6356|Sendikalar ve Toplu İş Sözleşmesi Kanunu
+4447|İşsizlik Sigortası Kanunu
+854|Deniz İş Kanunu
+5953|Basın Mesleğinde Çalışanlarla Çalıştıranlar Arasındaki Münasebetlerin Tanzimi Hakkında Kanun
+5510|Sosyal Sigortalar ve Genel Sağlık Sigortası Kanunu
+5434|Türkiye Cumhuriyeti Emekli Sandığı Kanunu
+6102|Türk Ticaret Kanunu
+6103|Türk Ticaret Kanununun Yürürlüğü ve Uygulama Şekli Hakkında Kanun
+6502|Tüketicinin Korunması Hakkında Kanun
+6563|Elektronik Ticaretin Düzenlenmesi Hakkında Kanun
+5941|Çek Kanunu
+3095|Kanuni Faiz ve Temerrüt Faizine İlişkin Kanun
+6361|Finansal Kiralama, Faktoring, Finansman ve Tasarruf Finansman Şirketleri Kanunu
+5411|Bankacılık Kanunu
+6362|Sermaye Piyasası Kanunu
+4054|Rekabetin Korunması Hakkında Kanun
+6769|Sınai Mülkiyet Kanunu
+5846|Fikir ve Sanat Eserleri Kanunu
+1163|Kooperatifler Kanunu
+634|Kat Mülkiyeti Kanunu
+2644|Tapu Kanunu
+3402|Kadastro Kanunu
+3091|Taşınmaz Mal Zilyetliğine Yapılan Tecavüzlerin Önlenmesi Hakkında Kanun
+2942|Kamulaştırma Kanunu
+3194|İmar Kanunu
+4708|Yapı Denetimi Hakkında Kanun
+6306|Afet Riski Altındaki Alanların Dönüştürülmesi Hakkında Kanun
+2577|İdari Yargılama Usulü Kanunu
+2575|Danıştay Kanunu
+2797|Yargıtay Kanunu
+6216|Anayasa Mahkemesinin Kuruluşu ve Yargılama Usulleri Hakkında Kanun
+5235|Adli Yargı İlk Derece Mahkemeleri ile Bölge Adliye Mahkemelerinin Kuruluş, Görev ve Yetkileri Hakkında Kanun
+4787|Aile Mahkemelerinin Kuruluş, Görev ve Yargılama Usullerine Dair Kanun
+2802|Hâkimler ve Savcılar Kanunu
+1136|Avukatlık Kanunu
+1512|Noterlik Kanunu
+6325|Hukuk Uyuşmazlıklarında Arabuluculuk Kanunu
+5326|Kabahatler Kanunu
+5275|Ceza ve Güvenlik Tedbirlerinin İnfazı Hakkında Kanun
+5395|Çocuk Koruma Kanunu
+6284|Ailenin Korunması ve Kadına Karşı Şiddetin Önlenmesine Dair Kanun
+3713|Terörle Mücadele Kanunu
+2911|Toplantı ve Gösteri Yürüyüşleri Kanunu
+6136|Ateşli Silahlar ve Bıçaklar ile Diğer Aletler Hakkında Kanun
+5607|Kaçakçılıkla Mücadele Kanunu
+5549|Suç Gelirlerinin Aklanmasının Önlenmesi Hakkında Kanun
+2559|Polis Vazife ve Salahiyet Kanunu
+4483|Memurlar ve Diğer Kamu Görevlilerinin Yargılanması Hakkında Kanun
+5651|İnternet Ortamında Yapılan Yayınların Düzenlenmesi ve Bu Yayınlar Yoluyla İşlenen Suçlarla Mücadele Edilmesi Hakkında Kanun
+5187|Basın Kanunu
+6112|Radyo ve Televizyonların Kuruluş ve Yayın Hizmetleri Hakkında Kanun
+6698|Kişisel Verilerin Korunması Kanunu
+4982|Bilgi Edinme Hakkı Kanunu
+3071|Dilekçe Hakkının Kullanılmasına Dair Kanun
+6328|Kamu Denetçiliği Kurumu Kanunu
+6701|Türkiye İnsan Hakları ve Eşitlik Kurumu Kanunu
+5233|Terör ve Terörle Mücadeleden Doğan Zararların Karşılanması Hakkında Kanun
+657|Devlet Memurları Kanunu
+2547|Yükseköğretim Kanunu
+1739|Millî Eğitim Temel Kanunu
+5393|Belediye Kanunu
+5216|Büyükşehir Belediyesi Kanunu
+5302|İl Özel İdaresi Kanunu
+5442|İl İdaresi Kanunu
+442|Köy Kanunu
+2918|Karayolları Trafik Kanunu
+2872|Çevre Kanunu
+6831|Orman Kanunu
+4342|Mera Kanunu
+5403|Toprak Koruma ve Arazi Kullanımı Kanunu
+2863|Kültür ve Tabiat Varlıklarını Koruma Kanunu
+3213|Maden Kanunu
+4734|Kamu İhale Kanunu
+4735|Kamu İhale Sözleşmeleri Kanunu
+2886|Devlet İhale Kanunu
+5018|Kamu Malî Yönetimi ve Kontrol Kanunu
+213|Vergi Usul Kanunu
+6183|Amme Alacaklarının Tahsil Usulü Hakkında Kanun
+193|Gelir Vergisi Kanunu
+5520|Kurumlar Vergisi Kanunu
+3065|Katma Değer Vergisi Kanunu
+4760|Özel Tüketim Vergisi Kanunu
+488|Damga Vergisi Kanunu
+492|Harçlar Kanunu
+1319|Emlak Vergisi Kanunu
+197|Motorlu Taşıtlar Vergisi Kanunu
+4458|Gümrük Kanunu
+3568|Serbest Muhasebeci Mali Müşavirlik ve Yeminli Mali Müşavirlik Kanunu
+6458|Yabancılar ve Uluslararası Koruma Kanunu
+5901|Türk Vatandaşlığı Kanunu
+5490|Nüfus Hizmetleri Kanunu
+5682|Pasaport Kanunu
+5253|Dernekler Kanunu
+5378|Engelliler Hakkında Kanun
+1219|Tababet ve Şuabatı San'atlarının Tarzı İcrasına Dair Kanun
+1593|Umumi Hıfzıssıhha Kanunu
+3359|Sağlık Hizmetleri Temel Kanunu
+5070|Elektronik İmza Kanunu
+5809|Elektronik Haberleşme Kanunu
+6585|Perakende Ticaretin Düzenlenmesi Hakkında Kanun
+7223|Ürün Güvenliği ve Teknik Düzenlemeler Kanunu
+2820|Siyasi Partiler Kanunu
+298|Seçimlerin Temel Hükümleri ve Seçmen Kütükleri Hakkında Kanun
+7179|Askeralma Kanunu`.split("\n").map(l => { const [no, name] = l.split("|"); return { no, name, tur: "1" }; });
+const TYPES = [["1", "Kanun"], ["4", "Kanun Hükmünde Kararname"], ["19", "Cumhurbaşkanlığı Kararnamesi"]];
+const TOP_LAWS = ["6098", "4721", "5237", "5271", "6100", "2004", "4857", "6102"];
+const lawCache = {};                       // aynı oturumda tekrar indirilmez, arama hakkı tekrar düşmez
+const trLower = s => String(s).replace(/İ/g, "i").replace(/I/g, "ı").toLowerCase();
+
+// Madde başı: "MADDE 7-", "Madde 7 –", "Ek Madde 2 -", "GEÇİCİ MADDE 1-", "Mükerrer Madde 21 -"
+const ART_RE = /^\s*(?:(Ek|EK|Geçici|GEÇİCİ|Mükerrer|MÜKERRER)\s+)?(?:Madde|MADDE)\s+(\d+(?:\s*\/\s*[A-Za-zÇĞİÖŞÜçğıöşü])?)\s*[-\u2013\u2014]/;
+// Değişiklik notları: "(Değişik: 24/11/2016-6763/24 md.)", "(Ek fıkra: ...)", "(Mülga: ...)", "(İptal: Anayasa Mahkemesinin ...)"
+const NOTE_RE = /\(\s*(Değişik|Ek|Mülga|İptal|Yeniden düzenleme|Değiştirilen)([^:()]{0,60}?)\s*:\s*([^()]{3,300}?)\)/g;
+// Dipnot biçimi: "7/2/2024 tarihli ve 7499 sayılı Kanunun 5 inci maddesiyle değiştirilmiştir"
+const FOOT_RE = /(\d{1,2}\/\d{1,2}\/\d{4})\s+tarihli\s+ve\s+(\d{2,5})\s+sayılı\s+Kanunun\s+(\d+)\s*['’]?\s*\S*\s+maddesiyle\s+(değiştiril|eklen|yürürlükten kaldırıl|mülga)\S*/g;
+const VERB = { "değişik": "değiştirildi", "değiştirilen": "değiştirildi", "ek": "eklendi", "mülga": "yürürlükten kaldırıldı",
+               "iptal": "Anayasa Mahkemesince iptal edildi", "yeniden düzenleme": "yeniden düzenlendi",
+               "değiştiril": "değiştirildi", "eklen": "eklendi", "yürürlükten kaldırıl": "yürürlükten kaldırıldı" };
+
+function htmlToLines(html){
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  doc.querySelectorAll("script,style,head").forEach(n => n.remove());
+  doc.querySelectorAll("br").forEach(n => n.replaceWith("\n"));
+  doc.querySelectorAll("p,div,tr,li,h1,h2,h3,h4,h5,h6,table").forEach(n => n.append("\n"));
+  return (doc.body ? doc.body.textContent : "").replace(/\u00a0/g, " ").split("\n")
+    .map(l => l.replace(/[ \t]+/g, " ").trim()).filter(Boolean);
+}
+function parseNotes(text){
+  const out = [];
+  for (const m of text.matchAll(NOTE_RE)) {
+    const type = trLower(m[1]), scope = m[2].trim(), inner = m[3];
+    const d = /(\d{1,2})\s*\/\s*(\d{1,2})\s*\/\s*(\d{4})/.exec(inner);
+    let law = "", art = "";
+    const k = /-\s*((?:KHK\s*-\s*)?\d{2,5})\s*\/\s*(\d+[a-zA-Z]?)\s*md/i.exec(inner);
+    if (k) { law = k[1].replace(/\s+/g, ""); art = k[2]; }
+    const aym = /E\.?\s*:?\s*(\d{4}\/\d+)\s*[;,]?\s*K\.?\s*:?\s*(\d{4}\/\d+)/i.exec(inner);
+    out.push({ type, scope, raw: m[0], date: d ? `${d[1].padStart(2,"0")}.${d[2].padStart(2,"0")}.${d[3]}` : "",
+               sort: d ? +(d[3] + d[2].padStart(2,"0") + d[1].padStart(2,"0")) : 0, law, art,
+               aym: type === "iptal" && aym ? `E. ${aym[1]}, K. ${aym[2]}` : "" });
+  }
+  for (const m of text.matchAll(FOOT_RE)) {
+    const [dd, mm, yy] = m[1].split("/");
+    out.push({ type: trLower(m[4]), scope: "", raw: m[0], date: `${dd.padStart(2,"0")}.${mm.padStart(2,"0")}.${yy}`,
+               sort: +(yy + mm.padStart(2,"0") + dd.padStart(2,"0")), law: m[2], art: m[3], aym: "" });
+  }
+  return out.sort((a, b) => a.sort - b.sort);
+}
+function parseLaw(html){
+  let lines = htmlToLines(html);
+  const cut = lines.findIndex(l => /YÜRÜRLÜĞE GİRİŞ TARİHİNİ GÖSTERİR LİSTE|EK VE DEĞİŞİKLİK GETİREN MEVZUAT/i.test(l));
+  if (cut > 0) lines = lines.slice(0, cut);
+  const title = (lines.slice(0, 40).find(l => /KANUN|ANAYASA/.test(l) && l === l.toLocaleUpperCase("tr-TR") && l.length < 160) || "").trim();
+  const arts = [];
+  let cur = null;
+  lines.forEach((l, i) => {
+    const m = ART_RE.exec(l);
+    if (m) {
+      const kind = m[1] ? trLower(m[1]).replace("geçici", "geçici") : "";
+      const num = m[2].replace(/\s+/g, "");
+      const prev = lines[i - 1] || "";
+      const heading = prev && prev.length < 90 && !ART_RE.test(prev) && !/[.;:]$/.test(prev) && !/KISIM|BÖLÜM|KİTAP|AYIRIM/.test(prev) ? prev : "";
+      if (cur && heading && cur.lines[cur.lines.length - 1] === heading) cur.lines.pop();
+      cur = { kind, num, key: (kind ? kind + " " : "") + trLower(num), heading, lines: [l] };
+      arts.push(cur);
+    } else if (cur) cur.lines.push(l);
+  });
+  arts.forEach(a => {
+    a.text = a.lines.join("\n");
+    a.label = (a.kind ? a.kind.charAt(0).toLocaleUpperCase("tr-TR") + a.kind.slice(1) + " " : "") + "Madde " + a.num;
+    a.notes = parseNotes((a.heading ? a.heading + "\n" : "") + a.text);
+    a.last = a.notes.reduce((x, n) => Math.max(x, n.sort), 0);
+    delete a.lines;
+  });
+  return { title, arts };
+}
+function normMadde(s){
+  let t = trLower(s).replace(/madde(si)?/g, " ").replace(/\s+/g, " ").trim();
+  let kind = "";
+  const k = /^(ek|geçici|gecici|mükerrer|mukerrer)\s*/.exec(t);
+  if (k) { kind = k[1].replace("gecici", "geçici").replace("mukerrer", "mükerrer"); t = t.slice(k[0].length); }
+  t = t.replace(/\s+/g, "");
+  return t ? (kind ? kind + " " : "") + t : "";
+}
+const lawKey = sel => `${sel.tur}/${sel.no}`;
+async function fetchLaw(sel){
+  const ck = lawKey(sel);
+  if (lawCache[ck]) return lawCache[ck];
+  const headers = { "Content-Type": "application/json" };
+  if (state.token) headers.Authorization = "Bearer " + state.token;
+  let res;
+  try { res = await fetch(apiBase() + "/api/mevzuat", { method: "POST", headers, body: JSON.stringify({ no: sel.no, tur: sel.tur, tertip: sel.tertip || 0 }) }); }
+  catch { throw new Error("Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edin."); }
+  if (!res.ok) {
+    let d = {}; try { d = await res.json(); } catch {}
+    if (res.status === 401) logoutLocal();
+    const e = new Error(d.error || `İşlem başarısız (HTTP ${res.status}).`); e.officialUrl = d.officialUrl; throw e;
+  }
+  const buf = await res.arrayBuffer();
+  let cs = (/charset=([\w-]+)/i.exec(res.headers.get("Content-Type") || "") || [])[1] || "utf-8";
+  let html = new TextDecoder(cs).decode(buf);
+  const meta = /<meta[^>]+charset=["']?([\w-]+)/i.exec(html.slice(0, 3000));
+  if (meta && trLower(meta[1]) !== trLower(cs)) { try { html = new TextDecoder(meta[1]).decode(buf); } catch {} }
+  const law = parseLaw(html);
+  if (!law.arts.length) throw new Error("Metin alındı ama maddeler ayrıştırılamadı. Lütfen bize bildirin; bu sırada metni Mevzuat Bilgi Sistemi'nde açabilirsiniz.");
+  law.no = sel.no; law.tur = sel.tur; law.url = res.headers.get("X-Mevzuat-Url") || "";
+  const known = sel.tur === "1" && LAWS.find(x => x.no === sel.no);
+  const typeName = (TYPES.find(t => t[0] === sel.tur) || [, "Mevzuat"])[1];
+  law.name = known ? known.name : law.title ? law.title.charAt(0) + law.title.slice(1).toLocaleLowerCase("tr-TR") : `${sel.no} sayılı ${typeName}`;
+  law.quota = { used: res.headers.get("X-Quota-Used"), limit: res.headers.get("X-Quota-Limit") };
+  return (lawCache[ck] = law);
+}
+// Kullanıcı girişini çöz: mevzuat.gov.tr bağlantısı, "Ad (no)", yalnızca numara veya kanun adı
+function resolveLaw(q, tur){
+  q = String(q || "").trim();
+  const u = /MevzuatNo=(\d{1,7})/i.exec(q);
+  if (u) return { no: u[1], tur: (/MevzuatTur=(\d{1,2})/i.exec(q) || [, "1"])[1], tertip: +((/MevzuatTertip=(\d)/i.exec(q) || [, 0])[1]) };
+  const p = /\((\d{1,7})\)\s*$/.exec(q);
+  if (p) return { no: p[1], tur: "1" };
+  if (/^\d{1,7}$/.test(q)) return { no: q, tur };
+  const hits = searchLaws(q);
+  return hits.length ? { no: hits[0].no, tur: "1" } : null;
+}
+function searchLaws(q){
+  const words = trLower(q).split(/\s+/).filter(w => w.length > 1);
+  if (!words.length) return [];
+  return LAWS.map(l => { const n = trLower(l.name); return { l, ok: words.every(w => n.includes(w)), start: n.startsWith(words[0]) }; })
+    .filter(x => x.ok).sort((a, b) => (b.start - a.start) || a.l.name.length - b.l.name.length).map(x => x.l);
+}
+const markNotes = t => esc(t).replace(NOTE_RE, m => `<mark>${m}</mark>`).replace(FOOT_RE, m => `<mark>${m}</mark>`);
+function noteLine(n){
+  const what = n.scope ? `${n.scope} ` : "";
+  const by = n.type === "iptal" ? (n.aym ? ` (${n.aym})` : "")
+    : n.law ? ` — ${n.law.startsWith("KHK") ? n.law + " sayılı KHK" : n.law + " sayılı Kanun"}${n.art ? " md. " + n.art : ""}` : "";
+  const q = n.law ? encodeURIComponent(`${n.law.replace("KHK", "KHK ")} sayılı ${n.law.startsWith("KHK") ? "kanun hükmünde kararname" : "kanun"} resmi gazete`) : "";
+  return `<li><b>${esc(n.date || "tarih belirtilmemiş")}</b> · ${esc(what)}${esc(VERB[n.type] || n.type)}${esc(by)}
+    ${q ? ` <a href="https://www.google.com/search?q=${q}" target="_blank" rel="noopener" class="small">Değişiklik kanununu bul ↗</a>` : ""}</li>`;
+}
+
+function tabMevzuat(){
+  const b = $("#tabbody");
+  state.mvMode = state.mvMode || "gecmis";
+  b.innerHTML = `<div class="card">
+    <h2>Mevzuat</h2>
+    <div class="chips" id="mvm"><button data-m="gecmis">📜 Madde geçmişi</button><button data-m="fark">⚖️ Metin karşılaştır</button></div>
+    <div id="mvbody"></div>
+  </div>`;
+  const draw = () => {
+    document.querySelectorAll("#mvm button").forEach(x => x.classList.toggle("on", x.dataset.m === state.mvMode));
+    (state.mvMode === "gecmis" ? mvHistory : mvCompare)();
+  };
+  $("#mvm").onclick = e => { const m = e.target.dataset.m; if (m){ state.mvMode = m; draw(); } };
+  draw();
+}
+
+function mvHistory(){
+  const box = $("#mvbody");
+  const tur = state.mvTur || "1";
+  box.innerHTML = `
+    <label for="lq">Kanun adı, numarası veya mevzuat.gov.tr bağlantısı</label>
+    <input id="lq" type="text" autocomplete="off" maxlength="400" placeholder="ör. borçlar  ·  6098  ·  tebligat" value="${esc(state.mvQuery || "")}">
+    <div id="sugg" class="sugg"></div>
+    <div class="chips" id="quick" style="margin-top:8px">${TOP_LAWS.map(n => { const l = LAWS.find(x => x.no === n); return `<button data-n="${n}">${esc(l.name.replace(/ Kanunu$/, ""))}</button>`; }).join("")}</div>
+    <details style="margin-top:8px"><summary class="small">Kanun dışındaki mevzuat (KHK, Cumhurbaşkanlığı kararnamesi, yönetmelik)</summary>
+      <p class="muted small" style="margin:6px 0">Numarayla aramada tür: <select id="tur" style="width:auto;min-height:0;padding:6px 10px">${TYPES.map(([k, v]) => `<option value="${k}" ${k === tur ? "selected" : ""}>${v}</option>`).join("")}</select></p>
+      <p class="muted small" style="margin:0">Yönetmelik, tebliğ ve diğer tüm mevzuat için: metni <a href="https://www.mevzuat.gov.tr/" target="_blank" rel="noopener">mevzuat.gov.tr</a>'de açın, adres çubuğundaki bağlantıyı kopyalayıp yukarıdaki kutuya yapıştırın.</p></details>
+    <label for="mad">Madde (boş bırakırsanız son değişen maddeler listelenir)</label>
+    <form id="mf" class="searchrow"><input id="mad" type="text" maxlength="30" placeholder="ör. 344  ·  geçici 1  ·  ek 2" value="${esc(state.mvMadde || "")}"><button class="btn btn-primary">Getir</button></form>
+    <p class="muted small" style="margin:8px 0 0">Güncel metin Mevzuat Bilgi Sistemi'nden alınır. Her maddenin hangi tarihte ve hangi kanunla değiştiği, metindeki resmî değişiklik notlarından çıkarılır. Eski metin uydurulmaz; eski metne ulaşmak için değişiklik kanununa bağlantı verilir.</p>
+    <div id="m" class="hidden"></div>
+    <div id="mvout"></div>`;
+  const lq = $("#lq"), sugg = $("#sugg");
+  const showSugg = () => {
+    const q = lq.value.trim(); state.mvQuery = q;
+    if (q.length < 2 || /^\d+$/.test(q) || /mevzuat/i.test(q)) { sugg.innerHTML = ""; return; }
+    const hits = searchLaws(q).slice(0, 8);
+    sugg.innerHTML = hits.length ? hits.map(l => `<button type="button" data-n="${l.no}">${esc(l.name)} <span class="muted">(${l.no})</span></button>`).join("")
+      : `<p class="muted small" style="margin:6px 2px">Listede bulunamadı. Kanun numarasını yazın veya mevzuat.gov.tr bağlantısını yapıştırın.
+         <a href="https://www.google.com/search?q=${encodeURIComponent("site:mevzuat.gov.tr " + q)}" target="_blank" rel="noopener">Mevzuat Bilgi Sistemi'nde ara ↗</a></p>`;
+  };
+  lq.oninput = showSugg;
+  const pick = n => { const l = LAWS.find(x => x.no === n); lq.value = `${l.name} (${l.no})`; state.mvQuery = lq.value; sugg.innerHTML = ""; $("#mad").focus(); };
+  sugg.onclick = e => { const b = e.target.closest("[data-n]"); if (b) pick(b.dataset.n); };
+  $("#quick").onclick = e => { const b = e.target.closest("[data-n]"); if (b) pick(b.dataset.n); };
+  $("#tur").onchange = e => { state.mvTur = e.target.value; };
+  $("#mf").onsubmit = async e => {
+    e.preventDefault(); sugg.innerHTML = "";
+    const sel = resolveLaw(lq.value, $("#tur").value);
+    if (!sel) return showMsg($("#m"), "Kanun bulunamadı. Adını farklı yazmayı deneyin, numarasını girin veya mevzuat.gov.tr bağlantısını yapıştırın.");
+    state.mvSel = sel; state.mvMadde = $("#mad").value.trim();
+    const btn = $("#mf button"); busy(btn, true, "Getiriliyor…"); $("#m").classList.add("hidden");
+    $("#mvout").innerHTML = lawCache[lawKey(sel)] ? "" : `<p class="muted small"><span class="spinner" style="display:inline-block;vertical-align:middle;border-color:#0002;border-top-color:var(--gold)"></span> Metin Mevzuat Bilgi Sistemi'nden alınıyor…</p>`;
+    try { mvShow(await fetchLaw(sel), normMadde(state.mvMadde)); }
+    catch (err) {
+      $("#mvout").innerHTML = "";
+      showMsg($("#m"), err.message);
+      if (err.officialUrl) $("#m").insertAdjacentHTML("beforeend", ` <a href="${esc(err.officialUrl)}" target="_blank" rel="noopener">Mevzuat Bilgi Sistemi'nde aç ↗</a>`);
+    }
+    finally { busy(btn, false); }
+  };
+  if (state.mvSel && lawCache[lawKey(state.mvSel)]) mvShow(lawCache[lawKey(state.mvSel)], normMadde(state.mvMadde || ""));
+}
+
+function mvShow(law, key){
+  const out = $("#mvout");
+  const head = `<div class="card" style="margin-top:14px;background:var(--bg)">
+    <b>${esc(law.name)}</b> <span class="muted small">(${esc(law.no)} sayılı · ${law.arts.length} madde)</span>
+    ${law.title && trLower(law.title) !== trLower(law.name) ? `<br><span class="muted small">Belgedeki başlık: ${esc(law.title)}</span>` : ""}
+    ${law.url ? `<br><a class="small" href="${esc(law.url)}" target="_blank" rel="noopener">Güncel metni Mevzuat Bilgi Sistemi'nde aç ↗</a>` : ""}
+    ${law.quota && law.quota.used ? `<br><span class="muted small">Bugünkü arama kullanımı: ${law.quota.used}/${law.quota.limit}</span>` : ""}</div>`;
+  if (key) {
+    const a = law.arts.find(x => x.key === key);
+    if (!a) {
+      out.innerHTML = head + `<div class="msg err" style="margin-top:10px">Bu kanunda "${esc(state.mvMadde)}" bulunamadı. Madde numarasını kontrol edin (geçici maddeler için "geçici 1", ek maddeler için "ek 1" yazın).</div>`;
+      return;
+    }
+    out.innerHTML = head + `<div class="card" style="margin-top:10px">
+      <h3>${esc(a.label)}${a.heading ? ` <span class="muted" style="font-weight:400">— ${esc(a.heading)}</span>` : ""}</h3>
+      <h4 style="margin:10px 0 4px">Değişiklik geçmişi</h4>
+      ${a.notes.length ? `<ol class="hist">${a.notes.map(noteLine).join("")}</ol>`
+        : `<p class="muted">Bu maddede değişiklik notu yok; madde kanunun ilk kabul edildiği hâliyle yürürlükte görünüyor.</p>`}
+      <h4 style="margin:14px 0 4px">Güncel metin</h4>
+      <div class="doc">${markNotes(a.text)}</div>
+      <p class="muted small">Sarı işaretli kısımlar resmî değişiklik notlarıdır.</p>
+      <div class="row"><button class="btn btn-ghost" id="cpy">Maddeyi kopyala</button>
+        <button class="btn btn-gold" id="cmp">Eski hâliyle karşılaştır →</button></div></div>`;
+    $("#cpy").onclick = e => copy(`${law.name} ${a.label}${a.heading ? " (" + a.heading + ")" : ""}\n${a.text}`, e.target);
+    $("#cmp").onclick = () => { state.mvNew = a.text; state.mvOld = ""; state.mvMode = "fark"; tabMevzuat(); };
+    return;
+  }
+  const changed = law.arts.filter(x => x.notes.length).sort((x, y) => y.last - x.last);
+  const list = rows => rows.map(a => {
+    const ln = a.notes[a.notes.length - 1];
+    return `<button class="result" data-k="${esc(a.key)}"><b>${esc(a.label)}</b>${a.heading ? " — " + esc(a.heading) : ""}
+      <br><span>Son değişiklik: ${esc(ln.date || "tarih belirtilmemiş")} · ${a.notes.length} değişiklik notu</span></button>`;
+  }).join("");
+  out.innerHTML = head + (changed.length
+    ? `<h3 style="margin-top:16px">Son değişen maddeler</h3><div id="clist">${list(changed.slice(0, 25))}</div>
+       ${changed.length > 25 ? `<button class="btn btn-ghost btn-block" id="allc" style="margin-top:10px">Tümünü göster (${changed.length} madde)</button>` : ""}`
+    : `<p class="muted" style="margin-top:12px">Bu kanunun metninde değişiklik notu bulunamadı.</p>`);
+  out.onclick = e => {
+    const k = e.target.closest("[data-k]"); if (!k) return;
+    const a = law.arts.find(x => x.key === k.dataset.k);
+    state.mvMadde = a.key; $("#mad").value = a.key; mvShow(law, a.key); out.scrollIntoView({ behavior: "smooth" });
+  };
+  const all = $("#allc"); if (all) all.onclick = () => { $("#clist").innerHTML = list(changed); all.remove(); };
+}
+
+// ---- kelime düzeyinde fark (bilgisayar hesaplar; yapay zekâ kullanılmaz) ----
+function lcsDiff(a, b){
+  const n = a.length, m = b.length, w = m + 1;
+  const L = new Uint16Array((n + 1) * w);
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--)
+    L[i * w + j] = a[i] === b[j] ? L[(i + 1) * w + j + 1] + 1 : Math.max(L[(i + 1) * w + j], L[i * w + j + 1]);
+  const ops = []; let i = 0, j = 0;
+  while (i < n && j < m) {
+    if (a[i] === b[j]) { ops.push(["=", a[i]]); i++; j++; }
+    else if (L[(i + 1) * w + j] >= L[i * w + j + 1]) ops.push(["-", a[i++]]);
+    else ops.push(["+", b[j++]]);
+  }
+  while (i < n) ops.push(["-", a[i++]]);
+  while (j < m) ops.push(["+", b[j++]]);
+  return ops;
+}
+const CELL_LIMIT = 4e6;
+// Seviyeler: word (kelime) → çok büyükse cümle veya 40 kelimelik parça birimleriyle karşılaştırılır,
+// değişen birimler "leaf" seviyesinde kelime kelime incelenir. Her yol sonlanır; telefon kilitlenmez.
+function chunkUnits(words){
+  const sents = (words.join(" ").match(/[^.;:!?]+[.;:!?]*/g) || []).map(x => x.trim()).filter(Boolean);
+  if (sents.length > 1 && sents.length < words.length / 3) return sents;
+  const out = []; for (let i = 0; i < words.length; i += 40) out.push(words.slice(i, i + 40).join(" ")); return out;
+}
+function diffTokens(a, b, level){
+  let p = 0; while (p < a.length && p < b.length && a[p] === b[p]) p++;
+  let s = 0; while (s < a.length - p && s < b.length - p && a[a.length - 1 - s] === b[b.length - 1 - s]) s++;
+  const A = a.slice(p, a.length - s), B = b.slice(p, b.length - s);
+  let mid;
+  if (A.length * B.length <= CELL_LIMIT) mid = lcsDiff(A, B);
+  else if (level === "word") {
+    const so = diffTokens(chunkUnits(A), chunkUnits(B), "unit");
+    const split = x => x.split(/\s+/).filter(Boolean);
+    mid = []; let del = [], ins = [];
+    const flush = () => { if (del.length || ins.length) mid.push(...diffTokens(del.flatMap(split), ins.flatMap(split), "leaf")); del = []; ins = []; };
+    so.forEach(([t, v]) => { if (t === "-") del.push(v); else if (t === "+") ins.push(v); else { flush(); split(v).forEach(x => mid.push(["=", x])); } });
+    flush();
+  } else mid = [...A.map(x => ["-", x]), ...B.map(x => ["+", x])];
+  return [...a.slice(0, p).map(x => ["=", x]), ...mid, ...b.slice(b.length - s).map(x => ["=", x])];
+}
+function wordDiff(oldT, newT){
+  const tok = t => t.split(/\s+/).filter(Boolean);
+  const ops = diffTokens(tok(oldT), tok(newT), "word");
+  const groups = [];
+  for (const [t, v] of ops) {
+    const g = groups[groups.length - 1];
+    if (g && g.t === t) g.v.push(v); else groups.push({ t, v: [v] });
+  }
+  return groups;
+}
+function diffHtml(groups){
+  return groups.map(g => {
+    const s = esc(g.v.join(" "));
+    return g.t === "=" ? s : g.t === "-" ? `<del>${s}</del>` : `<ins>${s}</ins>`;
+  }).join(" ");
+}
+function diffSummary(groups){
+  const changes = [];
+  for (let i = 0; i < groups.length; i++) {
+    const g = groups[i];
+    if (g.t === "=") continue;
+    const nx = groups[i + 1];
+    if (g.t === "-" && nx && nx.t === "+") { changes.push(`Değiştirildi: "${g.v.join(" ")}" → "${nx.v.join(" ")}"`); i++; }
+    else changes.push(`${g.t === "-" ? "Çıkarıldı" : "Eklendi"}: "${g.v.join(" ")}"`);
+  }
+  return changes;
+}
+
+function mvCompare(){
+  const box = $("#mvbody");
+  const canFiles = allowed("optimus"), canAI = allowed(TASK_MIN.degisiklik);
+  const up = id => `<label class="btn btn-ghost small ${canFiles ? "" : "locked"}" style="margin:0;padding:6px 12px;min-height:0">📄 Dosyadan<input id="${id}" type="file" accept=".udf,.eyp,.pdf,.docx,.txt" class="hidden" ${canFiles ? "" : "disabled"}></label>`;
+  box.innerHTML = `
+    <p class="muted small" style="margin:10px 0 0">İki metin arasındaki farkı kelime kelime gösterir: <del>çıkarılan</del> · <ins>eklenen</ins>. Kanunun eski ve yeni hâli, sözleşmenin iki versiyonu veya iki dilekçe için kullanabilirsiniz. Farkları bilgisayar hesaplar; yapay zekâ yalnızca isterseniz açıklama yapar.</p>
+    <div class="row" style="justify-content:space-between;align-items:end;margin-top:12px"><label for="old" style="margin:0">Eski metin</label>${up("fOld")}</div>
+    <textarea id="old" placeholder="Eski metni yapıştırın (ör. değişiklik kanunundan veya eski baskıdan)…">${esc(state.mvOld || "")}</textarea>
+    <div class="row" style="justify-content:space-between;align-items:end;margin-top:12px"><label for="new" style="margin:0">Yeni metin</label>${up("fNew")}</div>
+    <textarea id="new" placeholder="Yeni metni yapıştırın…">${esc(state.mvNew || "")}</textarea>
+    ${canFiles ? "" : `<p class="muted small" style="margin:6px 0 0">Dosyadan okuma Optimus ve üzeri paketlerde kullanılabilir.</p>`}
+    <div id="m" class="hidden"></div>
+    <button class="btn btn-primary btn-block" id="dgo">Farkları göster</button>
+    <div id="dout"></div>`;
+  const keep = () => { state.mvOld = $("#old").value; state.mvNew = $("#new").value; };
+  $("#old").oninput = keep; $("#new").oninput = keep;
+  const load = (inp, ta) => { $(inp).onchange = async e => {
+    const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+    try { $(ta).value = (await fileText(f.name, await f.arrayBuffer())).trim(); keep(); }
+    catch (err) { showMsg($("#m"), err.message); }
+  }; };
+  load("#fOld", "#old"); load("#fNew", "#new");
+  $("#dgo").onclick = () => {
+    $("#m").classList.add("hidden");
+    const o = $("#old").value.trim(), n = $("#new").value.trim();
+    if (!o || !n) return showMsg($("#m"), "Karşılaştırmak için iki metni de girin.");
+    if (o.length + n.length > 400000) return showMsg($("#m"), "Metinler çok uzun. Lütfen ilgili maddeleri veya bölümleri karşılaştırın.");
+    const g = wordDiff(o, n);
+    const del = g.filter(x => x.t === "-").reduce((s, x) => s + x.v.length, 0);
+    const ins = g.filter(x => x.t === "+").reduce((s, x) => s + x.v.length, 0);
+    const changes = diffSummary(g);
+    $("#dout").innerHTML = `<div class="card" style="margin-top:14px">
+      <h3>Sonuç</h3>
+      ${changes.length ? `<p class="small"><b>${changes.length}</b> değişiklik · <del>${del} kelime çıkarıldı</del> · <ins>${ins} kelime eklendi</ins></p>
+        <div class="doc diff">${diffHtml(g)}</div>
+        <div class="row"><button class="btn btn-ghost" id="dcp">Değişiklik listesini kopyala</button>
+          <button class="btn btn-gold ${canAI ? "" : "locked"}" id="dai" ${canAI ? "" : "disabled"}>🤖 Değişikliği yapay zekâ ile açıkla</button></div>
+        ${canAI ? "" : `<p class="muted small">Yapay zekâ açıklaması ${PLAN_NAME[TASK_MIN.degisiklik]} ve üzeri paketlerde kullanılabilir.</p>`}
+        <div id="dm" class="hidden"></div><div id="daiout" class="hidden card out" style="margin-top:14px"></div>`
+      : `<p class="msg ok">İki metin aynı; kelime farkı yok.</p>`}</div>`;
+    const cp = $("#dcp"); if (cp) cp.onclick = e => copy(changes.map((c, i) => `${i + 1}. ${c}`).join("\n"), e.target);
+    const ai = $("#dai");
+    if (ai && canAI) ai.onclick = async () => {
+      busy(ai, true, "Yapay zekâ çalışıyor…"); $("#dm").classList.add("hidden");
+      const text = `ESKİ METİN:\n${o}\n\nYENİ METİN:\n${n}\n\nOTOMATİK TESPİT EDİLEN FARKLAR:\n` + changes.slice(0, 60).map((c, i) => `${i + 1}. ${c}`).join("\n");
+      try { await streamAI({ task: "degisiklik", text }, $("#daiout")); }
+      catch (err) { showMsg($("#dm"), err.message); }
+      finally { busy(ai, false); }
+    };
+    $("#dout").scrollIntoView({ behavior: "smooth" });
+  };
+}
+
+// ---------- Dilekçe Asistanı (4 adım: olay → kararlar → analiz → dilekçe) ----------
+const DAVA_TURLERI = ["İş hukuku (kıdem, ihbar, fazla mesai, işe iade)", "Kira (tahliye, kira alacağı, kira tespiti)", "Aile (boşanma, nafaka, velayet)",
+  "Tazminat (maddi, manevi, trafik kazası)", "İcra (itirazın iptali, menfi tespit)", "Tüketici", "Ticari alacak / sözleşme", "Miras", "Gayrimenkul (tapu iptali, ortaklığın giderilmesi)",
+  "İdari dava (iptal, tam yargı)", "Ceza (şikâyet, itiraz)", "Diğer"];
+const DL_STEPS = ["Olay", "Kararlar", "Analiz", "Dilekçe"];
+const dlKey = () => "hp_dl_" + ((state.user && state.user.id) || "x");
+function dlState(){
+  if (!state.dl) {
+    let saved = {}; try { saved = JSON.parse(localStorage.getItem(dlKey()) || "{}"); } catch {}
+    state.dl = { step: 1, tur: saved.tur || DAVA_TURLERI[0], olay: saved.olay || "", talep: saved.talep || "", deliller: saved.deliller || "",
+                 queries: [], results: [], picked: {}, manual: [], facts: null, analiz: "", dilekce: "" };
+  }
+  return state.dl;
+}
+function dlSaveDraft(){ const d = state.dl; try { localStorage.setItem(dlKey(), JSON.stringify({ tur: d.tur, olay: d.olay, talep: d.talep, deliller: d.deliller })); } catch {} }
+const dlMax = () => ({ basic: 0, optimus: 5, maximus: 10 })[myPlan()] || 0;
+const refKey = (s, id) => s + ":" + id;
+// Tarayıcı tarafı sonuç tespiti (avukatın kendi eklediği kararlar için; sunucudakiyle aynı mantık)
+function outcomeOf(text){
+  const t = trLower(String(text || "").slice(-2500)); let best = ["belirsiz", "Belirlenemedi", -1];
+  [["ihlal_yok", /ihlal\s+edilmediğine/g, "İhlal yok"], ["ihlal", /ihlal\s+edildiğine/g, "İhlal"], ["bozma", /bozulmasına|bozmaya/g, "Bozma"],
+   ["onama", /onanmasına|onamaya/g, "Onama"], ["kaldirma", /kaldırılmasına/g, "Kaldırma"], ["ret", /reddine|reddedilmesine/g, "Ret"], ["kabul", /kabulüne|kabulü ile/g, "Kabul"]]
+    .forEach(([k, re, l]) => { for (const m of t.matchAll(re)) if (m.index > best[2]) best = [k, l, m.index]; });
+  return { key: best[0], label: best[1] };
+}
+
+function tabDilekce(){
+  const b = $("#tabbody"); const d = dlState();
+  if (!dlMax()) {
+    b.innerHTML = `<div class="card"><h2>Dilekçe Asistanı</h2>
+      <p>Olayınızı anlatın; platform ilgili Yargıtay, Danıştay ve UYAP Emsal kararlarını bulsun, seçtiğiniz kararlarla davayı analiz etsin ve <b>yalnızca gerçek kararlara atıf yapan</b> bir dilekçe taslağı hazırlasın.</p>
+      <div class="notice">Dilekçe Asistanı <b>Optimus</b> ve <b>Maximus</b> paketlerinde kullanılabilir.</div>
+      <a class="btn btn-gold" href="#/paketler">Paketleri görün</a></div>`;
+    return;
+  }
+  b.innerHTML = `<div class="card">
+    <h2>Dilekçe Asistanı</h2>
+    <div class="steps" id="dlsteps">${DL_STEPS.map((s, i) => `<button data-s="${i + 1}" class="${d.step === i + 1 ? "on" : ""} ${dlCanGo(i + 1) ? "" : "off"}"><b>${i + 1}</b> ${s}</button>`).join("")}</div>
+    <div id="dlbody"></div>
+  </div>`;
+  $("#dlsteps").onclick = e => { const x = e.target.closest("[data-s]"); if (x && dlCanGo(+x.dataset.s)) { d.step = +x.dataset.s; tabDilekce(); } };
+  ({ 1: dlStep1, 2: dlStep2, 3: dlStep3, 4: dlStep4 })[d.step]();
+}
+function dlCanGo(n){
+  const d = state.dl;
+  if (n <= 1) return true;
+  if (n === 2) return d.olay.trim().length >= 30;
+  if (n === 3) return dlPickedList().length > 0;
+  if (n === 4) return !!d.facts;
+  return false;
+}
+function dlPickedList(){ const d = state.dl; return [...Object.values(d.picked), ...d.manual]; }
+
+function dlStep1(){
+  const d = state.dl, box = $("#dlbody");
+  box.innerHTML = `
+    <p class="muted small" style="margin:6px 0 0">1. Davayı anlatın. Müvekkil adı, T.C. kimlik no gibi bilgileri yazmayın; taslakta bu alanlar [ ] olarak bırakılır.</p>
+    <label for="dtur">Dava türü</label>
+    <select id="dtur">${DAVA_TURLERI.map(t => `<option ${t === d.tur ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>
+    <label for="dolay">Olay (tarih sırasıyla)</label>
+    <textarea id="dolay" placeholder="Ör. Müvekkil 01.03.2019-15.06.2024 arasında davalı şirkette şoför olarak çalıştı. Haftada 6 gün, günde 11 saat çalıştığı hâlde fazla mesai ücreti ödenmedi. İş sözleşmesi 15.06.2024'te işverence 'performans düşüklüğü' gerekçesiyle, savunması alınmadan feshedildi…">${esc(d.olay)}</textarea>
+    <label for="dtalep">Talep</label>
+    <textarea id="dtalep" style="min-height:80px" placeholder="Ör. Kıdem ve ihbar tazminatı, fazla mesai ücreti, yıllık izin ücreti">${esc(d.talep)}</textarea>
+    <label for="ddelil">Deliller</label>
+    <input id="ddelil" type="text" placeholder="Ör. SGK kayıtları, banka hesap dökümü, 2 tanık, takograf kayıtları" value="${esc(d.deliller)}">
+    <div id="m" class="hidden"></div>
+    <button class="btn btn-primary btn-block" id="dgo1">Kararları bul →</button>
+    <p class="muted small">Taslağınız bu telefonda saklanır, sunucuya kaydedilmez.</p>`;
+  const keep = () => { d.tur = $("#dtur").value; d.olay = $("#dolay").value; d.talep = $("#dtalep").value; d.deliller = $("#ddelil").value; dlSaveDraft(); };
+  ["#dtur", "#dolay", "#dtalep", "#ddelil"].forEach(s => $(s).oninput = keep);
+  $("#dgo1").onclick = async () => {
+    keep();
+    if (d.olay.trim().length < 30) return showMsg($("#m"), "Lütfen olayı biraz daha ayrıntılı yazın (en az 30 karakter).");
+    const btn = $("#dgo1"); busy(btn, true, "Arama ifadeleri hazırlanıyor…");
+    try {
+      const r = await api("/api/dilekce/plan", { tur: d.tur, olay: d.olay, talep: d.talep });
+      d.queries = (r.queries && r.queries.length ? r.queries : [d.talep || d.tur]).slice(0, 3);
+    } catch (err) { d.queries = [d.talep.split(/[,.]/)[0] || d.tur.split(" (")[0]]; showMsg($("#m"), err.message + " Arama ifadesini kendiniz düzenleyebilirsiniz."); }
+    finally { busy(btn, false); }
+    d.results = []; d.step = 2; tabDilekce(); dlRunSearch();
+  };
+}
+
+function dlStep2(){
+  const d = state.dl, box = $("#dlbody"), max = dlMax();
+  const picked = dlPickedList().length;
+  box.innerHTML = `
+    <p class="muted small" style="margin:6px 0 0">2. Dilekçede dayanılacak kararları seçin (en fazla ${max}). Bir karara dokunursanız metnini görürsünüz.</p>
+    <label>Arama ifadeleri <span class="muted small">(düzenleyebilirsiniz; "+" ile birden fazla ifade aranır)</span></label>
+    ${[0, 1, 2].map(i => `<input class="dq" data-i="${i}" type="text" maxlength="120" style="margin-top:6px" value="${esc(d.queries[i] || "")}" placeholder="${i ? "isteğe bağlı" : "ör. fazla mesai ispat yükü"}">`).join("")}
+    <div class="row"><button class="btn btn-ghost" id="dsearch">🔎 Yeniden ara</button></div>
+    <div id="m" class="hidden"></div>
+    <div class="pickbar"><span><b id="pcount">${picked}</b> / ${max} karar seçildi</span>
+      <button class="btn btn-primary" id="dgo2" ${picked ? "" : "disabled"}>Analize geç →</button></div>
+    <div id="dres"></div>
+    <details style="margin-top:14px"><summary>Kendi elimdeki bir kararı eklemek istiyorum</summary>
+      <label for="mk">Künye</label><input id="mk" type="text" maxlength="200" placeholder="ör. Yargıtay 9. HD, E. 2021/1234, K. 2022/5678, T. 12.04.2022">
+      <label for="mt">Karar metni</label><textarea id="mt" style="min-height:100px" placeholder="Kararın metnini yapıştırın (en azından gerekçe ve hüküm kısmı)…"></textarea>
+      <div class="row"><button class="btn btn-ghost" id="madd">Kararı ekle</button></div></details>
+    ${d.manual.length ? `<p class="small" style="margin-top:10px"><b>Eklediğiniz kararlar:</b> ${d.manual.map((m, i) => `${esc(m.kunye)} <a href="#" data-mdel="${i}">(çıkar)</a>`).join(" · ")}</p>` : ""}`;
+  box.querySelectorAll(".dq").forEach(inp => inp.oninput = () => { d.queries[+inp.dataset.i] = inp.value; });
+  $("#dsearch").onclick = () => dlRunSearch();
+  $("#dgo2").onclick = () => { d.step = 3; d.facts = null; d.analiz = ""; tabDilekce(); };
+  $("#madd").onclick = () => {
+    const k = $("#mk").value.trim(), t = $("#mt").value.trim();
+    if (!k || t.length < 100) return showMsg($("#m"), "Künyeyi ve kararın metnini (en az 100 karakter) girin.");
+    if (dlPickedList().length >= max) return showMsg($("#m"), `En fazla ${max} karar seçebilirsiniz.`);
+    d.manual.push({ manual: true, kunye: k.slice(0, 200), text: t.slice(0, 60000) }); dlStep2();
+  };
+  box.querySelectorAll("[data-mdel]").forEach(a => a.onclick = e => { e.preventDefault(); d.manual.splice(+a.dataset.mdel, 1); dlStep2(); });
+  dlDrawResults();
+}
+async function dlRunSearch(){
+  const d = state.dl;
+  const qs = d.queries.map(q => String(q || "").trim()).filter(q => q.length >= 3);
+  if (!qs.length) return showMsg($("#m"), "En az bir arama ifadesi yazın.");
+  const idari = /idari/i.test(d.tur);
+  const cfg = idari ? "danistay" : "yargitay", fast = idari ? "danistay" : "emsal";
+  d.results = []; d.searching = true; dlDrawResults();
+  const seen = new Set(Object.keys(d.picked));
+  const add = (r, q) => {
+    for (const it of (r.items || [])) {
+      const k = refKey(r.source, it.id); if (seen.has(k)) continue; seen.add(k);
+      d.results.push({ source: r.source, label: r.sourceLabel, q, item: it });
+    }
+    dlDrawResults();
+  };
+  const jobs = [];
+  qs.forEach((q, i) => {
+    jobs.push(api("/api/search", { source: fast, q, page: 1 }).then(r => add(r, q)).catch(() => {}));
+    jobs.push(api("/api/search", { source: "arsiv", q, page: 1, config: cfg, paired: true }).then(r => add(r, q)).catch(() => {}));
+  });
+  await Promise.all(jobs);
+  d.searching = false; dlDrawResults();
+}
+function dlDrawResults(){
+  const d = state.dl, box = $("#dres"); if (!box) return;
+  const pickedRows = Object.values(d.picked);
+  const row = (src, label, it, on) => `<div class="pick ${on ? "on" : ""}" data-k="${esc(refKey(src, it.id))}">
+      <label class="chk"><input type="checkbox" ${on ? "checked" : ""}></label>
+      <button class="pbody"><b>${esc(it.daire || label)}</b><span>E. ${esc(it.esas || "—")} · K. ${esc(it.karar || "—")} · ${esc(it.tarih || "")} · ${esc(src === "arsiv" ? "Arşiv" : label)}</span></button></div>`;
+  box.innerHTML =
+    (pickedRows.length ? `<h3 style="margin:16px 2px 4px;font-size:1rem">Seçilenler</h3>` + pickedRows.map(p => row(p.source, p.label, p.item, true)).join("") : "") +
+    `<h3 style="margin:16px 2px 4px;font-size:1rem">Bulunan kararlar ${d.results.length ? `<span class="muted small">(${d.results.length})</span>` : ""}</h3>` +
+    (d.searching ? `<p class="muted small"><span class="spinner" style="display:inline-block;vertical-align:middle;border-color:#0002;border-top-color:var(--gold)"></span> Arşivde ve resmî kaynaklarda aranıyor… (ilk aramada 10-20 saniye sürebilir)</p>` : "") +
+    (d.results.filter(r => !d.picked[refKey(r.source, r.item.id)]).map(r => row(r.source, r.label, r.item, false)).join("") ||
+      (d.searching ? "" : `<p class="muted small">Sonuç yok. Arama ifadelerini değiştirip yeniden arayın.</p>`));
+  box.onclick = async e => {
+    const el = e.target.closest(".pick"); if (!el) return;
+    const k = el.dataset.k;
+    const hit = d.picked[k] || d.results.find(r => refKey(r.source, r.item.id) === k);
+    if (e.target.closest(".chk")) {
+      e.preventDefault();
+      if (d.picked[k]) delete d.picked[k];
+      else { if (dlPickedList().length >= dlMax()) return showMsg($("#m"), `En fazla ${dlMax()} karar seçebilirsiniz.`); d.picked[k] = hit; }
+      const c = $("#pcount"); if (c) c.textContent = dlPickedList().length;
+      $("#dgo2").disabled = !dlPickedList().length;
+      return dlDrawResults();
+    }
+    // metni göster
+    const old = el.nextElementSibling; if (old && old.classList.contains("peek")) return old.remove();
+    el.insertAdjacentHTML("afterend", `<div class="peek doc"><span class="muted">Karar metni getiriliyor…</span></div>`);
+    const pk = el.nextElementSibling;
+    try {
+      const { decision } = await api("/api/decision", { source: hit.source, id: hit.item.id, hint: { ...hit.item, q: hit.q } });
+      pk.innerHTML = highlightPhrases(decision.text, hlTerms(hit.q));
+    } catch (err) { pk.innerHTML = `<span class="msg err">${esc(err.message)}</span>`; }
+  };
+}
+
+async function dlStep3(){
+  const d = state.dl, box = $("#dlbody");
+  box.innerHTML = `<p class="muted small" style="margin:6px 0 0">3. Seçtiğiniz kararların sonucu ve mahkeme düzeyi bilgisayarca çıkarılır; yapay zekâ davanızı bu kararlarla analiz eder. Yüzde veya kazanma olasılığı verilmez.</p>
+    <div id="m" class="hidden"></div><div id="facts"><p class="muted small"><span class="spinner" style="display:inline-block;vertical-align:middle;border-color:#0002;border-top-color:var(--gold)"></span> Karar metinleri alınıyor…</p></div>`;
+  if (!d.facts) {
+    try {
+      const refs = Object.values(d.picked).map(p => ({ source: p.source, id: p.item.id, hint: { ...p.item, q: p.q } }));
+      const r = refs.length ? await api("/api/dilekce/kaynak", { refs }) : { items: [], ozet: {} };
+      const man = d.manual.map(m => ({ ok: true, manual: true, kunye: m.kunye, level: { rank: 0, label: "Avukatın eklediği" }, outcome: outcomeOf(m.text), year: +((/(\d{4})/.exec(m.kunye) || [])[1]) || null,
+        excerpt: m.text.length > 3000 ? m.text.slice(0, 500) + "\n[...]\n" + m.text.slice(-2200) : m.text }));
+      d.facts = { items: [...(r.items || []), ...man] };
+    } catch (err) { $("#facts").innerHTML = ""; return showMsg($("#m"), err.message); }
+  }
+  const ok = d.facts.items.filter(x => x.ok);
+  const cnt = {}; ok.forEach(x => cnt[x.outcome.label] = (cnt[x.outcome.label] || 0) + 1);
+  const newest = ok.reduce((m, x) => Math.max(m, x.year || 0), 0);
+  const strong = ok.filter(x => x.level.rank >= 4).length;
+  $("#facts").innerHTML = `
+    <div class="notice"><b>İçtihat özeti (bilgisayar sayımı):</b> ${ok.length} karar · ${Object.entries(cnt).map(([k, v]) => `${esc(k)}: ${v}`).join(" · ")}
+      ${newest ? ` · en yenisi ${newest}` : ""} · İBK / Genel Kurul / AYM: ${strong || "yok"}
+      ${d.facts.items.length > ok.length ? `<br><span class="small">${d.facts.items.length - ok.length} kararın metni alınamadı; analize katılmadı.</span>` : ""}</div>
+    <div class="tbl">${ok.map(x => `<div class="trow"><div><b>${esc(x.kunye)}</b><span class="muted small">${esc(x.level.label)}</span></div><div class="tag2 o-${esc(x.outcome.key)}">${esc(x.outcome.label)}</div></div>`).join("")}</div>
+    <p class="muted small">Sonuç, karar metninin hüküm kısmındaki ifadelerden (onanmasına, bozulmasına, reddine…) otomatik çıkarılır; "Belirlenemedi" görünen kararları metninden kontrol edin.</p>
+    <button class="btn btn-gold btn-block" id="dan">🤖 Dava analizini oluştur</button>
+    <div id="danout" class="${d.analiz ? "" : "hidden"} card out" style="margin-top:14px"></div>
+    <div class="row"><button class="btn btn-primary btn-block" id="dgo3">Dilekçeye geç →</button></div>
+    <p class="muted small">Analiz isteğe bağlıdır; yapılırsa dilekçe, analizdeki lehe noktaları öne çıkarır. Analiz ve dilekçe birer yapay zekâ hakkı kullanır.</p>`;
+  if (d.analiz) showAI($("#danout"), { answer: d.analiz, note: "", quota: { used: "–", limit: "–" } });
+  $("#dan").onclick = async () => {
+    const btn = $("#dan"); busy(btn, true, "Analiz ediliyor…"); $("#m").classList.add("hidden");
+    try { d.analiz = await streamAI({ task: "dava_analiz", text: dlCompose(false) }, $("#danout")); }
+    catch (err) { showMsg($("#m"), err.message); }
+    finally { busy(btn, false); }
+  };
+  $("#dgo3").onclick = () => { d.step = 4; tabDilekce(); };
+}
+function dlCompose(forPetition){
+  const d = state.dl;
+  const ok = (d.facts ? d.facts.items : []).filter(x => x.ok);
+  const per = forPetition ? 1500 : 2200;
+  const kararlar = ok.map((x, i) => `[${i + 1}] ${x.kunye}\nMahkeme düzeyi: ${x.level.label} · Sonuç (otomatik): ${x.outcome.label}\nGerekçe/hüküm kısmı:\n${String(x.excerpt || "").slice(-per)}`).join("\n\n");
+  const cnt = {}; ok.forEach(x => cnt[x.outcome.label] = (cnt[x.outcome.label] || 0) + 1);
+  return `DAVA TÜRÜ: ${d.tur}\n\nOLAY:\n${d.olay.trim()}\n\nTALEP:\n${d.talep.trim() || "-"}\n\nDELİLLER:\n${d.deliller.trim() || "-"}\n\n` +
+    `SAYIM: ${ok.length} karar; ${Object.entries(cnt).map(([k, v]) => `${k}: ${v}`).join(", ")}\n\nSEÇİLEN KARARLAR:\n${kararlar}` +
+    (forPetition && d.analiz ? `\n\nDAVA ANALİZİ:\n${d.analiz.slice(0, 4000)}` : "");
+}
+function dlStep4(){
+  const d = state.dl, box = $("#dlbody");
+  box.innerHTML = `<p class="muted small" style="margin:6px 0 0">4. Taslak yalnızca seçtiğiniz kararlara atıf yapar. [ ] ile işaretli yerleri doldurun, mevzuat atıflarını kontrol edin.</p>
+    <div id="m" class="hidden"></div>
+    <button class="btn btn-gold btn-block" id="dyaz">${d.dilekce ? "🔄 Yeniden yaz" : "✍️ Dilekçe taslağını yaz"}</button>
+    <div id="dout" class="${d.dilekce ? "" : "hidden"} card out" style="margin-top:14px"></div>
+    <div id="dact" class="row ${d.dilekce ? "" : "hidden"}"><button class="btn btn-ghost" id="dcopy">Taslağı kopyala</button><button class="btn btn-ghost" id="ddocx">Word (.docx) indir</button></div>
+    <div class="row"><button class="btn btn-ghost" id="dnew">Yeni dilekçe başlat</button></div>`;
+  const out = $("#dout");
+  if (d.dilekce) out.innerHTML = fmtAI(d.dilekce);
+  $("#dyaz").onclick = async () => {
+    const btn = $("#dyaz"); busy(btn, true, "Yazılıyor…"); $("#m").classList.add("hidden");
+    try { d.dilekce = await streamAI({ task: "dilekce_yaz", text: dlCompose(true) }, out); $("#dact").classList.remove("hidden"); }
+    catch (err) { showMsg($("#m"), err.message); }
+    finally { busy(btn, false); }
+  };
+  $("#dcopy").onclick = e => copy(d.dilekce, e.target);
+  $("#ddocx").onclick = async e => { try { await downloadDocx(d.dilekce, "dilekce-taslagi.docx"); } catch (err) { showMsg($("#m"), "Word dosyası oluşturulamadı: " + err.message); } };
+  $("#dnew").onclick = () => { if (!confirm("Mevcut olay, seçilen kararlar ve taslak silinsin mi?")) return; state.dl = null; try { localStorage.removeItem(dlKey()); } catch {} tabDilekce(); };
+}
+
+// Gerçek .docx (Word) dosyası: JSZip ile en küçük geçerli Word belgesi oluşturulur
+async function downloadDocx(text, filename){
+  await loadScript(LIB.jszip);
+  const x = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const paras = String(text || "").replace(/\*\*(.+?)\*\*/g, "$1").replace(/^#{1,4}\s*/gm, "").split("\n").map(line => {
+    const bold = /^[A-ZÇĞİÖŞÜ0-9 .,:()\/\-]{4,}$/.test(line.trim()) && /[A-ZÇĞİÖŞÜ]/.test(line);
+    return `<w:p><w:pPr><w:spacing w:after="120" w:line="360" w:lineRule="auto"/>${bold ? '<w:jc w:val="left"/>' : '<w:jc w:val="both"/>'}</w:pPr><w:r><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/>${bold ? "<w:b/>" : ""}<w:sz w:val="24"/></w:rPr><w:t xml:space="preserve">${x(line)}</w:t></w:r></w:p>`;
+  }).join("");
+  const zip = new window.JSZip();
+  zip.file("[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`);
+  zip.file("_rels/.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`);
+  zip.file("word/document.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${paras}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1417" w:right="1417" w:bottom="1417" w:left="1417" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>`);
+  const blob = await zip.generateAsync({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
+// ---------- arama yardımcıları: çoklu ifade, vurgulama, geçmiş ----------
+function splitPhrasesClient(q){ return String(q || "").split(/\s*[+,]\s*|\s+[-–]\s+/).map(x => x.trim().replace(/^"|"$/g, "")).filter(x => x.length >= 2).slice(0, 4); }
+// Vurgulanacak terimler: çoklu ifadede ifadelerin kendisi, tek ifadede 4+ harfli kelimeler
+function hlTerms(q){
+  q = String(q || "").trim(); const ph = splitPhrasesClient(q);
+  if (ph.length > 1 || /^".+"$/.test(q)) return ph;
+  return ph.length ? ph[0].split(/\s+/).filter(w => w.length >= 4) : [];
+}
+function highlightPhrases(text, phrases){
+  const src = String(text || ""); const low = trLower(src);
+  const ranges = [];
+  (phrases || []).map(trLower).filter(p => p.length >= 2).forEach(p => {
+    let i = 0, n = 0; while ((i = low.indexOf(p, i)) >= 0 && n < 400) { ranges.push([i, i + p.length]); i += p.length; n++; }
+  });
+  if (!ranges.length) return esc(src);
+  ranges.sort((a, b) => a[0] - b[0]);
+  let out = "", pos = 0;
+  for (const [s, e] of ranges) { if (s < pos) continue; out += esc(src.slice(pos, s)) + "<mark>" + esc(src.slice(s, e)) + "</mark>"; pos = e; }
+  return out + esc(src.slice(pos));
+}
+const histKey = () => "hp_hist_" + ((state.user && state.user.id) || "x");
+function getHist(){ try { return JSON.parse(localStorage.getItem(histKey()) || "[]"); } catch { return []; } }
+function addHist(q, source, cfg){
+  const h = getHist().filter(x => !(x.q === q && x.s === source && x.c === cfg));
+  h.unshift({ q, s: source, c: cfg, t: Date.now() });
+  try { localStorage.setItem(histKey(), JSON.stringify(h.slice(0, 20))); } catch {}
+}
+function clearHist(){ try { localStorage.removeItem(histKey()); } catch {} }
 
 async function tabAccount(){
   const b = $("#tabbody");
@@ -810,8 +1690,12 @@ function pageTerms(){
   <p>Kullanıcı, kayıt bilgilerinin doğru olmasından ve şifresinin gizliliğinden sorumludur. Hesabın üçüncü kişilerle paylaşılması yasaktır. Hesap, Hesabım sayfasından her zaman silinebilir.</p>
   <h2>5. Kullanıcı içeriği</h2>
   <p>Kullanıcı, analiz için gönderdiği metinler üzerinde gerekli haklara sahip olduğunu ve bu metinlerin hukuka aykırı içerik barındırmadığını kabul eder. Kişisel verileri, özellikle özel nitelikli kişisel verileri (sağlık, ceza mahkûmiyeti vb.) göndermeden önce anonimleştirmek Kullanıcının sorumluluğundadır. Analiz için gönderilen metinler işlendikten sonra saklanmaz.</p>
+  <h2>5/A. Avukatlık meslek sırrı</h2>
+  <p>Avukat Kullanıcılar, 1136 sayılı Avukatlık Kanunu m.36 uyarınca sır saklama yükümlülüğü altındadır. Müvekkile ait bilgileri, dosya ve belgeleri analiz için göndermeden önce müvekkili tanıtıcı bilgileri (ad, T.C. kimlik no, adres, telefon, dosya numarası vb.) çıkarmak veya maskelemek Kullanıcının sorumluluğundadır. Platform gönderilen metinleri yalnızca işlem anında işler ve saklamaz; Kullanıcının taslakları ve arama geçmişi yalnızca kendi cihazında tutulur.</p>
+  <h2>5/B. Yapay zekâ çıktılarının niteliği ve sorumluluk</h2>
+  <p>Karar özetleri, dava analizleri, dilekçe ve sözleşme taslakları ile çeviriler yapay zekâ tarafından otomatik üretilir; hatalı, eksik veya bağlamdan kopuk olabilir. Dava analizi bir kazanma olasılığı veya sonuç garantisi değildir. Karar sonuçları (onama, bozma vb.) karar metninden otomatik çıkarılır ve hatalı olabilir. Çıktıların doğruluğunu, güncelliğini ve somut olaya uygunluğunu kontrol etmek ve bunları kullanma kararı tamamen Kullanıcıya aittir; çıktılar üzerinden yapılan işlemlerden doğan mesleki sorumluluk Kullanıcıdadır. Resmî işlemlerde kullanılacak çeviriler için yeminli tercüman onayı gerekir.</p>
   <h2>6. Paketler ve ücretlendirme</h2>
-  <p>Platform Basic (ücretsiz), Optimus ve Maximus paketleriyle sunulur; paket kapsamları Paketler sayfasında belirtilir. Yeni hesaplara bir defaya mahsus 1 günlük ücretsiz deneme tanımlanır. Ücretli paketlerin satışı başladığında, satış öncesinde ön bilgilendirme formu ve mesafeli satış sözleşmesi ayrıca sunulacaktır. Hizmet Sağlayıcı, paket kapsam ve fiyatlarını önceden duyurmak kaydıyla değiştirebilir; yürürlükteki abonelik dönemi için değişiklik uygulanmaz.</p>
+  <p>Platform Basic (ücretsiz), Optimus ve Maximus paketleriyle sunulur; paket kapsamları Paketler sayfasında belirtilir. Yeni hesaplara bir defaya mahsus 7 günlük ücretsiz deneme tanımlanır. Ücretli paketlerin satışı başladığında, satış öncesinde ön bilgilendirme formu ve mesafeli satış sözleşmesi ayrıca sunulacaktır. Hizmet Sağlayıcı, paket kapsam ve fiyatlarını önceden duyurmak kaydıyla değiştirebilir; yürürlükteki abonelik dönemi için değişiklik uygulanmaz.</p>
   <h2>7. Yasak kullanımlar</h2>
   <p>Platformun otomatik araçlarla toplu veri çekmek, resmî kaynaklara aşırı yük bindirmek, güvenliğini aşmaya çalışmak, tersine mühendislik yapmak veya hukuka aykırı amaçlarla kullanılması yasaktır. Bu durumlarda hesap uyarısız askıya alınabilir.</p>
   <h2>8. Fikrî mülkiyet</h2>
@@ -830,13 +1714,15 @@ function pageKvkk(){
   <ul><li>Kimlik ve iletişim: ad soyad, e-posta adresi</li>
   <li>Hesap güvenliği: geri çözülemez biçimde saklanan şifre özeti, oturum kayıtları</li>
   <li>Kullanım: paket bilgisi, günlük arama ve işlem sayıları</li>
-  <li>Analiz için gönderdiğiniz metinler: yalnızca işlem anında işlenir, kaydedilmez</li></ul>
+  <li>Analiz için gönderdiğiniz metinler: yalnızca işlem anında işlenir, kaydedilmez</li>
+  <li>Açtığınız mahkeme kararları: kamuya açık resmî metinlerdir; hızlı erişim için önbellekte tutulur, hesabınızla ilişkilendirilmez</li>
+  <li>Cihazınızda (sunucuya gönderilmeden) tutulanlar: arama geçmişiniz ve dilekçe taslaklarınız; uygulamadan veya tarayıcı verilerini silerek temizleyebilirsiniz</li></ul>
   <h2>3. Amaçlar ve hukuki sebepler</h2>
   <p>Verileriniz; üyelik sözleşmesinin kurulması ve ifası (KVKK m.5/2-c), hesap güvenliğinin ve hizmet sürekliliğinin sağlanması ile kötüye kullanımın önlenmesi için veri sorumlusunun meşru menfaati (m.5/2-f) ve yasal yükümlülüklerin yerine getirilmesi (m.5/2-ç) hukuki sebeplerine dayanılarak işlenir.</p>
   <h2>4. Aktarım</h2>
   <p>Platform altyapısı; barındırma, veritabanı ve yapay zekâ işlemleri için Cloudflare, Inc. (ABD), şifre sıfırlama e-postaları için Google (Gmail, ABD) hizmet sağlayıcılarını kullanır. Bu nedenle verileriniz yurt dışındaki sunuculara aktarılabilir. Yurt dışına aktarım, KVKK m.9'da öngörülen uygun güvencelere dayanılarak gerçekleştirilir. Verileriniz bunun dışında, kanunen yetkili kurumların talepleri hariç, üçüncü kişilerle paylaşılmaz ve satılmaz.</p>
   <h2>5. Toplama yöntemi ve saklama süresi</h2>
-  <p>Veriler kayıt formu ve Platform kullanımı sırasında elektronik ortamda toplanır. Hesap verileri hesabınız açık kaldığı sürece saklanır; hesabınızı sildiğinizde kalıcı olarak silinir. Kanunen saklanması zorunlu kayıtlar ilgili süre boyunca tutulur.</p>
+  <p>Veriler kayıt formu ve Platform kullanımı sırasında elektronik ortamda toplanır. Saklama süreleri: hesap bilgileri hesabınız açık kaldığı sürece saklanır ve hesabınızı sildiğinizde derhâl kalıcı olarak silinir; oturum kayıtları en fazla 30 gün; günlük kullanım sayaçları ve güvenlik kayıtları (hatalı giriş denemeleri gibi) en fazla 90 gün; şifre sıfırlama bağlantıları 30 dakika geçerlidir. Sistem günlüklerinde metin içeriği tutulmaz, yalnızca işlem türü ve boyutu gibi teknik bilgiler kısa süreyle tutulur. Kanunen saklanması zorunlu kayıtlar ilgili süre boyunca tutulur.</p>
   <h2>6. Haklarınız</h2>
   <p>KVKK m.11 uyarınca verilerinizin işlenip işlenmediğini öğrenme, bilgi talep etme, amacına uygun kullanılıp kullanılmadığını öğrenme, aktarıldığı üçüncü kişileri bilme, düzeltilmesini, silinmesini veya yok edilmesini isteme, itiraz etme ve zararın giderilmesini talep etme haklarına sahipsiniz. Başvurularınızı <a href="mailto:${m}">${m}</a> adresine iletebilirsiniz; en geç 30 gün içinde yanıtlanır.</p>`);
 }
@@ -853,10 +1739,12 @@ function pageGuide(){
   <li>Kaynağı seçin: <b>📚 11M Arşiv</b> (11 milyon Yargıtay, UYAP Emsal, Danıştay ve Anayasa Mahkemesi kararı; açılan kutudan mahkemeyi seçin), <b>Yargıtay</b>, <b>UYAP Emsal</b> (Yargıtay, bölge adliye ve ilk derece kararları) veya <b>Danıştay</b>.</li>
   <li>Arşivde esas veya karar numarasıyla da arayabilirsiniz: yalnızca <i>2021/1234</i> yazın.</li>
   <li>Arama ifadesini yazın (ör. <i>fazla mesai ispat yükü</i>). Tam ifade için tırnak kullanın: <i>"iş kazası"</i>.</li>
+  <li><b>Birden fazla ifade:</b> ifadeleri "+", virgül veya tire ile ayırın: <i>kıdem tazminatı + fazla mesai, tanık beyanı</i>. 11M Arşiv'de yalnızca ifadelerin hepsini içeren kararlar gösterilir; açtığınız kararda ifadeler renkli işaretlenir.</li>
+  <li><b>Son aramalar</b> arama kutusunun altında görünür; dokununca tekrar aranır. <b>Geçmişi temizle</b> ile silebilirsiniz. Geçmiş yalnızca bu cihazda tutulur.</li>
   <li>Bir karara dokunun: tam metin açılır. <b>Künyeyi kopyala</b>, <b>Metni kopyala</b>, <b>Resmî kaynakta aç</b> ve <b>Yapay zekâ ile özetle</b> düğmeleri kullanılabilir.</li></ol>
   <p class="small muted">Yargıtay'ın kendi sitesine ulaşılamadığında sonuçlar otomatik olarak UYAP Emsal'den getirilir; ekranda bununla ilgili not görürsünüz.</p>
   <h2>2. Belge analizi</h2>
-  <ol><li><b>Panelim → Belge analizi</b> sekmesini açın ve işlemi seçin: karar özeti, sözleşme risk analizi, dilekçe taslağı, hukuki çeviri veya karar karşılaştırma.</li>
+  <ol><li><b>Panelim → Belge analizi</b> sekmesini açın ve işlemi seçin: karar özeti, sözleşme risk analizi, hukuki çeviri veya karar karşılaştırma. (Dilekçe için <b>Dilekçe</b> sekmesini kullanın.)</li>
   <li>Metni yapıştırın ya da belge ekleyin:
     <ul><li><b>📄 Dosya yükle:</b> UYAP belgeleri (UDF), imzalı UYAP paketleri (EYP), PDF, Word (.docx) ve .txt.</li>
     <li><b>📷 Fotoğraf çek:</b> Kâğıt belgenin fotoğrafını çekin; yazı otomatik okunur. Çok sayfalı belgede her sayfa için tekrarlayın.</li>
@@ -870,10 +1758,15 @@ function pageGuide(){
   <p><b>Ne girilir:</b> İncelenecek sözleşmenin tamamı: kira, iş, satış, hizmet, gizlilik sözleşmesi vb. Word, PDF, UDF dosyası veya fotoğraf olarak eklenebilir.<br>
   <b>Ne verir:</b> Taraflar ve konu, tarafların temel yükümlülükleri, <b>riskli veya tek taraflı maddeler</b> (madde metninden alıntıyla), eksik görünen hükümler (cezai şart, fesih, yetkili mahkeme vb.), müzakere önerileri ve genel risk seviyesi (Yüksek / Orta / Düşük).<br>
   <b>İpucu:</b> Sözleşmenin tamamını ekleyin; tek bir madde gönderildiğinde eksik hüküm değerlendirmesi yapılamaz.</p>
-  <h3>✍️ Dilekçe taslağı <span class="small muted">(Optimus ve Maximus)</span></h3>
-  <p><b>Ne girilir:</b> Olayları tarih sırasıyla, tarafları (maskeleyerek), talebinizi ve varsa dayanmak istediğiniz kanun maddeleri ile kararları yazın.<br>
-  <b>Ne verir:</b> Başlık, taraflar, konu, açıklamalar, hukuki nedenler, deliller, sonuç ve istem bölümlerinden oluşan bir dilekçe <b>iskeleti</b>. Doldurulması gereken yerler [ ] ile işaretlenir.<br>
-  <b>Önemli:</b> Yapay zekâ kendi hafızasından kanun maddesi veya karar numarası eklemez; yalnızca sizin yazdıklarınızı kullanır. Mevzuat atıfları sizin tarafınızdan tamamlanmalıdır.</p>
+  <h3>✍️ Dilekçe Asistanı <span class="small muted">(Optimus: 5 karar, Maximus: 10 karar)</span></h3>
+  <p><b>Panelim → Dilekçe</b> sekmesinde 4 adımda çalışır:<br>
+  <b>1. Olay:</b> Dava türünü seçin; olayı tarih sırasıyla, talebi ve delilleri yazın. Müvekkil adı ve kimlik bilgisi yazmayın. Taslağınız telefonunuzda saklanır.<br>
+  <b>2. Kararlar:</b> Platform olayınızdan arama ifadeleri çıkarır ve 11M arşiv ile UYAP Emsal/Danıştay'da arar. İfadeleri düzenleyip yeniden arayabilirsiniz. Bir karara dokunarak metnini okuyun, kutucuğu işaretleyerek seçin. Elinizdeki bir kararı <i>Kendi elimdeki kararı ekle</i> ile ekleyebilirsiniz. Karar arama ekranındaki <b>+ Dilekçeye ekle</b> düğmesi de kararı buraya ekler.<br>
+  <b>3. Analiz:</b> Seçtiğiniz kararların sonucu (onama, bozma, ret…) ve mahkeme düzeyi bilgisayarca sayılır. <b>Dava analizini oluştur</b> düğmesi; olayla benzerlikleri, lehe ve aleyhe noktaları, ispat ve usul kontrollerini yazar. Yüzde veya kazanma olasılığı verilmez.<br>
+  <b>4. Dilekçe:</b> Taslak yalnızca seçtiğiniz kararlara künyesiyle atıf yapar; bilinmeyen bilgiler [ ] ile bırakılır. <b>Word (.docx) indir</b> ile dosya olarak alabilirsiniz.<br>
+  <b>Önemli:</b> Mevzuat atıflarını ve kararların kesinleşme durumunu kontrol edin; taslak avukat denetimi olmadan kullanılmamalıdır.</p>
+  <h3>📑 Sözleşme: yeni versiyon <span class="small muted">(Optimus ve Maximus)</span></h3>
+  <p>Sözleşme risk analizi bittikten sonra <b>Önerileri uygula — yeni versiyon oluştur</b> düğmesine dokunun. Yapay zekâ sözleşmenin düzeltilmiş tam metnini yazar; değişiklikler <del>kırmızı</del> / <ins>yeşil</ins> gösterilir. Yeni metni kopyalayabilir veya Word dosyası olarak indirebilirsiniz.</p>
   <h3>🌐 Hukuki çeviri <span class="small muted">(Optimus ve Maximus)</span></h3>
   <p><b>Ne girilir:</b> Çevrilecek metin. Açılan <b>Hedef dil</b> kutusundan dili seçin: İngilizce, Almanca, Fransızca, Arapça, Rusça veya Türkçe (yabancı dildeki bir belgeyi Türkçeye çevirmek için).<br>
   <b>Ne verir:</b> Hukuki terimleri karşılıklarıyla kullanan çeviri. Karşılığından emin olunmayan terimlerin yanına parantez içinde Türkçe aslı yazılır.<br>
@@ -881,22 +1774,31 @@ function pageGuide(){
   <h3>⚖️ Karar karşılaştırma <span class="small muted">(Maximus)</span></h3>
   <p><b>Ne girilir:</b> Karşılaştırmak istediğiniz iki veya daha fazla kararın metni, art arda. Karar arama ekranındaki <b>Metni kopyala</b> düğmesiyle kararları buraya taşıyabilirsiniz.<br>
   <b>Ne verir:</b> Kararlar arasındaki benzerlikler, farklılıklar ve sonucu değiştiren olgu.</p>
-  <h2>4. UYAP'tan belge almak</h2>
+  <h2>4. Mevzuat</h2>
+  <h3>📜 Madde geçmişi <span class="small muted">(tüm paketler; arama hakkından düşer)</span></h3>
+  <p><b>Ne girilir:</b> Kanunun adını yazın (ör. <i>borçlar</i>, <i>tebligat</i>; öneriler çıkar) veya numarasını girin (ör. <i>6098</i>). Ardından madde numarasını yazın: <i>344</i>, <i>geçici 1</i>, <i>ek 2</i>. Madde boş bırakılırsa <b>son değişen maddeler</b> listelenir.<br>
+  <b>KHK, Cumhurbaşkanlığı kararnamesi, yönetmelik:</b> Metni mevzuat.gov.tr'de açın, adres çubuğundaki bağlantıyı kopyalayıp kanun kutusuna yapıştırın.<br>
+  <b>Ne verir:</b> Maddenin güncel metni ve <b>değişiklik geçmişi</b>: hangi tarihte, hangi kanunun kaçıncı maddesiyle değiştirildiği, eklendiği, yürürlükten kaldırıldığı veya Anayasa Mahkemesince iptal edildiği. Bilgiler Mevzuat Bilgi Sistemi'ndeki resmî değişiklik notlarından alınır; sarıyla işaretlenir.<br>
+  <b>Önemli:</b> Platform eski metni tahmin etmez. Eski metin için <b>Değişiklik kanununu bul</b> bağlantısını kullanın; bulduğunuz eski metni <b>Eski hâliyle karşılaştır</b> düğmesiyle yeni metinle karşılaştırabilirsiniz.</p>
+  <h3>⚖️ Metin karşılaştır <span class="small muted">(karşılaştırma tüm paketlerde; yapay zekâ açıklaması Optimus ve Maximus)</span></h3>
+  <p><b>Ne girilir:</b> Eski ve yeni metin: kanun maddesinin iki hâli, sözleşmenin iki versiyonu veya iki dilekçe.<br>
+  <b>Ne verir:</b> Kelime kelime fark: <del>çıkarılan</del> kırmızı, <ins>eklenen</ins> yeşil. Farkları bilgisayar hesaplar, bu yüzden atlanan değişiklik olmaz. İsterseniz <b>Değişikliği yapay zekâ ile açıkla</b> düğmesi değişikliğin hukuki anlamını, kimi etkilediğini ve dikkat edilecek noktaları yazar.</p>
+  <h2>5. UYAP'tan belge almak</h2>
   <ol><li>UYAP Avukat Portal'da veya UYAP Avukat mobil uygulamasında ilgili dosyayı açın.</li>
   <li>Belgeyi telefonunuza indirin (UDF, EYP veya PDF olarak).</li>
   <li>Platformda <b>📄 Dosya yükle</b>'ye dokunun ve indirdiğiniz belgeyi <i>İndirilenler</i> klasöründen seçin.</li></ol>
   <p class="small muted">Platform UYAP'a bağlanmaz ve UYAP şifrenizi istemez; belgeyi siz indirip seçersiniz.</p>
-  <h2>5. İyi fotoğraf için</h2>
+  <h2>6. İyi fotoğraf için</h2>
   <ul><li>Belgeyi düz bir zemine koyun, gölge düşürmeden iyi ışıkta çekin.</li>
   <li>Sayfanın tamamı kadrajda olsun, telefonu kâğıda paralel tutun.</li>
   <li>El yazısı ve çok soluk fotokopilerde okuma hatalı olabilir; metni göndermeden önce kontrol edin.</li></ul>
-  <h2>6. Gizlilik</h2>
+  <h2>7. Gizlilik</h2>
   <ul><li>Dosya ve fotoğraflar <b>telefonunuzda</b> okunur; sunucuya yalnızca metin gider.</li>
   <li>Analiz için gönderilen metinler saklanmaz.</li>
   <li>Müvekkil adları, T.C. kimlik no, sağlık ve ceza bilgisi gibi verileri göndermeden önce maskeleyin (ör. "A.B.").</li></ul>
-  <h2>7. Önemli</h2>
+  <h2>8. Önemli</h2>
   <p>Yapay zekâ çıktıları taslaktır ve hata içerebilir; kullanmadan önce kontrol edin. Platform hukuki danışmanlık sunmaz.</p>
-  <h2>8. Geri bildirim</h2>
+  <h2>9. Geri bildirim</h2>
   <p>Hata, eksik veya öneri için <a href="${feedbackLink()}">buraya dokunarak</a> e-posta gönderin. Ekran görüntüsü eklemeniz çok yardımcı olur.</p>`);
 }
 function pageDisclaimer(){
