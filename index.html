@@ -1419,7 +1419,13 @@ async function dlRunSearch(custom){
   box.innerHTML = `<div class="card" style="margin-top:12px"><p style="margin:0"><span class="spinner" style="display:inline-block;vertical-align:middle;border-color:#0002;border-top-color:var(--gold)"></span> <b>Kararlar taranıyor…</b></p>
     <p class="muted small" style="margin:8px 0 0">Hukuki konu belirleniyor → 11M arşiv ve UYAP Emsal taranıyor → yapay zekâ kararları okuyup ilgili olanları seçiyor. Bu işlem 20-60 saniye sürebilir.</p></div>`;
   try {
-    const r = await api("/api/dilekce/ara", { tur: d.tur, konu: d.konu, olay: d.olay, talep: d.talep, ...(custom || {}) });
+    const body = { tur: d.tur, konu: d.konu, olay: d.olay, talep: d.talep, ...(custom || {}) };
+    let r = await api("/api/dilekce/ara", body);
+    if (!(r.candidates || []).length) {
+      // Karar kaynakları ilk denemede yavaş kalabiliyor: bir kez otomatik tekrar
+      const p = box.querySelector(".muted"); if (p) p.innerHTML = "İlk taramada karar gelmedi (kaynaklar yavaş yanıt verdi). Hukuki terimle tekrar deneniyor…";
+      try { const r2 = await api("/api/dilekce/ara", { ...body, terim: body.terim || r.terim || undefined, queries: body.queries || r.queries || undefined, tekrar: 1 }); if ((r2.candidates || []).length || !r.terim) r = r2; } catch {}
+    }
     d.terim = r.terim || ""; d.queries = r.queries || []; d.cands = r; d.picked = {};
     if (!custom) d.aiTerim = r.aiTerim || r.terim || "";
     (r.candidates || []).filter(c => c.selected).forEach(c => d.picked[refKey(c.source, c.item.id)] = { source: c.source, label: c.source === "arsiv" ? "Arşiv" : "UYAP Emsal", q: d.terim || d.queries[0] || "", item: c.item, ai: c.ai });
@@ -1450,7 +1456,7 @@ function dlDrawCands(){
   const sel = all.filter(c => d.picked[refKey(c.source, c.item.id)]), rest = all.filter(c => !d.picked[refKey(c.source, c.item.id)]);
   const extra = Object.values(d.picked).filter(p => !all.some(c => refKey(c.source, c.item.id) === refKey(p.source, p.item.id)));
   box.innerHTML = `
-    <div class="notice" style="margin-top:12px">Hukuki konu: <b>${esc(d.terim || "—")}</b> · ${d.cands ? `${d.cands.scanned} karar tarandı, ${d.cands.withTerm} kararda bu konu geçiyor` : ""}${d.cands && !d.cands.aiUsed ? " · yapay zekâ seçimi yapılamadı, kararlar ilgi puanına göre sıralandı" : ""}${d.cands && d.cands.ogrenilen ? `<br><span class="small">📚 Bu dava türünde avukatların düzeltmelerinden öğrenilen terim kullanıldı (yapay zekânın önerisi: ${esc(d.cands.aiTerim || "")}).</span>` : ""}</div>
+    <div class="notice" style="margin-top:12px">Hukuki konu: <b>${esc(d.terim || "—")}</b> · ${d.cands ? `${d.cands.scanned} karar tarandı, ${d.cands.withTerm} kararda bu konu geçiyor` : ""}${d.cands && !d.cands.aiUsed && (d.cands.candidates || []).length ? " · yapay zekâ seçimi yapılamadı, kararlar ilgi puanına göre sıralandı" : ""}${d.cands && !(d.cands.candidates || []).length ? `<br><span class="small">Kaynak durumu — 11M arşiv: ${esc((d.cands.diag || {}).arsiv || "-")} · UYAP Emsal: ${esc((d.cands.diag || {}).resmi || "-")}. Karar kaynakları şu an yavaş olabilir; birkaç dakika sonra aşağıdaki <b>Aramayı düzelt</b> bölümünden tekrar arayın veya Karar ara sekmesinde bulduğunuz kararları <b>+ Dilekçeye ekle</b> ile ekleyin.</span>` : ""}${d.cands && d.cands.ogrenilen ? `<br><span class="small">📚 Bu dava türünde avukatların düzeltmelerinden öğrenilen terim kullanıldı (yapay zekânın önerisi: ${esc(d.cands.aiTerim || "")}).</span>` : ""}</div>
     ${sel.length || extra.length || d.manual.length ? `<h3 style="margin:14px 2px 4px;font-size:1rem">Dilekçede kullanılacak kararlar (${pickedN}/${max})</h3>` + sel.map(row).join("") +
       extra.map(p => `<div class="pick on" data-k="${esc(refKey(p.source, p.item.id))}"><label class="chk"><input type="checkbox" checked></label><button class="pbody"><b>${esc(p.item.daire || "")}</b><span>E. ${esc(p.item.esas || "—")} · K. ${esc(p.item.karar || "—")} · karar ekranından eklendi</span></button></div>`).join("") +
       d.manual.map((m, i) => `<div class="pick on"><label class="chk"><input type="checkbox" checked data-mdel="${i}"></label><div class="pbody"><b>${esc(m.kunye)}</b><span>Sizin eklediğiniz karar</span></div></div>`).join("")

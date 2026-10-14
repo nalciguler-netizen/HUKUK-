@@ -368,12 +368,12 @@ const ARCHIVE_MIRRORS = ["esnucil/turkish-court-decisions", "geginhug/turkish-co
 const ARCHIVE_CONFIGS = { yargitay: "Yargıtay", emsal: "UYAP Emsal", danistay: "Danıştay", aym_bb: "AYM Bireysel Başvuru", aym_norm: "AYM Norm Denetimi" };
 const HF = "https://datasets-server.huggingface.co";
 
-async function hfGet(path, params) {
+async function hfGet(path, params, ms = 20000) {
   const url = `${HF}/${path}?` + new URLSearchParams(params).toString();
   // Aynı arama tekrarlanınca 1 gün boyunca Cloudflare önbelleğinden anında döner.
   const cache = caches.default; const key = new Request(url);
   const hit = await cache.match(key); if (hit) return hit.json();
-  const ctrl = new AbortController(); const timer = setTimeout(() => ctrl.abort(), 20000);
+  const ctrl = new AbortController(); const timer = setTimeout(() => ctrl.abort(), ms);
   try {
     const r = await fetch(url, { signal: ctrl.signal, headers: { Accept: "application/json" } });
     const j = await r.json().catch(() => ({}));
@@ -813,33 +813,59 @@ async function learnedDocs(env, terim) {
 }
 
 // Arşivden metinli satırlar (birkaç ayna denenir)
-async function archiveRows(cfg, q, length) {
-  for (const ds of ARCHIVE_MIRRORS) {
+async function archiveRows(cfg, q, length, ms = 30000, diag) {
+  let last = "";
+  for (const ds of ARCHIVE_MIRRORS.slice(0, 3)) {
     try {
-      const j = await hfGet("search", { dataset: ds, config: cfg, split: "train", offset: "0", length: String(length), query: q });
+      const j = await hfGet("search", { dataset: ds, config: cfg, split: "train", offset: "0", length: String(length), query: q }, ms);
       return (j.rows || []).map(it => ({ ...archRow(cfg, it, ds), source: "arsiv" }));
-    } catch (e) { if (e && e.timeout) break; }
+    } catch (e) { last = e && e.timeout ? "zaman aşımı" : String(e && e.message || e).slice(0, 60); if (e && e.timeout) break; }
   }
+  if (diag) diag.push(last || "sonuç yok");
   return [];
 }
 const wordStems = s => [...new Set(trLower(s).split(/[^a-zçğıöşü0-9]+/).filter(w => w.length >= 4).map(w => w.slice(0, 6)))];
 async function smartSearch(env, tur, p0, ctxt, max) {
   const cfg = /idari|vergi/i.test(tur) ? "danistay" : "yargitay";
   const qs = p0.queries.slice(0, 3);
-  // 1) arşiv (paralel) — 2) resmî kaynak: terimle ara, ilk 6 kararın metnini al
-  const archP = Promise.allSettled(qs.map(q => archiveRows(cfg, q, 30)));
+  // 1) arşiv: önce yalnızca hukuki terimle (en isabetli), yetmezse diğer ifadelerle — aynı anda çok arama arşivi yavaşlatıyor
+  const aDiag = [];
+  const archP = (async () => {
+    const first = await archiveRows(cfg, p0.terim || qs[0], 30, 35000, aDiag);
+    const rest = first.length >= 10 ? [] : qs.filter(q => trLower(q) !== trLower(p0.terim || ""));
+    const more = await Promise.allSettled(rest.slice(0, 2).map(q => archiveRows(cfg, q, 20, 25000, aDiag)));
+    return [{ status: "fulfilled", value: first }, ...more];
+  })();
   const offSrc = cfg === "danistay" ? "danistay" : "emsal";
+  let oDiag = "";
   const offP = (async () => {
     try {
-      const r = await searchOfficial(offSrc, p0.terim ? (/\s/.test(p0.terim) ? `"${p0.terim}"` : p0.terim) : qs[0], 1);
-      // UYAP Emsal'de ilk derece ve bölge adliye kararları da var: yalnızca Yargıtay daire/kurul kararları alınır
-      const items = (r.items || []).filter(it => offSrc !== "emsal" || (/daire|genel kurul/i.test(it.daire) && !/mahkemesi|bölge adliye/i.test(it.daire))).slice(0, 6);
+      const q = p0.terim ? (/\s/.test(p0.terim) ? `"${p0.terim}"` : p0.terim) : qs[0];
+      const pages = await Promise.allSettled([1, 2].map(pg => searchOfficial(offSrc, q, pg)));
+      let raw = pages.flatMap(x => x.status === "fulfilled" ? (x.value.items || []) : []);
+      // Tırnaklı tam ifade sonuç vermediyse tırnaksız bir kez daha
+      if (!raw.length && q.startsWith('"')) {
+        try { raw = (await searchOfficial(offSrc, q.slice(1, -1), 1)).items || []; } catch {}
+      }
+      // UYAP Emsal'de ilk derece kararları da var: yalnızca Yargıtay ve bölge adliye daire/kurul kararları alınır
+      const isTop = it => /daire|genel kurul/i.test(it.daire) && !/asliye|sulh|ticaret mahkemesi|iş mahkemesi|aile mahkemesi|tüketici mahkemesi|icra/i.test(it.daire);
+      const items = (offSrc === "emsal" ? raw.filter(isTop).sort((a, b) => (/bölge/i.test(a.daire) ? 1 : 0) - (/bölge/i.test(b.daire) ? 1 : 0)) : raw).slice(0, 6);
+      oDiag = pages.every(x => x.status === "rejected") && !raw.length ? "ulaşılamadı" : `${raw.length} sonuç, ${items.length} üst mahkeme kararı`;
       const got = await Promise.allSettled(items.map(it => getDecision(env, offSrc, it.id, { ...it, q: p0.terim || qs[0] })));
       return got.map((g, i) => g.status === "fulfilled" && g.value && g.value.text ? { ...items[i], text: g.value.text, source: offSrc } : null).filter(Boolean);
-    } catch { return []; }
+    } catch (e) { oDiag = "ulaşılamadı"; return []; }
   })();
   const votesP = learnedDocs(env, p0.terim || "");
-  const [archS, off, votes] = await Promise.all([archP, offP, votesP]);
+  let [archS, off, votes] = await Promise.all([archP, offP, votesP]);
+  // Yedek: hiç metinli karar gelmediyse arşivin UYAP Emsal bölümünde ve ilk arama ifadesiyle bir kez daha denenir
+  if (!off.length && !archS.some(x => x.status === "fulfilled" && x.value.length)) {
+    const alt = [];
+    if (cfg === "yargitay") alt.push(archiveRows("emsal", p0.terim || qs[0], 25, 30000, aDiag));
+    const q2 = qs.find(q => trLower(q) !== trLower(p0.terim || ""));
+    if (q2) alt.push(archiveRows(cfg, q2, 20, 30000, aDiag));
+    const got = await Promise.allSettled(alt);
+    archS = [...archS, ...got.map(g => g.status === "fulfilled" ? { status: "fulfilled", value: g.value } : g)];
+  }
   const voteOf = new Map(votes.map(v => [v.doc, v.up - v.down]));
   // Avukatların sık seçtiği ama bu aramada çıkmayan kararlar da adaylara eklenir (en fazla 3)
   const foundKeys = new Set([...off.map(c => c.source + ":" + c.id), ...archS.flatMap(x => x.status === "fulfilled" ? x.value.map(c => "arsiv:" + c.id) : [])]);
@@ -907,7 +933,9 @@ async function smartSearch(env, tur, p0, ctxt, max) {
       score: x.score, hasTerm: x.hasTerm, level: x.lv.label, outcome: decisionOutcome(text).label, oy: x.oy || 0,
       ai: pk ? pk.neden : null, rank: pk ? pk.rank : 99, selected: !!pk && pk.rank < max };
   }).sort((a, b) => a.rank - b.rank || b.score - a.score);
-  return { scanned: all.length, withTerm: withTerm.length, candidates: out, aiUsed: picks.length > 0 };
+  const aCount = archS.reduce((n, x) => n + (x.status === "fulfilled" ? x.value.length : 0), 0);
+  return { scanned: all.length, withTerm: withTerm.length, candidates: out, aiUsed: picks.length > 0,
+    diag: { arsiv: aCount ? `${aCount} karar` : (aDiag[0] || "sonuç yok"), resmi: oDiag || "-", zamanAsimi: !aCount && aDiag.includes("zaman aşımı") } };
 }
 
 // Mahkeme düzeyi: yüksek değer = daha güçlü kaynak
@@ -1156,7 +1184,7 @@ async function route(req, env, ctx) {
     if (!p0.arti) { const prof = TERIM_BAGLAM[trLower(p0.terim)] || {}; p0.arti = prof.arti || []; p0.eksi = prof.eksi || []; }
     if (!p0.queries.length) p0.queries = [p0.terim || konu || tur.split(" (")[0]].filter(Boolean);
     const r = await smartSearch(env, tur, p0, { olay: fixLegalTypos(olay), talep: fixLegalTypos(talep), konu: fixLegalTypos(konu) }, max);
-    await useQuota(env, user, "ai");
+    if (r.candidates.length) await useQuota(env, user, "ai");   // karar bulunamazsa hak düşülmez
     return { terim: p0.terim, aiTerim, ogrenilen, queries: p0.queries, ...r };
   }
   // 1c) Öğrenme: avukatın tuttuğu / çıkardığı kararlar ve terim düzeltmesi (anonim; kişi ve olay bilgisi yok)
