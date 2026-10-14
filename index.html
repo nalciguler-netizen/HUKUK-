@@ -201,7 +201,7 @@ function pageHome(){
     <span class="eyebrow">KAYNAK DOĞRULAMALI HUKUK ARAŞTIRMASI</span>
     <h1>İçtihat araştırmanızı dakikalardan saniyelere indirin.</h1>
     <p>Yargıtay, UYAP Emsal ve Danıştay kararlarında doğrudan resmî kaynaktan arama yapın. Bulduğunuz kararı yapay zekâyla özetleyin, sözleşmeleri risk açısından inceleyin, dilekçe taslağının iskeletini çıkarın.</p>
-    <div class="cta"><a class="btn btn-gold" href="#/kayit">1 gün ücretsiz deneyin</a><a class="btn btn-ghost" href="#/paketler">Paketleri görün</a></div>
+    <div class="cta"><a class="btn btn-gold" href="#/kayit">7 gün ücretsiz deneyin</a><a class="btn btn-ghost" href="#/paketler">Paketleri görün</a></div>
     <div class="stats">
       <div><b>11M+</b><span>karar hedefi</span></div>
       <div><b>3</b><span>resmî karar bankası</span></div>
@@ -246,7 +246,7 @@ const PLAN_INFO = [
 function pagePlans(){
   app.innerHTML = `<section class="block plans"><div class="wrap">
     <h1>Paketler</h1>
-    <p class="muted">Her yeni hesap Optimus paketini <b>1 gün ücretsiz</b> dener. Fiyatlara KDV dahildir; aylık abonelik.</p>
+    <p class="muted">Her yeni hesap Optimus paketini <b>7 gün ücretsiz</b> dener. Fiyatlara KDV dahildir; aylık abonelik.</p>
     <div class="notice">Platform şu an <b>test aşamasındadır</b>; ücretli paketlerin satışı henüz açılmamıştır. Test kullanıcısı olmak için <a href="mailto:${esc(CONFIG.SUPPORT_EMAIL)}">${esc(CONFIG.SUPPORT_EMAIL)}</a> adresine yazabilirsiniz.</div>
     <div class="grid">${PLAN_INFO.map(p => `
       <article class="card plan ${p.featured ? "featured" : ""}">
