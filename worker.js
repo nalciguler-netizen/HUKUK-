@@ -227,7 +227,7 @@ function metaError(data) {
   return m && m.FMTY === "ERROR" ? String(m.FMTE || "Resmî kaynak hata döndürdü.") : null;
 }
 
-async function searchOfficial(sourceKey, query, page) {
+async function searchOfficial(sourceKey, query, page, opts = {}) {
   const s = SOURCES[sourceKey];
   if (!s) throw new HttpError(400, "Bilinmeyen kaynak.");
   const q = String(query || "").trim();
@@ -256,6 +256,7 @@ async function searchOfficial(sourceKey, query, page) {
     try {
       res = await post(s.search, { arananKelime: qq, birimYrgKurulDaire: "", ...common });
     } catch (e) {
+      if (opts.noFallback) throw e;
       // Yargıtay sitesi bulut bağlantılarını reddedebiliyor; Yargıtay kararları UYAP Emsal'de de yayımlanır.
       const alt = await searchOfficial("emsal", q, p);   // emsal kendi içinde çoklu ifadeyi işler
       // UYAP Emsal tüm mahkemeleri verir; Yargıtay seçildiğinde bölge adliye ve ilk derece kararlarını ayıkla.
@@ -491,22 +492,28 @@ const AI_TASKS = {
     "2. Olayla benzerlik: her karar için olaya benzeyen ve ayrışan yön; karara künyesiyle atıf yap.\n" +
     "3. Lehe noktalar ve aleyhe noktalar (karşı tarafın muhtemel savunması dahil).\n" +
     "4. İspat: hangi vakıa kimin tarafından, hangi delille ispatlanmalı; eksik görünen deliller.\n" +
-    "5. Usul kontrolü: süre, görev/yetki, dava şartları (ör. arabuluculuk) gibi kontrol edilmesi gereken noktalar — yalnızca soru olarak belirt, kesin hüküm kurma.\n" +
-    "6. Değerlendirme: davanın güçlü ve zayıf yanlarını nitel olarak özetle (güçlü / orta / zayıf). YÜZDE veya kazanma olasılığı rakamı VERME.\n" +
+    "5. Mevzuat: MEVZUAT bölümündeki maddelerin davaya nasıl uygulanacağı (yalnızca verilen maddeler ve verilen metinleri).\n" +
+    "6. Usul kontrolü: süre, görev/yetki, dava şartları (ARABULUCULUK bölümü verilmişse son tutanak), zorunlu dava arkadaşlığı gibi kontrol edilmesi gereken noktalar; eksik bilgileri madde madde say.\n" +
+    "7. Değerlendirme: davanın güçlü ve zayıf yanlarını nitel olarak özetle (güçlü / orta / zayıf). YÜZDE veya kazanma olasılığı rakamı VERME.\n" +
     "Yalnızca verilen künyelere atıf yap; listede olmayan karar, esas/karar numarası veya kanun maddesi yazma.",
-  dilekce_yaz: "Aşağıdaki bilgilerle bir DAVA DİLEKÇESİ TASLAĞI yaz. Taraf ve mahkeme bilgilerini AŞAĞIDAKİ YER TUTUCULARLA aynen yaz (bunlar telefonda gerçek bilgilerle doldurulacak):\n" +
-    "{{MAHKEME}} — mahkeme adı (başlıkta, 'NE' ekiyle: {{MAHKEME}}'NE); {{DAVACI}} — davacı; {{DAVACI_VEKILI}} — davacı vekili; {{DAVALI}} — davalı(lar); {{DAVA_DEGERI}} — dava değeri; {{TARIH}} — tarih.\n" +
-    "Biçim: {{MAHKEME}}'NE başlığı; DAVACI : {{DAVACI}}; VEKİLİ : {{DAVACI_VEKILI}}; DAVALI : {{DAVALI}}; DAVA DEĞERİ : {{DAVA_DEGERI}} (gerekiyorsa); KONU (verilen konuyu kullanarak tek paragraf); AÇIKLAMALAR (numaralı paragraflar, olaylar tarih sırasıyla); HUKUKİ DEĞERLENDİRME VE EMSAL KARARLAR; HUKUKİ NEDENLER; HUKUKİ DELİLLER; SONUÇ VE İSTEM (numaralı talepler); {{TARIH}} ve 'Davacı Vekili {{DAVACI_VEKILI}}' imza alanı.\n" +
-    "Kurallar:\n" +
-    "- Emsal karar olarak YALNIZCA 'SEÇİLEN KARARLAR' listesindeki künyeleri kullan; her atıfta künyeyi aynen yaz (daire, E., K., tarih) ve kararın olaya nasıl uyduğunu bir-iki cümleyle açıkla. Listede olmayan karar yazma.\n" +
-    "- Kanun maddesini yalnızca kullanıcının metninde veya seçilen kararların metninde geçiyorsa yaz; yoksa '[ilgili mevzuat avukat tarafından eklenecek]' yaz.\n" +
-    "- Olayda geçmeyen ada, tarihe, tutara, ada-parsel bilgisine ihtiyaç olursa [ ] ile boş bırak; uydurma.\n" +
-    "- Dava analizi verilmişse onun lehe noktalarını öne çıkar, aleyhe noktalara karşı açıklama yap.\n" +
-    "- Emsal olarak yalnızca davacının talebini DESTEKLEYEN kararları kullan; talebe aykırı (ör. davayı reddeden) kararları dilekçeye koyma, bunlar yalnızca analizde değerlendirilir.\n" +
-    "- SONUÇ VE İSTEM bölümünde delil sayma; yalnızca mahkemeden istenen hükümleri numaralı yaz (davanın kabulü ve talep edilen hüküm; yargılama giderleri ile vekâlet ücretinin karşı tarafa yükletilmesi).\n" +
-    "- AÇIKLAMALAR'da olaydaki her vakıayı ayrı paragrafta anlat; olayda olmayan vakıa ekleme; dilekçe için gerekli olup olayda bulunmayan bilgiyi (ör. taşınmazın il/ilçe/ada/parsel bilgisi, paydaşların hisse oranları) [ ] ile yer açarak belirt.\n" +
-    "- Aynı cümleyi veya talebi tekrar etme. Kullanıcının yazım hatalarını düzelt (ör. 'izale-i şuur' değil 'izale-i şuyu', 'dava' kelimesini doğru yaz).\n" +
-    "- Resmî, açık ve ölçülü dilekçe dili kullan; abartılı ifade kullanma.",
+  dilekce_yaz: "Sen 30 yıllık deneyimli bir Türk avukatısın. Aşağıdaki bilgilerle Türk yargı usulüne uygun bir DAVA DİLEKÇESİNİN GÖVDESİNİ yaz.\n" +
+    "Mahkeme başlığı, taraf bilgileri, tarih, imza ve EKLER bölümü telefonda ayrıca eklenecek; SEN BUNLARI YAZMA. Yalnızca aşağıdaki beş bölümü, bu sırayla ve bu başlıklarla yaz:\n" +
+    "KONUSU : tek cümle, '... talebinden ibarettir.' ile biter.\n" +
+    "AÇIKLAMALAR :\n1-) ...\n2-) ...   (paragraflar '1-)', '2-)' biçiminde numaralanır)\n" +
+    "HUKUKİ NEDENLER : tek satır.\n" +
+    "HUKUKİ DELİLLER : tek satır, virgülle ayrılmış.\n" +
+    "NETİCE VE TALEP : 'Yukarıda arz ve izah edilen nedenlerle;' ile başlar, istemler '1-', '2-' diye numaralanır, 'karar verilmesini saygılarımızla arz ve talep ederiz.' ile biter.\n\n" +
+    "AÇIKLAMALAR NASIL YAZILIR:\n" +
+    "- İlk paragraflarda vakıaları tarih sırasıyla anlat; davacı için 'müvekkil', karşı taraf için 'davalı' de. OLAY ve TÜRE ÖZEL BİLGİLER'de olmayan vakıa ekleme; dilekçe için gerekli olup verilmeyen bilgi (ada/parsel, tarih, tutar, pay oranı gibi) için [ ] bırak.\n" +
+    "- Sonraki paragraflarda hukuki değerlendirme yap: MEVZUAT bölümündeki maddeleri içerikleriyle kullan (ör. 'TMK m.698 uyarınca paydaşlardan her biri paylaşmayı isteyebilir.'). Bir maddeye, verilen metninde veya açıklamasında olmayan bir hüküm yükleme.\n" +
+    "- SEÇİLEN KARARLAR'dan davayı DESTEKLEYENLERE künyesiyle atıf yap (ör. 'Yargıtay 7. Hukuk Dairesinin E. 2023/11, K. 2023/90 sayılı kararında da ... belirtildiği üzere'). Kararın ne dediğini YALNIZCA verilen alıntıdan çıkar; alıntıda davayla ilgili bir ilke yoksa o karara atıf yapma. Talebe aykırı (davayı reddeden) kararları dilekçeye koyma. [1] gibi sıra numarası yazma.\n" +
+    "- ARABULUCULUK bölümü verilmişse bir paragrafta dava şartı arabuluculuğa başvurulduğunu ve anlaşma sağlanamadığını son tutanak bilgisiyle yaz; bilgi eksikse [ ] bırak.\n" +
+    "- Son paragraf davanın açılma gerekçesini bağlar (ör. '... bu nedenle Sayın Mahkemenize işbu davayı açma zorunluluğu doğmuştur.').\n" +
+    "- 'açmak istemektedir', 'talep etmek istemektedir' gibi niyet bildiren ifadeler KULLANMA; dava açılmış gibi yaz.\n" +
+    "HUKUKİ NEDENLER: MEVZUAT bölümündeki kanunları kısaltma ve madde numaralarıyla yaz (ör. 'TMK m.688, 698, 699; HMK m.4; 6325 s. HUAK m.18/B ve ilgili sair mevzuat.'). MEVZUAT bölümünde olmayan madde numarası yazma.\n" +
+    "HUKUKİ DELİLLER: verilen delilleri yaz, sonuna 've her türlü yasal delil.' ekle.\n" +
+    "NETİCE VE TALEP: STANDART İSTEMLER'i olaya ve avukatın TALEP'ine uyarlayarak yaz; delil sayma; aynı istemi tekrarlama.\n" +
+    "GENEL: Metindeki {{...}} biçimindeki yer tutucuları AYNEN koru (telefonda doldurulacak). Resmî, ölçülü, akıcı dilekçe dili kullan; aynı cümleyi tekrarlama; kullanıcının yazım hatalarını düzelt; abartılı ifade kullanma.",
   degisiklik: "Aşağıda bir mevzuat hükmünün ESKİ ve YENİ metni ile bilgisayarın otomatik çıkardığı kelime farkları var. Şu başlıklarla yaz:\n" +
     "1. Değişikliğin özü: 1-2 cümle.\n" +
     "2. Değişen noktalar: her biri için 'eski → yeni' ve hukuki anlamı (hak, yükümlülük, süre, miktar, oran, kapsam veya yaptırım genişledi mi, daraldı mı, kaldırıldı mı).\n" +
@@ -760,6 +767,7 @@ TERİM: Davanın Yargıtay kararlarında geçen resmî adı (2-4 kelime). Örnek
 BAĞLAM: Bu davaya ait kararlarda geçmesi beklenen 4-6 kelime (ör. paydaş, taşınmaz, tapu).
 İLGİSİZ: Aynı terimin farklı anlamda geçtiği ilgisiz kararlarda görülen 3-5 kelime (ör. ortaklığın giderilmesi için: şirket, anonim, ticaret sicil).
 ARAMA: Bu davaya özgü 3 farklı arama ifadesi (her biri 2-5 kelime, hukuki terimlerle; ör. "ortaklığın giderilmesi satış", "ortaklığın giderilmesi aynen taksim", "paydaş muhdesat").
+MADDE: Bu davada dayanılacak en fazla 6 kanun maddesi; her satıra bir madde, kısaltma + madde numarası (ör. "TMK 698", "HMK 4", "TBK 344", "İş K. 17", "İİK 67"). Kullanılabilecek kısaltmalar: TMK, TBK, HMK, İİK, TTK, İş K., 1475, İş Mahk. K., HUAK, TKHK, KTK, NHK, KMK, Tapu K., İYUK, 3095. Emin olmadığın maddeyi yazma.
 Kişi adı, tarih, tutar yazma. Kullanıcının yazım hatalarını düzelt (ör. "izalei şuur" = izale-i şuyu). Biçim tam olarak şöyle olsun:
 TERİM: ...
 BAĞLAM: kelime, kelime, ...
@@ -767,12 +775,13 @@ BAĞLAM: kelime, kelime, ...
 ARAMA: ...
 ARAMA: ...
 ARAMA: ...
+MADDE: ...
 
 Dava türü: ${tur || "-"}
 Konu: ${konu || "-"}
 Talep: ${talep || "-"}
 Olay: ${olay}` },
-  ], 160);
+  ], 260);
   const clean = l => l.replace(/^[\s\-*•"“]+|["”.\s]+$/g, "").trim();
   let terim = clean(((/TER[İI]M\s*:\s*(.+)/i.exec(text) || [])[1] || ""));
   const queries = [...text.matchAll(/ARAMA\s*:\s*(.+)/gi)].map(m => clean(m[1])).filter(x => x.length >= 4 && x.length <= 80).slice(0, 3);
@@ -783,7 +792,19 @@ Olay: ${olay}` },
   const prof = TERIM_BAGLAM[trLower(terim)] || {};
   const arti = [...new Set([...(prof.arti || []), ...list(/BAĞLAM\s*:\s*(.+)/i)])];
   const eksi = [...new Set([...(prof.eksi || []), ...list(/[İI]LG[İI]S[İI]Z\s*:\s*(.+)/i)])].filter(x => !arti.includes(x));
-  return { terim, queries: queries.length ? queries : (terim ? [terim] : []), arti, eksi };
+  const maddeler = [...text.matchAll(/MADDE\s*:\s*(.+)/gi)].map(m => parseMadde(clean(m[1]))).filter(Boolean).slice(0, 6);
+  return { terim, queries: queries.length ? queries : (terim ? [terim] : []), arti, eksi, maddeler };
+}
+// Yapay zekânın önerdiği madde: yalnızca bilinen kanun kısaltmaları kabul edilir; metni tarayıcıda mevzuat.gov.tr'den doğrulanır
+const KANUN_KISA = { "tmk": "4721", "tbk": "6098", "hmk": "6100", "iik": "2004", "ttk": "6102", "is k": "4857", "is kanunu": "4857", "1475": "1475",
+  "is mahk k": "7036", "is mahkemeleri k": "7036", "7036": "7036", "huak": "6325", "6325": "6325", "tkhk": "6502", "6502": "6502", "ktk": "2918", "2918": "2918",
+  "nhk": "5490", "5490": "5490", "kmk": "634", "634": "634", "tapu k": "2644", "iyuk": "2577", "2577": "2577", "3095": "3095", "4721": "4721", "6098": "6098", "6100": "6100", "2004": "2004", "4857": "4857" };
+function parseMadde(x) {
+  const m = /^(.+?)\s+(?:m\.?\s*|md\.?\s*|madde\s*)?((?:ek|geçici)\s*)?(\d{1,4}(?:\s*\/\s*[a-zçğıöşü])?)\b/i.exec(String(x || "").trim());
+  if (!m) return null;
+  const key = trLower(m[1]).replace(/[İı]/g, "i").replace(/ı/g, "i").replace(/ş/g, "s").replace(/[.\s]+/g, " ").trim();
+  const no = KANUN_KISA[key]; if (!no) return null;
+  return { no, m: ((m[2] ? m[2].trim() + " " : "") + m[3].replace(/\s+/g, "")).toLocaleUpperCase("tr-TR"), ham: x.slice(0, 40) };
 }
 // ---------- Öğrenen arama: avukatların seçimlerinden öğrenir ----------
 // Saklanan: yalnızca hukuki terim + karar künyesi + kaç kez tutulduğu/çıkarıldığı. Kimlik, olay metni veya kullanıcı bilgisi SAKLANMAZ.
@@ -815,11 +836,14 @@ async function learnedDocs(env, terim) {
 // Arşivden metinli satırlar (birkaç ayna denenir)
 async function archiveRows(cfg, q, length, ms = 30000, diag) {
   let last = "";
-  for (const ds of ARCHIVE_MIRRORS.slice(0, 3)) {
+  for (const ds of ARCHIVE_MIRRORS.slice(0, 2)) {
     try {
       const j = await hfGet("search", { dataset: ds, config: cfg, split: "train", offset: "0", length: String(length), query: q }, ms);
       return (j.rows || []).map(it => ({ ...archRow(cfg, it, ds), source: "arsiv" }));
-    } catch (e) { last = e && e.timeout ? "zaman aşımı" : String(e && e.message || e).slice(0, 60); if (e && e.timeout) break; }
+    } catch (e) {
+      last = e && e.timeout ? "zaman aşımı" : e && e.status >= 500 ? `servis hatası (${e.status})` : String(e && e.message || e).slice(0, 60);
+      if (e && (e.timeout || e.status >= 500)) break;      // aynalar aynı arama sunucusunu kullanır; sunucu hatasında diğerini denemek boşuna
+    }
   }
   if (diag) diag.push(last || "sonuç yok");
   return [];
@@ -831,38 +855,50 @@ async function smartSearch(env, tur, p0, ctxt, max) {
   // 1) arşiv: önce yalnızca hukuki terimle (en isabetli), yetmezse diğer ifadelerle — aynı anda çok arama arşivi yavaşlatıyor
   const aDiag = [];
   const archP = (async () => {
-    const first = await archiveRows(cfg, p0.terim || qs[0], 30, 35000, aDiag);
+    const first = await archiveRows(cfg, p0.terim || qs[0], 30, 25000, aDiag);
     const rest = first.length >= 10 ? [] : qs.filter(q => trLower(q) !== trLower(p0.terim || ""));
-    const more = await Promise.allSettled(rest.slice(0, 2).map(q => archiveRows(cfg, q, 20, 25000, aDiag)));
+    const more = await Promise.allSettled(rest.slice(0, 2).map(q => archiveRows(cfg, q, 20, 20000, aDiag)));
     return [{ status: "fulfilled", value: first }, ...more];
   })();
   const offSrc = cfg === "danistay" ? "danistay" : "emsal";
-  let oDiag = "";
-  const offP = (async () => {
+  let oDiag = "", yDiag = "";
+  const offQ = p0.terim ? (/\s/.test(p0.terim) ? `"${p0.terim}"` : p0.terim) : qs[0];
+  // UYAP Emsal (Danıştay davalarında Danıştay): yalnızca daire / kurul kararları
+  const emsP = (async () => {
     try {
-      const q = p0.terim ? (/\s/.test(p0.terim) ? `"${p0.terim}"` : p0.terim) : qs[0];
-      const pages = await Promise.allSettled([1, 2].map(pg => searchOfficial(offSrc, q, pg)));
+      const pages = await Promise.allSettled([1, 2].map(pg => searchOfficial(offSrc, offQ, pg)));
       let raw = pages.flatMap(x => x.status === "fulfilled" ? (x.value.items || []) : []);
-      // Tırnaklı tam ifade sonuç vermediyse tırnaksız bir kez daha
-      if (!raw.length && q.startsWith('"')) {
-        try { raw = (await searchOfficial(offSrc, q.slice(1, -1), 1)).items || []; } catch {}
-      }
-      // UYAP Emsal'de ilk derece kararları da var: yalnızca Yargıtay ve bölge adliye daire/kurul kararları alınır
+      if (!raw.length && offQ.startsWith('"')) { try { raw = (await searchOfficial(offSrc, offQ.slice(1, -1), 1)).items || []; } catch {} }
       const isTop = it => /daire|genel kurul/i.test(it.daire) && !/asliye|sulh|ticaret mahkemesi|iş mahkemesi|aile mahkemesi|tüketici mahkemesi|icra/i.test(it.daire);
-      const items = (offSrc === "emsal" ? raw.filter(isTop).sort((a, b) => (/bölge/i.test(a.daire) ? 1 : 0) - (/bölge/i.test(b.daire) ? 1 : 0)) : raw).slice(0, 6);
+      const items = (offSrc === "emsal" ? raw.filter(isTop).sort((a, b) => (/bölge/i.test(a.daire) ? 1 : 0) - (/bölge/i.test(b.daire) ? 1 : 0)) : raw).slice(0, cfg === "danistay" ? 7 : 4);
       oDiag = pages.every(x => x.status === "rejected") && !raw.length ? "ulaşılamadı" : `${raw.length} sonuç, ${items.length} üst mahkeme kararı`;
-      const got = await Promise.allSettled(items.map(it => getDecision(env, offSrc, it.id, { ...it, q: p0.terim || qs[0] })));
-      return got.map((g, i) => g.status === "fulfilled" && g.value && g.value.text ? { ...items[i], text: g.value.text, source: offSrc } : null).filter(Boolean);
-    } catch (e) { oDiag = "ulaşılamadı"; return []; }
+      return items.map(it => ({ ...it, source: offSrc }));
+    } catch { oDiag = "ulaşılamadı"; return []; }
+  })();
+  // Yargıtay'ın kendi karar arama sitesi (bulut bağlantısını reddedebilir; o durumda sessizce atlanır)
+  const ygtP = cfg === "danistay" ? Promise.resolve([]) : (async () => {
+    try {
+      const r = await searchOfficial("yargitay", offQ, 1, { noFallback: true });
+      const items = (r.items || []).slice(0, 4);
+      yDiag = `${(r.items || []).length} sonuç`;
+      return items.map(it => ({ ...it, daire: /yargıtay/i.test(it.daire) ? it.daire : "Yargıtay " + it.daire, source: "yargitay" }));
+    } catch { yDiag = "ulaşılamadı"; return []; }
+  })();
+  const offP = (async () => {
+    const [e, y] = await Promise.all([emsP, ygtP]);
+    const seenNo = new Set(); const items = [];
+    for (const it of [...y, ...e]) { const k = `${it.esas}|${it.karar}`; if (it.esas && seenNo.has(k)) continue; seenNo.add(k); items.push(it); }
+    const got = await Promise.allSettled(items.slice(0, 8).map(it => getDecisionOfficial(env, it.source, it.id, { ...it, q: p0.terim || qs[0] })));
+    return got.map((g, i) => g.status === "fulfilled" && g.value && g.value.text ? { ...items[i], text: g.value.text } : null).filter(Boolean);
   })();
   const votesP = learnedDocs(env, p0.terim || "");
   let [archS, off, votes] = await Promise.all([archP, offP, votesP]);
   // Yedek: hiç metinli karar gelmediyse arşivin UYAP Emsal bölümünde ve ilk arama ifadesiyle bir kez daha denenir
   if (!off.length && !archS.some(x => x.status === "fulfilled" && x.value.length)) {
     const alt = [];
-    if (cfg === "yargitay") alt.push(archiveRows("emsal", p0.terim || qs[0], 25, 30000, aDiag));
+    if (cfg === "yargitay") alt.push(archiveRows("emsal", p0.terim || qs[0], 25, 20000, aDiag));
     const q2 = qs.find(q => trLower(q) !== trLower(p0.terim || ""));
-    if (q2) alt.push(archiveRows(cfg, q2, 20, 30000, aDiag));
+    if (q2) alt.push(archiveRows(cfg, q2, 20, 20000, aDiag));
     const got = await Promise.allSettled(alt);
     archS = [...archS, ...got.map(g => g.status === "fulfilled" ? { status: "fulfilled", value: g.value } : g)];
   }
@@ -887,14 +923,17 @@ async function smartSearch(env, tur, p0, ctxt, max) {
     const t = String(c.text); const low = trLower(t.length > 9000 ? t.slice(0, 3000) + " " + t.slice(-6000) : t);
     const hasTerm = terim ? low.includes(terim) : false;
     const termCount = terim ? Math.min(10, low.split(terim).length - 1) : 0;
+    // Asıl konu testi: terim kararın baş kısmında (dava türü / konu satırı) geçmeli ya da metinde en az iki kez geçmeli.
+    // Tek ve tesadüfi geçiş (ör. bir usul kararında "ortaklığın giderilmesi davasında..." diye anılması) yeterli değildir.
+    const core = hasTerm && (trLower(t.slice(0, 1500)).includes(terim) || termCount >= 2);
     const hits = stems.filter(w => low.includes(w)).length;
     const arti = (p0.arti || []).filter(w => low.includes(trLower(w))).length;
     const eksi = (p0.eksi || []).filter(w => low.includes(trLower(w))).length;
     const oy = voteOf.get(c.source + ":" + c.id) || 0;                 // avukat oyları (tutuldu − çıkarıldı)
     const offTopic = (eksi >= 2 && eksi > arti) || oy <= -3;            // ör. şirket ortaklığı kararı veya avukatların sürekli çıkardığı karar
     const lv = courtLevel(c.daire, t); const year = +((/(\d{4})/.exec(String(c.tarih || "")) || [])[1]) || 0;
-    const score = (hasTerm ? 50 : 0) + termCount * 3 + hits * 4 + arti * 6 - eksi * 8 + Math.max(-5, Math.min(10, oy)) * 5 + lv.rank * 4 + (year >= 2020 ? 4 : year >= 2015 ? 2 : 0) - (offTopic ? 60 : 0);
-    return { c, low, hasTerm: hasTerm && !offTopic, offTopic, score, lv, year, oy };
+    const score = (core ? 50 : hasTerm ? 15 : 0) + termCount * 3 + hits * 4 + arti * 6 - eksi * 8 + Math.max(-5, Math.min(10, oy)) * 5 + lv.rank * 4 + (year >= 2020 ? 4 : year >= 2015 ? 2 : 0) - (offTopic ? 60 : 0);
+    return { c, low, hasTerm: core && !offTopic, mention: hasTerm, offTopic, score, lv, year, oy };
   });
   let withTerm = scored.filter(x => x.hasTerm);
   // Yeterli Yargıtay/Danıştay kararı varsa ilk derece kararları dışarıda bırakılır
@@ -908,13 +947,14 @@ async function smartSearch(env, tur, p0, ctxt, max) {
     const t = String(x.c.text).replace(/\s+/g, " ");
     const at = terim ? x.low.indexOf(terim) : -1;
     const around = at >= 0 ? t.slice(Math.max(0, at - 350), at + 450) : t.slice(0, 600);
-    return `[${i + 1}] ${x.c.daire} E.${x.c.esas || "-"} K.${x.c.karar || "-"} (${x.c.tarih || "-"})\n…${around}…\nHüküm: ${t.slice(-280)}`;
+    const head = at > 450 ? t.slice(0, 220) + " … " : "";
+    return `[${i + 1}] ${x.c.daire} E.${x.c.esas || "-"} K.${x.c.karar || "-"} (${x.c.tarih || "-"})\n${head}…${around}…\nHüküm: ${t.slice(-280)}`;
   };
   let picks = [];
   if (pool.length) {
     const ans = await aiText(env, [
       { role: "system", content: "Sen Türk hukukunda emsal karar seçen bir asistansın. Yalnızca verilen kararlara bakarsın, uydurmazsın." },
-      { role: "user", content: `AVUKATIN DAVASI\nDava türü: ${tur}\nKonu: ${ctxt.konu || "-"}\nTalep: ${ctxt.talep || "-"}\nOlay: ${ctxt.olay.slice(0, 1500)}\n\nAşağıdaki kararlardan bu davaya EMSAL olabilecek, yani AYNI HUKUKİ MESELEYİ içerenleri seç. Konusu farklı olanları seçme. DİKKAT: aynı terim farklı anlamda geçebilir (ör. "ortaklığın giderilmesi" taşınmaz paydaşları arasında başka, şirket ortaklığında başka bir davadır); avukatın davasıyla aynı türde olanları seç.\nYanıt biçimi: her satırda "numara | neden ilgili (en fazla 15 kelime)". En ilgiliden başla, en fazla ${Math.min(max + 3, 12)} karar. İlgili karar yoksa yalnızca YOK yaz.\n\n${pool.map(brief).join("\n\n")}` },
+      { role: "user", content: `AVUKATIN DAVASI\nDava türü: ${tur}\nKonu: ${ctxt.konu || "-"}\nTalep: ${ctxt.talep || "-"}\nOlay: ${ctxt.olay.slice(0, 1500)}\n\nAşağıdaki kararlardan bu davaya EMSAL olabilecek, yani DAVA KONUSU AYNI olan kararları seç. Terimin kararda yalnızca geçmesi yetmez: kararın kendisi bu tür bir davayı (ör. ortaklığın giderilmesi davasını) incelemeli. Görev/yetki, harç, kesinleşme, ihya, icra gibi başka bir meseleyi inceleyen kararları SEÇME. DİKKAT: aynı terim farklı anlamda geçebilir (ör. "ortaklığın giderilmesi" taşınmaz paydaşları arasında başka, şirket ortaklığında başka bir davadır); avukatın davasıyla aynı türde olanları seç.\nYanıt biçimi: her satırda "numara | neden ilgili (en fazla 15 kelime)". En ilgiliden başla, en fazla ${Math.min(max + 3, 12)} karar. İlgili karar yoksa yalnızca YOK yaz.\n\n${pool.map(brief).join("\n\n")}` },
     ], 500);
     const used = new Set();
     for (const m of ans.matchAll(/^\s*\[?(\d{1,2})\]?\s*[|:\-–)]\s*(.+)$/gm)) {
@@ -935,7 +975,7 @@ async function smartSearch(env, tur, p0, ctxt, max) {
   }).sort((a, b) => a.rank - b.rank || b.score - a.score);
   const aCount = archS.reduce((n, x) => n + (x.status === "fulfilled" ? x.value.length : 0), 0);
   return { scanned: all.length, withTerm: withTerm.length, candidates: out, aiUsed: picks.length > 0,
-    diag: { arsiv: aCount ? `${aCount} karar` : (aDiag[0] || "sonuç yok"), resmi: oDiag || "-", zamanAsimi: !aCount && aDiag.includes("zaman aşımı") } };
+    diag: { arsiv: aCount ? `${aCount} karar` : (aDiag[0] || "sonuç yok"), resmi: oDiag || "-", yargitay: yDiag || "-", zamanAsimi: !aCount && aDiag.includes("zaman aşımı") } };
 }
 
 // Mahkeme düzeyi: yüksek değer = daha güçlü kaynak
@@ -973,8 +1013,15 @@ function decisionFacts(d, ref) {
   const text = String(d.text || "");
   const year = +((/(\d{4})/.exec(String(d.tarih || "")) || /(\d{4})\s*\//.exec(String(d.karar || "")) || [])[1]) || null;
   const kunye = [d.daire, d.esas && "E. " + d.esas, d.karar && "K. " + d.karar, d.tarih && "T. " + d.tarih].filter(Boolean).join(", ");
-  // Gerekçe ve hüküm sondadır: baştan kısa giriş + sondan 2.200 karakter
-  const excerpt = text.length > 3000 ? text.slice(0, 500).trim() + "\n[...]\n" + text.slice(-2200).trim() : text.trim();
+  // Dilekçe için: kısa giriş + davanın konusunun geçtiği bölüm + gerekçe/hüküm (sondan)
+  const flat = text.replace(/[ \t]+/g, " ");
+  const q = trLower(String((ref && ref.hint && ref.hint.q) || "")).trim();
+  let excerpt = flat.trim();
+  if (flat.length > 3200) {
+    const at = q ? trLower(flat).indexOf(q, 300) : -1;
+    const mid = at > 0 && at < flat.length - 1800 ? "\n[...]\n" + flat.slice(Math.max(300, at - 300), at + 700).trim() : "";
+    excerpt = flat.slice(0, 300).trim() + mid + "\n[...]\n" + flat.slice(-1800).trim();
+  }
   return { ok: true, ref, kunye, daire: d.daire || "", esas: d.esas || "", karar: d.karar || "", tarih: d.tarih || "",
            year, level: courtLevel(d.daire, text), outcome: decisionOutcome(text), excerpt, chars: text.length };
 }
@@ -998,7 +1045,7 @@ async function getMevzuat(no, tur, tertipHint, ctx) {
     try {
       res = await fetch(src, { headers: { "User-Agent": UA, "Accept": "text/html", "Accept-Language": "tr-TR,tr;q=0.9" },
                                signal: AbortSignal.timeout(20000) });
-    } catch (e) { lastErr = "bağlantı kurulamadı"; continue; }
+    } catch (e) { lastErr = "bağlantı kurulamadı"; break; }   // bağlantı yoksa diğer tertipleri denemek yalnızca bekletir
     if (!res.ok) { lastErr = `HTTP ${res.status}`; if (res.status >= 500) break; continue; }
     const buf = await res.arrayBuffer();
     const probe = new TextDecoder("latin1").decode(buf.slice(0, Math.min(buf.byteLength, 400000)));
@@ -1173,7 +1220,7 @@ async function route(req, env, ctx) {
     let p0 = { terim: String(b.terim || "").trim().slice(0, 80), queries: (Array.isArray(b.queries) ? b.queries : []).map(x => String(x).trim().slice(0, 100)).filter(x => x.length >= 3).slice(0, 3) };
     if (!p0.terim || !p0.queries.length) {
       const g = await planSearch(env, tur, konu, olay, talep);
-      p0 = { terim: p0.terim || g.terim, queries: p0.queries.length ? p0.queries : g.queries, arti: g.arti, eksi: g.eksi };
+      p0 = { terim: p0.terim || g.terim, queries: p0.queries.length ? p0.queries : g.queries, arti: g.arti, eksi: g.eksi, maddeler: g.maddeler };
     }
     // Avukatlar bu dava türünde yapay zekânın terimini sık düzelttiyse öğrenilen terim kullanılır
     let aiTerim = p0.terim, ogrenilen = false;
@@ -1185,7 +1232,7 @@ async function route(req, env, ctx) {
     if (!p0.queries.length) p0.queries = [p0.terim || konu || tur.split(" (")[0]].filter(Boolean);
     const r = await smartSearch(env, tur, p0, { olay: fixLegalTypos(olay), talep: fixLegalTypos(talep), konu: fixLegalTypos(konu) }, max);
     if (r.candidates.length) await useQuota(env, user, "ai");   // karar bulunamazsa hak düşülmez
-    return { terim: p0.terim, aiTerim, ogrenilen, queries: p0.queries, ...r };
+    return { terim: p0.terim, aiTerim, ogrenilen, queries: p0.queries, maddeler: p0.maddeler || [], ...r };
   }
   // 1c) Öğrenme: avukatın tuttuğu / çıkardığı kararlar ve terim düzeltmesi (anonim; kişi ve olay bilgisi yok)
   if (path === "/api/dilekce/ogren" && req.method === "POST") {
