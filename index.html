@@ -1375,6 +1375,7 @@ function dlStep1(){
     <select id="dtur">${DAVA_TURLERI.map(([t]) => `<option ${t === d.tur ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>
     <label for="dmah">Mahkeme</label>
     <input id="dmah" type="text" maxlength="160" placeholder="ör. İstanbul Anadolu ${esc(hint.replace("… ", ""))}" value="${esc(d.mahkeme)}">
+    <div id="gorev" class="small" style="margin-top:6px;color:var(--err)">${gorevUyari(d)}</div>
     <label for="dcvi">Davacı</label>
     <input id="dcvi" type="text" maxlength="300" placeholder="Ad soyad, T.C. kimlik no, adres" value="${esc(d.davaci)}">
     <label for="dvek">Davacı vekili</label>
@@ -1395,7 +1396,7 @@ function dlStep1(){
     <button class="btn btn-primary btn-block" id="dgo1">Kararları bul →</button>
     <p class="muted small">Bilgileriniz bu telefonda saklanır, sunucuya kaydedilmez. Arama ve analiz için sunucuya yalnızca dava türü, konu, olay, talep ve deliller gider.</p>`;
   const map = { dtur: "tur", dmah: "mahkeme", dcvi: "davaci", dvek: "vekil", dcli: "davali", dkon: "konu", ddeg: "deger", dolay: "olay", dtalep: "talep", ddelil: "deliller" };
-  const keep = () => { Object.entries(map).forEach(([id, k]) => d[k] = $("#" + id).value); dlSaveDraft(); };
+  const keep = () => { Object.entries(map).forEach(([id, k]) => d[k] = $("#" + id).value); dlSaveDraft(); const g = $("#gorev"); if (g) g.innerHTML = gorevUyari(d); };
   Object.keys(map).forEach(id => $("#" + id).oninput = keep);
   $("#dtur").onchange = () => { keep(); const h = (DAVA_TURLERI.find(x => x[0] === d.tur) || [, "… Mahkemesi"])[1]; $("#dmah").placeholder = "ör. İstanbul Anadolu " + h.replace("… ", ""); };
   $("#dgo1").onclick = () => {
@@ -1420,6 +1421,7 @@ async function dlRunSearch(custom){
   try {
     const r = await api("/api/dilekce/ara", { tur: d.tur, konu: d.konu, olay: d.olay, talep: d.talep, ...(custom || {}) });
     d.terim = r.terim || ""; d.queries = r.queries || []; d.cands = r; d.picked = {};
+    if (!custom) d.aiTerim = r.aiTerim || r.terim || "";
     (r.candidates || []).filter(c => c.selected).forEach(c => d.picked[refKey(c.source, c.item.id)] = { source: c.source, label: c.source === "arsiv" ? "Arşiv" : "UYAP Emsal", q: d.terim || d.queries[0] || "", item: c.item, ai: c.ai });
     d.facts = null; d.analiz = ""; d.dilekce = "";
     dlDrawCands();
@@ -1443,11 +1445,12 @@ function dlDrawCands(){
     return `<div class="pick ${on ? "on" : ""}" data-k="${esc(k)}">
       <label class="chk"><input type="checkbox" ${on ? "checked" : ""}></label>
       <button class="pbody"><b>${esc(c.item.daire || "")}</b><span>E. ${esc(c.item.esas || "—")} · K. ${esc(c.item.karar || "—")} · ${esc(c.item.tarih || "")} · ${c.source === "arsiv" ? "Arşiv" : "UYAP Emsal"} · <b>${esc(c.outcome || "")}</b></span>
-        ${c.ai ? `<span class="small" style="color:var(--text)">🤖 ${esc(c.ai)}</span>` : ""}</button></div>`; };
+        ${c.ai ? `<span class="small" style="color:var(--text)">🤖 ${esc(c.ai)}</span>` : ""}
+      ${c.oy > 0 ? `<span class="small" style="color:var(--ok)">👍 Avukatlar bu konuda ${c.oy} kez seçti</span>` : ""}</button></div>`; };
   const sel = all.filter(c => d.picked[refKey(c.source, c.item.id)]), rest = all.filter(c => !d.picked[refKey(c.source, c.item.id)]);
   const extra = Object.values(d.picked).filter(p => !all.some(c => refKey(c.source, c.item.id) === refKey(p.source, p.item.id)));
   box.innerHTML = `
-    <div class="notice" style="margin-top:12px">Hukuki konu: <b>${esc(d.terim || "—")}</b> · ${d.cands ? `${d.cands.scanned} karar tarandı, ${d.cands.withTerm} kararda bu konu geçiyor` : ""}${d.cands && !d.cands.aiUsed ? " · yapay zekâ seçimi yapılamadı, kararlar ilgi puanına göre sıralandı" : ""}</div>
+    <div class="notice" style="margin-top:12px">Hukuki konu: <b>${esc(d.terim || "—")}</b> · ${d.cands ? `${d.cands.scanned} karar tarandı, ${d.cands.withTerm} kararda bu konu geçiyor` : ""}${d.cands && !d.cands.aiUsed ? " · yapay zekâ seçimi yapılamadı, kararlar ilgi puanına göre sıralandı" : ""}${d.cands && d.cands.ogrenilen ? `<br><span class="small">📚 Bu dava türünde avukatların düzeltmelerinden öğrenilen terim kullanıldı (yapay zekânın önerisi: ${esc(d.cands.aiTerim || "")}).</span>` : ""}</div>
     ${sel.length || extra.length || d.manual.length ? `<h3 style="margin:14px 2px 4px;font-size:1rem">Dilekçede kullanılacak kararlar (${pickedN}/${max})</h3>` + sel.map(row).join("") +
       extra.map(p => `<div class="pick on" data-k="${esc(refKey(p.source, p.item.id))}"><label class="chk"><input type="checkbox" checked></label><button class="pbody"><b>${esc(p.item.daire || "")}</b><span>E. ${esc(p.item.esas || "—")} · K. ${esc(p.item.karar || "—")} · karar ekranından eklendi</span></button></div>`).join("") +
       d.manual.map((m, i) => `<div class="pick on"><label class="chk"><input type="checkbox" checked data-mdel="${i}"></label><div class="pbody"><b>${esc(m.kunye)}</b><span>Sizin eklediğiniz karar</span></div></div>`).join("")
@@ -1459,7 +1462,7 @@ function dlDrawCands(){
       <label for="mt">Karar metni</label><textarea id="mt" style="min-height:100px" placeholder="Kararın metnini yapıştırın (en azından gerekçe ve hüküm kısmı)…"></textarea>
       <div class="row"><button class="btn btn-ghost" id="madd">Kararı ekle</button></div></details>`;
   dlDrawFix();
-  $("#dgo2").onclick = () => { d.step = 3; d.facts = null; d.analiz = ""; tabDilekce(); };
+  $("#dgo2").onclick = () => { dlLearn(); d.step = 3; d.facts = null; d.analiz = ""; tabDilekce(); };
   $("#madd").onclick = () => {
     const k = $("#mk").value.trim(), t = $("#mt").value.trim();
     if (!k || t.length < 100) return showMsg($("#m"), "Künyeyi ve kararın metnini (en az 100 karakter) girin.");
@@ -1488,6 +1491,15 @@ function dlDrawCands(){
   };
 }
 
+// Öğrenme: avukatın tuttuğu ve çıkardığı kararlar + terim düzeltmesi sunucuya bildirilir (kişi/olay bilgisi gönderilmez)
+function dlLearn(){
+  const d = state.dl; if (!d.cands || !d.terim) return;
+  const sig = JSON.stringify([d.terim, Object.keys(d.picked).sort()]); if (d.learnSig === sig) return; d.learnSig = sig;
+  const pack = (src, it) => ({ source: src, id: it.id, daire: it.daire, esas: it.esas, karar: it.karar, tarih: it.tarih, dataset: it.dataset });
+  const kept = Object.values(d.picked).map(p => pack(p.source, p.item));
+  const removed = (d.cands.candidates || []).filter(c => c.selected && !d.picked[refKey(c.source, c.item.id)]).map(c => pack(c.source, c.item));
+  api("/api/dilekce/ogren", { tur: d.tur, terim: d.terim, aiTerim: d.aiTerim && d.aiTerim !== d.terim ? d.aiTerim : "", kept, removed }).catch(() => {});
+}
 async function dlStep3(){
   const d = state.dl, box = $("#dlbody");
   box.innerHTML = `<p class="muted small" style="margin:6px 0 0">3. Seçilen kararların sonucu ve mahkeme düzeyi bilgisayarca çıkarılır; yapay zekâ davanızı bu kararlarla analiz eder. Yüzde veya kazanma olasılığı verilmez.</p>
@@ -1532,23 +1544,50 @@ function dlCompose(forPetition){
   const kararlar = ok.map((x, i) => `[${i + 1}] ${x.kunye}\nMahkeme düzeyi: ${x.level.label} · Sonuç (otomatik): ${x.outcome.label}\nGerekçe/hüküm kısmı:\n${String(x.excerpt || "").slice(-per)}`).join("\n\n");
   const cnt = {}; ok.forEach(x => cnt[x.outcome.label] = (cnt[x.outcome.label] || 0) + 1);
   const mahTur = (d.mahkeme || "").replace(/^.*?(\d+\.\s*)?((Sulh|Asliye|Aile|İş|Tüketici|İdare|Vergi|Ticaret|Sulh Ceza)[^,]*)$/i, "$2");
-  return `DAVA TÜRÜ: ${d.tur}\nMAHKEME TÜRÜ: ${mahTur || "-"}\nDAVA KONUSU: ${d.konu.trim() || "-"}\nDAVA DEĞERİ: ${d.deger.trim() ? "belirtildi ({{DAVA_DEGERI}})" : "belirtilmedi"}\nDAVALI SAYISI: ${d.davali.trim() ? d.davali.trim().split(/\n+/).filter(Boolean).length : "belirtilmedi"}\n\n` +
-    `OLAY:\n${d.olay.trim()}\n\nTALEP:\n${d.talep.trim() || "-"}\n\nDELİLLER:\n${d.deliller.trim() || "-"}\n\n` +
+  return `DAVA TÜRÜ: ${d.tur}\nMAHKEME TÜRÜ: ${mahTur || "-"}\nDAVA KONUSU: ${fixTypos(d.konu.trim()) || "-"}\nDAVA DEĞERİ: ${d.deger.trim() ? "belirtildi ({{DAVA_DEGERI}})" : "belirtilmedi"}\nDAVALI SAYISI: ${d.davali.trim() ? d.davali.trim().split(/\n+/).filter(Boolean).length : "belirtilmedi"}\n\n` +
+    `OLAY:\n${fixTypos(d.olay.trim())}\n\nTALEP:\n${fixTypos(d.talep.trim()) || "-"}\n\nDELİLLER:\n${d.deliller.trim() || "-"}\n\n` +
     `SAYIM: ${ok.length} karar; ${Object.entries(cnt).map(([k, v]) => `${k}: ${v}`).join(", ")}\n\nSEÇİLEN KARARLAR:\n${kararlar}` +
     (forPetition && d.analiz ? `\n\nDAVA ANALİZİ:\n${d.analiz.slice(0, 4000)}` : "");
 }
+// Yazım hatası düzeltme (sunucudakiyle aynı): "izalei şuur" → "izale-i şuyu"
+const fixTypos = t => String(t || "").replace(/izale[\s\-]*[iı]?[\s\-]*ş[uü]y?[uü]r?\b/gi, "izale-i şuyu").replace(/ortaklı[gğ]ın gider[iı]lmes[iı]/gi, "ortaklığın giderilmesi");
+// Görevli mahkeme kontrolü (yalnızca uyarı)
+const GOREV = [
+  [/^Ortaklığın/, /sulh hukuk/, "Ortaklığın giderilmesi davalarında görevli mahkeme Sulh Hukuk Mahkemesidir (HMK m.4/1-b)."],
+  [/^Kira/, /sulh hukuk/, "Kira ilişkisinden doğan davalarda görevli mahkeme Sulh Hukuk Mahkemesidir (HMK m.4/1-a)."],
+  [/^İş hukuku/, /iş mahkemesi/, "İşçi-işveren uyuşmazlıklarında görevli mahkeme İş Mahkemesidir (7036 s.K. m.5); iş mahkemesi olmayan yerde Asliye Hukuk bu sıfatla bakar."],
+  [/^(Aile|Mal rejimi)/, /aile mahkemesi/, "Aile hukukundan doğan davalarda görevli mahkeme Aile Mahkemesidir (4787 s.K. m.4); olmayan yerde Asliye Hukuk bu sıfatla bakar."],
+  [/^Tüketici/, /tüketici/, "Tüketici işlemlerinden doğan davalarda görevli mahkeme Tüketici Mahkemesidir (6502 s.K. m.73)."],
+  [/^Ticari/, /ticaret/, "Ticari davalarda görevli mahkeme Asliye Ticaret Mahkemesidir (TTK m.5)."],
+];
+function gorevUyari(d){
+  const g = GOREV.find(([t]) => t.test(d.tur)); if (!g || !d.mahkeme.trim()) return "";
+  return trLower(d.mahkeme).match(g[1]) ? "" : `⚖️ <b>Görev kontrolü:</b> ${g[2]} Yazdığınız mahkemeyi kontrol edin.`;
+}
+// Mahkeme adı: "Niğde asliye hukuk" → "NİĞDE ASLİYE HUKUK MAHKEMESİ" ve doğru yönelme eki ('NE / 'NA)
+function mahkemeAdi(raw){
+  let m = String(raw || "").trim().replace(/\s+/g, " ").toLocaleUpperCase("tr-TR").replace(/['’]?\s*N[EA]$/, "");
+  if (!m) return "";
+  if (!/(MAHKEMES[İI]|H[ÂA]K[İI]ML[İI]Ğ[İI]|BAŞSAVCILIĞI|DA[İI]RES[İI]|KURULU|BAŞKANLIĞI|MÜDÜRLÜĞÜ)$/.test(m)) m += " MAHKEMESİ";
+  return m;
+}
+const yonelme = m => /[IAOU]$|[IAOU][^AEIİOÖUÜ]*$/.test(m.replace(/[^A-ZÇĞİÖŞÜ]/g, "").slice(-3)) && !/[EİÖÜ][^AEIİOÖUÜ]*$/.test(m) ? "'NA" : "'NE";
 // Yer tutucuları telefondaki bilgilerle doldur
 function dlFill(text){
-  const d = state.dl, up = s => s.toLocaleUpperCase("tr-TR");
-  const v = { MAHKEME: d.mahkeme.trim() ? up(d.mahkeme.trim()) : "[MAHKEME ADI]", DAVACI: d.davaci.trim() || "[Davacı ad soyad, T.C. kimlik no, adres]",
+  const d = state.dl;
+  const mah = mahkemeAdi(d.mahkeme);
+  const v = { MAHKEME: mah || "[MAHKEME ADI]", DAVACI: d.davaci.trim() || "[Davacı ad soyad, T.C. kimlik no, adres]",
     DAVACI_VEKILI: d.vekil.trim() || "[Vekil ad soyad, baro sicil no, adres]", DAVALI: d.davali.trim() ? d.davali.trim().split(/\n+/).map(x => x.trim()).filter(Boolean).join("\n          ") : "[Davalı ad soyad, adres]",
     DAVA_DEGERI: d.deger.trim() || "[ ]", TARIH: new Date().toLocaleDateString("tr-TR") };
-  return String(text || "").replace(/\{\{\s*([A-ZÇĞİÖŞÜ_]+)\s*\}\}/g, (m, k) => v[k] !== undefined ? v[k] : m);
+  return String(text || "")
+    .replace(/\{\{\s*MAHKEME\s*\}\}\s*['’]?\s*N[EA]\b/g, mah ? mah + yonelme(mah) : "[MAHKEME ADI]'NE")
+    .replace(/\{\{\s*([A-ZÇĞİÖŞÜ_]+)\s*\}\}/g, (m, k) => v[k] !== undefined ? v[k] : m);
 }
 function dlStep4(){
   const d = state.dl, box = $("#dlbody");
   box.innerHTML = `<p class="muted small" style="margin:6px 0 0">4. Taslak yalnızca seçilen kararlara atıf yapar. Mahkeme ve taraf bilgileri 1. adımda yazdıklarınızdan telefonunuzda eklenir. [ ] ile işaretli yerleri doldurun, mevzuat atıflarını kontrol edin.</p>
     ${!d.mahkeme.trim() || !d.davaci.trim() || !d.davali.trim() ? `<div class="notice">Mahkeme, davacı veya davalı bilgisi eksik. <a href="#" id="dto1">1. adıma dönüp doldurun</a>; doldurduktan sonra taslak kendiliğinden güncellenir, yeniden yazdırmanız gerekmez.</div>` : ""}
+    ${gorevUyari(d) ? `<div class="notice">${gorevUyari(d)} <a href="#" id="dto1b">Düzelt</a></div>` : ""}
     <div id="m" class="hidden"></div>
     <button class="btn btn-gold btn-block" id="dyaz">${d.dilekce ? "🔄 Yeniden yaz" : "✍️ Dilekçe taslağını yaz"}</button>
     <div id="dout" class="${d.dilekce ? "" : "hidden"} card out" style="margin-top:14px"></div>
@@ -1557,7 +1596,7 @@ function dlStep4(){
   const out = $("#dout");
   const final = () => dlFill(d.dilekce);
   if (d.dilekce) out.innerHTML = fmtAI(final());
-  const to1 = $("#dto1"); if (to1) to1.onclick = e => { e.preventDefault(); d.step = 1; tabDilekce(); };
+  [$("#dto1"), $("#dto1b")].forEach(a => { if (a) a.onclick = e => { e.preventDefault(); d.step = 1; tabDilekce(); }; });
   $("#dyaz").onclick = async () => {
     const btn = $("#dyaz"); busy(btn, true, "Yazılıyor…"); $("#m").classList.add("hidden");
     try { d.dilekce = await streamAI({ task: "dilekce_yaz", text: dlCompose(true) }, out); out.innerHTML = fmtAI(final()); $("#dact").classList.remove("hidden"); }
@@ -2206,6 +2245,7 @@ function pageKvkk(){
   <li>Kullanım: paket bilgisi, günlük arama ve işlem sayıları</li>
   <li>Analiz için gönderdiğiniz metinler: yalnızca işlem anında işlenir, kaydedilmez</li>
   <li>Açtığınız mahkeme kararları: kamuya açık resmî metinlerdir; hızlı erişim için önbellekte tutulur, hesabınızla ilişkilendirilmez</li>
+  <li>Arama kalitesini iyileştirmek için Dilekçe Asistanı'nda hangi kararların tutulduğu veya çıkarıldığı, yalnızca hukuki konu ve karar künyesi olarak <b>anonim</b> kaydedilir; kimliğiniz, olay metni ve taraf bilgileri bu kayda girmez</li>
   <li>Cihazınızda (sunucuya gönderilmeden) tutulanlar: arama geçmişiniz, dilekçe taslaklarınız, ajanda kayıtlarınız, klasör ve notlarınız; bunlar Hizmet Sağlayıcı tarafından görülemez, uygulamadan veya tarayıcı verilerini silerek temizleyebilirsiniz. Yedeği yalnızca siz dışa aktarabilirsiniz.</li></ul>
   <h2>3. Amaçlar ve hukuki sebepler</h2>
   <p>Verileriniz; üyelik sözleşmesinin kurulması ve ifası (KVKK m.5/2-c), hesap güvenliğinin ve hizmet sürekliliğinin sağlanması ile kötüye kullanımın önlenmesi için veri sorumlusunun meşru menfaati (m.5/2-f) ve yasal yükümlülüklerin yerine getirilmesi (m.5/2-ç) hukuki sebeplerine dayanılarak işlenir.</p>
@@ -2252,6 +2292,7 @@ function pageGuide(){
   <p><b>Panelim → Dilekçe</b> sekmesinde 4 adımda çalışır:<br>
   <b>1. Olay ve taraflar:</b> Dava türünü seçin; mahkeme, davacı, vekil, davalı(lar), dava konusu ve değerini yazın; olayı tarih sırasıyla, talebi ve delilleri ekleyin. <b>Taraf ve vekil bilgileri yapay zekâya gönderilmez</b>; taslağa telefonunuzda yerleştirilir. Bilgiler bu telefonda saklanır.<br>
   <b>2. Kararlar:</b> Platform davanın hukuki adını belirler (ör. kardeşler arasında ortak malın paylaşılması için <i>ortaklığın giderilmesi</i>), 11M arşivde ve UYAP Emsal'de bu konuyu içeren kararları tarar; yapay zekâ kararları okuyup <b>en ilgilileri sizin için seçer</b> ve her birinin neden seçildiğini yazar. İsterseniz bir kararın işaretini kaldırabilir, <i>Diğer adaylar</i>dan ekleyebilir, elinizdeki bir kararı ekleyebilir veya <i>Aramayı düzelt</i> ile hukuki terimi değiştirip yeniden taratabilirsiniz.<br>
+  <b>📚 Öğrenen arama:</b> Sistem avukatların seçimlerinden öğrenir. Bir konuda sık tutulan kararlar sonraki aramalarda öne çıkar ("👍 Avukatlar bu konuda n kez seçti"), sık çıkarılanlar geriye düşer; yapay zekânın önerdiği terim avukatlarca sık düzeltilirse sistem doğru terimle başlar. Bu öğrenmede yalnızca hukuki konu ve karar künyesi anonim olarak tutulur.<br>
   <b>3. Analiz:</b> Seçilen kararların sonucu (onama, bozma, ret…) ve mahkeme düzeyi bilgisayarca sayılır. <b>Dava analizini oluştur</b>; olayla benzerlikleri, lehe ve aleyhe noktaları, ispat ve usul kontrollerini yazar. Yüzde veya kazanma olasılığı verilmez.<br>
   <b>4. Dilekçe:</b> Mahkeme başlığı, taraflar, konu, açıklamalar, emsal kararlar (künyeleriyle), hukuki nedenler, deliller ve sonuç-istem bölümleriyle taslak hazırlanır. <b>Word (.docx) indir</b> veya <b>Klasöre kaydet</b>. 1. adımda bir bilgiyi sonradan düzeltirseniz taslak yeniden yazdırmadan güncellenir.<br>
   <b>Önemli:</b> Mevzuat atıflarını ve kararların kesinleşme durumunu kontrol edin; taslak avukat denetimi olmadan kullanılmamalıdır.</p>
