@@ -50,7 +50,7 @@ h1,h2,h3{font-family:var(--serif);line-height:1.2;margin:0 0 .5em}
 .btn.locked{opacity:.45;pointer-events:none}
 .btn-block{width:100%}
 label{display:block;font-size:.9rem;font-weight:500;margin:14px 0 6px}
-input[type=email],input[type=password],input[type=text],input[type=url],select,textarea{
+input[type=email],input[type=password],input[type=text],input[type=url],input[type=date],input[type=number],input[type=time],select,textarea{
   width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--card);min-height:46px}
 textarea{min-height:180px;resize:vertical}
 input:focus,select:focus,textarea:focus{outline:2px solid var(--gold);outline-offset:1px}
@@ -136,9 +136,16 @@ details summary{cursor:pointer;color:var(--muted)}
 .pickbar{position:sticky;bottom:0;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:12px;box-shadow:0 -4px 14px #0000000f}
 .tbl .trow{display:flex;justify-content:space-between;align-items:center;gap:10px;border-bottom:1px solid var(--line);padding:10px 2px}
 .tbl .trow span{display:block}
+.tbl .trow > div:last-child{white-space:nowrap;text-align:right}
 .tag2{flex:none;font-size:.8rem;font-weight:700;border-radius:999px;padding:4px 10px;background:var(--line)}
 .o-onama,.o-kabul,.o-ihlal{background:#dff3e6;color:#145c38}.o-bozma,.o-ret,.o-kaldirma,.o-ihlal_yok{background:#fde8e6;color:#8c1d18}
 @media (prefers-color-scheme:dark){ .o-onama,.o-kabul,.o-ihlal{background:#173a28;color:#9be0b4} .o-bozma,.o-ret,.o-kaldirma,.o-ihlal_yok{background:#4a1f1c;color:#ffb4ab} }
+.evc{display:flex;gap:12px;border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:8px;background:var(--card)}
+.evc .evd{flex:none;width:52px;text-align:center;border-right:1px solid var(--line);padding-right:10px}
+.evc .evd b{display:block;font-family:var(--serif);font-size:1.15rem}.evc .evd span{font-size:.82rem;color:var(--muted)}
+.evc .evb{flex:1;min-width:0}.evc .evb b{display:block}.evc .evb span{display:block;color:var(--muted);font-size:.88rem}
+.evc.soon{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}.evc.late{border-color:var(--err)}.evc.done{opacity:.55}
+.evact{margin-top:6px;font-size:.84rem;line-height:1.9}
 .hist-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;align-items:center}
 .hist-row button{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 12px;font-size:.88rem;cursor:pointer;color:var(--text);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hist-row .clr{border:0;background:none;color:var(--err);text-decoration:underline;padding:6px 4px}
@@ -415,18 +422,22 @@ async function pagePanel(){
       <button data-t="ara">Karar ara</button>
       <button data-t="analiz">Belge analizi</button>
       <button data-t="dilekce">Dilekçe</button>
+      <button data-t="araclar">Hesapla</button>
+      <button data-t="dosyalar">Dosyalarım</button>
       ${CONFIG.FEATURES.mevzuat ? `<button data-t="mevzuat">Mevzuat</button>` : ""}
       <button data-t="hesap">Hesabım</button>
     </div>
     <p class="small" style="margin:6px 2px 0"><a href="#/kullanim">📘 Nasıl kullanılır?</a> · <a href="${feedbackLink()}">✉️ Geri bildirim gönder</a></p>
+    <div id="agbWrap">${agendaBanner()}</div>
     <div id="tabbody" style="padding-bottom:30px"></div>
   </div>`;
   $("#tabs").onclick = e => { const t = e.target.dataset.t; if (t){ state.tab = t; renderTab(); } };
+  const agb = $("#agb"); if (agb) agb.onclick = () => { state.tab = "dosyalar"; state.dosMode = "ajanda"; renderTab(); };
   renderTab();
 }
 function renderTab(){
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.t === state.tab));
-  (({ ara: tabSearch, analiz: tabAnalyze, dilekce: tabDilekce, mevzuat: tabMevzuat, hesap: tabAccount })[state.tab] || tabSearch)();
+  (({ ara: tabSearch, analiz: tabAnalyze, dilekce: tabDilekce, araclar: tabAraclar, dosyalar: tabDosyalar, mevzuat: tabMevzuat, hesap: tabAccount })[state.tab] || tabSearch)();
 }
 
 const SOURCE_LABELS = { arsiv: "📚 11M Arşiv", yargitay: "Yargıtay", emsal: "UYAP Emsal", danistay: "Danıştay" };
@@ -539,6 +550,7 @@ async function openDecision(source, item){
         <button class="btn btn-ghost" id="copyT">Metni kopyala</button>
         ${d.officialUrl ? `<a class="btn btn-ghost" href="${esc(d.officialUrl)}" target="_blank" rel="noopener">Resmî kaynakta aç</a>` : ""}
         ${dlMax() ? `<button class="btn btn-ghost" id="toDlRef">+ Dilekçeye ekle</button>` : ""}
+        <button class="btn btn-ghost" id="toFolder">📁 Klasöre kaydet</button>
       </div>
       ${d.note ? `<div class="notice">${esc(d.note)}</div>` : ""}
       <div id="m" class="hidden"></div>
@@ -548,12 +560,13 @@ async function openDecision(source, item){
     </div>`;
     const qNow = (state.lastSearch && state.lastSearch.q) || "";
     $("#doc").innerHTML = highlightPhrases(d.text, hlTerms(qNow));
+    $("#toFolder").onclick = () => saveToFolder({ tur: "karar", baslik: kunye, metin: String(d.text || "").slice(-700).trim(), ref: { source, item } }, $("#m"));
     const addBtn = $("#toDlRef");
     if (addBtn) addBtn.onclick = () => {
       const dl = dlState(), k = refKey(source, item.id);
       if (dl.picked[k]) { addBtn.textContent = "Dilekçede ✓"; return; }
       if (dlPickedList().length >= dlMax()) return showMsg($("#m"), `Dilekçe Asistanı'nda en fazla ${dlMax()} karar seçilebilir.`);
-      dl.picked[k] = { source, label: SOURCE_LABELS[source] || "", q: qNow, item };
+      dl.picked[k] = { source, label: SOURCE_LABELS[source] || "", q: qNow, item }; dl.facts = null;
       addBtn.textContent = "Dilekçeye eklendi ✓";
     };
     $("#back").onclick = () => renderTab();
@@ -1294,24 +1307,31 @@ function mvCompare(){
   };
 }
 
-// ---------- Dilekçe Asistanı (4 adım: olay → kararlar → analiz → dilekçe) ----------
-const DAVA_TURLERI = ["İş hukuku (kıdem, ihbar, fazla mesai, işe iade)", "Kira (tahliye, kira alacağı, kira tespiti)", "Aile (boşanma, nafaka, velayet)",
-  "Tazminat (maddi, manevi, trafik kazası)", "İcra (itirazın iptali, menfi tespit)", "Tüketici", "Ticari alacak / sözleşme", "Miras", "Gayrimenkul (tapu iptali, ortaklığın giderilmesi)",
-  "İdari dava (iptal, tam yargı)", "Ceza (şikâyet, itiraz)", "Diğer"];
-const DL_STEPS = ["Olay", "Kararlar", "Analiz", "Dilekçe"];
+// ---------- Dilekçe Asistanı (4 adım: olay ve taraflar → kararlar → analiz → dilekçe) ----------
+const DAVA_TURLERI = [
+  ["Ortaklığın giderilmesi (izale-i şuyu)", "… Sulh Hukuk Mahkemesi"], ["İş hukuku (kıdem, ihbar, fazla mesai, işe iade)", "… İş Mahkemesi"],
+  ["Kira (tahliye, kira alacağı, kira tespiti)", "… Sulh Hukuk Mahkemesi"], ["Aile (boşanma, nafaka, velayet)", "… Aile Mahkemesi"],
+  ["Mal rejimi tasfiyesi (katılma alacağı)", "… Aile Mahkemesi"], ["Tazminat (maddi, manevi, trafik kazası)", "… Asliye Hukuk Mahkemesi"],
+  ["İcra (itirazın iptali, menfi tespit)", "… Asliye Hukuk / Asliye Ticaret Mahkemesi"], ["Tüketici", "… Tüketici Mahkemesi"],
+  ["Ticari alacak / sözleşme", "… Asliye Ticaret Mahkemesi"], ["Miras (tenkis, muris muvazaası, mirasçılık)", "… Asliye Hukuk / Sulh Hukuk Mahkemesi"],
+  ["Gayrimenkul (tapu iptali ve tescil, el atmanın önlenmesi)", "… Asliye Hukuk Mahkemesi"], ["İdari dava (iptal, tam yargı)", "… İdare Mahkemesi"],
+  ["Vergi davası", "… Vergi Mahkemesi"], ["Ceza (şikâyet, itiraz)", "… Cumhuriyet Başsavcılığı / Sulh Ceza Hâkimliği"], ["Diğer", "… Mahkemesi"],
+];
+const DL_STEPS = ["Olay ve taraflar", "Kararlar", "Analiz", "Dilekçe"];
+const DL_FIELDS = ["tur", "mahkeme", "davaci", "vekil", "davali", "konu", "deger", "olay", "talep", "deliller"];
 const dlKey = () => "hp_dl_" + ((state.user && state.user.id) || "x");
 function dlState(){
   if (!state.dl) {
     let saved = {}; try { saved = JSON.parse(localStorage.getItem(dlKey()) || "{}"); } catch {}
-    state.dl = { step: 1, tur: saved.tur || DAVA_TURLERI[0], olay: saved.olay || "", talep: saved.talep || "", deliller: saved.deliller || "",
-                 queries: [], results: [], picked: {}, manual: [], facts: null, analiz: "", dilekce: "" };
+    state.dl = { step: 1, picked: {}, manual: [], cands: null, terim: "", queries: [], facts: null, analiz: "", dilekce: "" };
+    DL_FIELDS.forEach(k => state.dl[k] = saved[k] || "");
+    if (!state.dl.tur) state.dl.tur = DAVA_TURLERI[0][0];
   }
   return state.dl;
 }
-function dlSaveDraft(){ const d = state.dl; try { localStorage.setItem(dlKey(), JSON.stringify({ tur: d.tur, olay: d.olay, talep: d.talep, deliller: d.deliller })); } catch {} }
+function dlSaveDraft(){ const d = state.dl, o = {}; DL_FIELDS.forEach(k => o[k] = d[k]); try { localStorage.setItem(dlKey(), JSON.stringify(o)); } catch {} }
 const dlMax = () => ({ basic: 0, optimus: 5, maximus: 10 })[myPlan()] || 0;
 const refKey = (s, id) => s + ":" + id;
-// Tarayıcı tarafı sonuç tespiti (avukatın kendi eklediği kararlar için; sunucudakiyle aynı mantık)
 function outcomeOf(text){
   const t = trLower(String(text || "").slice(-2500)); let best = ["belirsiz", "Belirlenemedi", -1];
   [["ihlal_yok", /ihlal\s+edilmediğine/g, "İhlal yok"], ["ihlal", /ihlal\s+edildiğine/g, "İhlal"], ["bozma", /bozulmasına|bozmaya/g, "Bozma"],
@@ -1319,12 +1339,20 @@ function outcomeOf(text){
     .forEach(([k, re, l]) => { for (const m of t.matchAll(re)) if (m.index > best[2]) best = [k, l, m.index]; });
   return { key: best[0], label: best[1] };
 }
-
+function dlPickedList(){ const d = state.dl; return [...Object.values(d.picked), ...d.manual]; }
+function dlCanGo(n){
+  const d = state.dl;
+  if (n <= 1) return true;
+  if (n === 2) return d.olay.trim().length >= 30;
+  if (n === 3) return dlPickedList().length > 0;
+  if (n === 4) return !!d.facts;
+  return false;
+}
 function tabDilekce(){
   const b = $("#tabbody"); const d = dlState();
   if (!dlMax()) {
     b.innerHTML = `<div class="card"><h2>Dilekçe Asistanı</h2>
-      <p>Olayınızı anlatın; platform ilgili Yargıtay, Danıştay ve UYAP Emsal kararlarını bulsun, seçtiğiniz kararlarla davayı analiz etsin ve <b>yalnızca gerçek kararlara atıf yapan</b> bir dilekçe taslağı hazırlasın.</p>
+      <p>Olayınızı ve taraf bilgilerini yazın; platform 11 milyon kararlık arşivde ve UYAP Emsal'de davanıza uygun kararları bulsun, yapay zekâ en ilgililerini seçip davanızı analiz etsin ve <b>yalnızca gerçek kararlara atıf yapan</b> bir dilekçe taslağı hazırlasın.</p>
       <div class="notice">Dilekçe Asistanı <b>Optimus</b> ve <b>Maximus</b> paketlerinde kullanılabilir.</div>
       <a class="btn btn-gold" href="#/paketler">Paketleri görün</a></div>`;
     return;
@@ -1337,136 +1365,132 @@ function tabDilekce(){
   $("#dlsteps").onclick = e => { const x = e.target.closest("[data-s]"); if (x && dlCanGo(+x.dataset.s)) { d.step = +x.dataset.s; tabDilekce(); } };
   ({ 1: dlStep1, 2: dlStep2, 3: dlStep3, 4: dlStep4 })[d.step]();
 }
-function dlCanGo(n){
-  const d = state.dl;
-  if (n <= 1) return true;
-  if (n === 2) return d.olay.trim().length >= 30;
-  if (n === 3) return dlPickedList().length > 0;
-  if (n === 4) return !!d.facts;
-  return false;
-}
-function dlPickedList(){ const d = state.dl; return [...Object.values(d.picked), ...d.manual]; }
 
 function dlStep1(){
   const d = state.dl, box = $("#dlbody");
+  const hint = (DAVA_TURLERI.find(x => x[0] === d.tur) || [, "… Mahkemesi"])[1];
   box.innerHTML = `
-    <p class="muted small" style="margin:6px 0 0">1. Davayı anlatın. Müvekkil adı, T.C. kimlik no gibi bilgileri yazmayın; taslakta bu alanlar [ ] olarak bırakılır.</p>
+    <p class="muted small" style="margin:6px 0 0">1. Davayı ve tarafları yazın. <b>Taraf ve vekil bilgileri yapay zekâya gönderilmez</b>; taslağa yalnızca telefonunuzda eklenir.</p>
     <label for="dtur">Dava türü</label>
-    <select id="dtur">${DAVA_TURLERI.map(t => `<option ${t === d.tur ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>
+    <select id="dtur">${DAVA_TURLERI.map(([t]) => `<option ${t === d.tur ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>
+    <label for="dmah">Mahkeme</label>
+    <input id="dmah" type="text" maxlength="160" placeholder="ör. İstanbul Anadolu ${esc(hint.replace("… ", ""))}" value="${esc(d.mahkeme)}">
+    <label for="dcvi">Davacı</label>
+    <input id="dcvi" type="text" maxlength="300" placeholder="Ad soyad, T.C. kimlik no, adres" value="${esc(d.davaci)}">
+    <label for="dvek">Davacı vekili</label>
+    <input id="dvek" type="text" maxlength="300" placeholder="Av. ad soyad, baro sicil no, adres" value="${esc(d.vekil)}">
+    <label for="dcli">Davalı(lar)</label>
+    <textarea id="dcli" style="min-height:70px" maxlength="1200" placeholder="Her davalıyı ayrı satıra yazın: ad soyad, adres">${esc(d.davali)}</textarea>
+    <label for="dkon">Dava konusu</label>
+    <input id="dkon" type="text" maxlength="300" placeholder="ör. Ortak mülkiyetteki … ada … parsel sayılı taşınmazın ortaklığının satış suretiyle giderilmesi" value="${esc(d.konu)}">
+    <label for="ddeg">Dava değeri <span class="muted small">(gerekiyorsa)</span></label>
+    <input id="ddeg" type="text" maxlength="80" placeholder="ör. 1.500.000 TL" value="${esc(d.deger)}">
     <label for="dolay">Olay (tarih sırasıyla)</label>
-    <textarea id="dolay" placeholder="Ör. Müvekkil 01.03.2019-15.06.2024 arasında davalı şirkette şoför olarak çalıştı. Haftada 6 gün, günde 11 saat çalıştığı hâlde fazla mesai ücreti ödenmedi. İş sözleşmesi 15.06.2024'te işverence 'performans düşüklüğü' gerekçesiyle, savunması alınmadan feshedildi…">${esc(d.olay)}</textarea>
+    <textarea id="dolay" placeholder="Ör. Müvekkil ve davalılar, murisleri babalarından intikal eden … ilindeki taşınmazın paydaşlarıdır. Taşınmazın kullanımı ve paylaşımı konusunda anlaşma sağlanamamıştır…">${esc(d.olay)}</textarea>
     <label for="dtalep">Talep</label>
-    <textarea id="dtalep" style="min-height:80px" placeholder="Ör. Kıdem ve ihbar tazminatı, fazla mesai ücreti, yıllık izin ücreti">${esc(d.talep)}</textarea>
+    <textarea id="dtalep" style="min-height:80px" placeholder="Ör. Taşınmazın aynen taksimi mümkün değilse satış suretiyle ortaklığın giderilmesi">${esc(d.talep)}</textarea>
     <label for="ddelil">Deliller</label>
-    <input id="ddelil" type="text" placeholder="Ör. SGK kayıtları, banka hesap dökümü, 2 tanık, takograf kayıtları" value="${esc(d.deliller)}">
+    <input id="ddelil" type="text" placeholder="Ör. tapu kaydı, veraset ilamı, keşif, bilirkişi incelemesi, tanık" value="${esc(d.deliller)}">
     <div id="m" class="hidden"></div>
     <button class="btn btn-primary btn-block" id="dgo1">Kararları bul →</button>
-    <p class="muted small">Taslağınız bu telefonda saklanır, sunucuya kaydedilmez.</p>`;
-  const keep = () => { d.tur = $("#dtur").value; d.olay = $("#dolay").value; d.talep = $("#dtalep").value; d.deliller = $("#ddelil").value; dlSaveDraft(); };
-  ["#dtur", "#dolay", "#dtalep", "#ddelil"].forEach(s => $(s).oninput = keep);
-  $("#dgo1").onclick = async () => {
+    <p class="muted small">Bilgileriniz bu telefonda saklanır, sunucuya kaydedilmez. Arama ve analiz için sunucuya yalnızca dava türü, konu, olay, talep ve deliller gider.</p>`;
+  const map = { dtur: "tur", dmah: "mahkeme", dcvi: "davaci", dvek: "vekil", dcli: "davali", dkon: "konu", ddeg: "deger", dolay: "olay", dtalep: "talep", ddelil: "deliller" };
+  const keep = () => { Object.entries(map).forEach(([id, k]) => d[k] = $("#" + id).value); dlSaveDraft(); };
+  Object.keys(map).forEach(id => $("#" + id).oninput = keep);
+  $("#dtur").onchange = () => { keep(); const h = (DAVA_TURLERI.find(x => x[0] === d.tur) || [, "… Mahkemesi"])[1]; $("#dmah").placeholder = "ör. İstanbul Anadolu " + h.replace("… ", ""); };
+  $("#dgo1").onclick = () => {
     keep();
     if (d.olay.trim().length < 30) return showMsg($("#m"), "Lütfen olayı biraz daha ayrıntılı yazın (en az 30 karakter).");
-    const btn = $("#dgo1"); busy(btn, true, "Arama ifadeleri hazırlanıyor…");
-    try {
-      const r = await api("/api/dilekce/plan", { tur: d.tur, olay: d.olay, talep: d.talep });
-      d.queries = (r.queries && r.queries.length ? r.queries : [d.talep || d.tur]).slice(0, 3);
-    } catch (err) { d.queries = [d.talep.split(/[,.]/)[0] || d.tur.split(" (")[0]]; showMsg($("#m"), err.message + " Arama ifadesini kendiniz düzenleyebilirsiniz."); }
-    finally { busy(btn, false); }
-    d.results = []; d.step = 2; tabDilekce(); dlRunSearch();
+    d.cands = null; d.picked = {}; d.facts = null; d.analiz = ""; d.dilekce = ""; d.terim = ""; d.queries = [];
+    d.step = 2; tabDilekce();
   };
 }
 
 function dlStep2(){
   const d = state.dl, box = $("#dlbody"), max = dlMax();
-  const picked = dlPickedList().length;
+  box.innerHTML = `<p class="muted small" style="margin:6px 0 0">2. Platform arşivde ve UYAP Emsal'de davanızın hukuki konusunu içeren kararları tarar; yapay zekâ kararları okuyup <b>en ilgili ${max} kararı</b> sizin için seçer. İsterseniz değiştirebilirsiniz.</p>
+    <div id="m" class="hidden"></div><div id="dres"></div>`;
+  if (!d.cands) return dlRunSearch();
+  dlDrawCands();
+}
+async function dlRunSearch(custom){
+  const d = state.dl, box = $("#dres");
+  box.innerHTML = `<div class="card" style="margin-top:12px"><p style="margin:0"><span class="spinner" style="display:inline-block;vertical-align:middle;border-color:#0002;border-top-color:var(--gold)"></span> <b>Kararlar taranıyor…</b></p>
+    <p class="muted small" style="margin:8px 0 0">Hukuki konu belirleniyor → 11M arşiv ve UYAP Emsal taranıyor → yapay zekâ kararları okuyup ilgili olanları seçiyor. Bu işlem 20-60 saniye sürebilir.</p></div>`;
+  try {
+    const r = await api("/api/dilekce/ara", { tur: d.tur, konu: d.konu, olay: d.olay, talep: d.talep, ...(custom || {}) });
+    d.terim = r.terim || ""; d.queries = r.queries || []; d.cands = r; d.picked = {};
+    (r.candidates || []).filter(c => c.selected).forEach(c => d.picked[refKey(c.source, c.item.id)] = { source: c.source, label: c.source === "arsiv" ? "Arşiv" : "UYAP Emsal", q: d.terim || d.queries[0] || "", item: c.item, ai: c.ai });
+    d.facts = null; d.analiz = ""; d.dilekce = "";
+    dlDrawCands();
+  } catch (err) { box.innerHTML = ""; showMsg($("#m"), err.message); dlDrawFix(); }
+}
+function dlDrawFix(){
+  const d = state.dl, box = $("#dres");
+  box.insertAdjacentHTML("beforeend", `<details ${d.cands && !(d.cands.candidates || []).length ? "open" : ""} style="margin-top:14px"><summary>Aramayı düzelt (hukuki terim ve arama ifadeleri)</summary>
+    <label for="dterm">Hukuki terim <span class="muted small">— kararlarda geçmesi zorunlu, ör. "ortaklığın giderilmesi"</span></label>
+    <input id="dterm" type="text" maxlength="80" value="${esc(d.terim || "")}">
+    <label>Arama ifadeleri</label>
+    ${[0, 1, 2].map(i => `<input class="dq" type="text" maxlength="100" style="margin-top:6px" value="${esc((d.queries || [])[i] || "")}" placeholder="${i ? "isteğe bağlı" : "ör. ortaklığın giderilmesi satış"}">`).join("")}
+    <div class="row"><button class="btn btn-ghost" id="dsearch">🔎 Yeniden tara</button></div></details>`);
+  $("#dsearch").onclick = () => dlRunSearch({ terim: $("#dterm").value.trim(), queries: [...document.querySelectorAll(".dq")].map(x => x.value.trim()).filter(Boolean) });
+}
+function dlDrawCands(){
+  const d = state.dl, box = $("#dres"), max = dlMax(); if (!box) return;
+  const all = (d.cands && d.cands.candidates) || [];
+  const pickedN = dlPickedList().length;
+  const row = c => { const k = refKey(c.source, c.item.id), on = !!d.picked[k];
+    return `<div class="pick ${on ? "on" : ""}" data-k="${esc(k)}">
+      <label class="chk"><input type="checkbox" ${on ? "checked" : ""}></label>
+      <button class="pbody"><b>${esc(c.item.daire || "")}</b><span>E. ${esc(c.item.esas || "—")} · K. ${esc(c.item.karar || "—")} · ${esc(c.item.tarih || "")} · ${c.source === "arsiv" ? "Arşiv" : "UYAP Emsal"} · <b>${esc(c.outcome || "")}</b></span>
+        ${c.ai ? `<span class="small" style="color:var(--text)">🤖 ${esc(c.ai)}</span>` : ""}</button></div>`; };
+  const sel = all.filter(c => d.picked[refKey(c.source, c.item.id)]), rest = all.filter(c => !d.picked[refKey(c.source, c.item.id)]);
+  const extra = Object.values(d.picked).filter(p => !all.some(c => refKey(c.source, c.item.id) === refKey(p.source, p.item.id)));
   box.innerHTML = `
-    <p class="muted small" style="margin:6px 0 0">2. Dilekçede dayanılacak kararları seçin (en fazla ${max}). Bir karara dokunursanız metnini görürsünüz.</p>
-    <label>Arama ifadeleri <span class="muted small">(düzenleyebilirsiniz; "+" ile birden fazla ifade aranır)</span></label>
-    ${[0, 1, 2].map(i => `<input class="dq" data-i="${i}" type="text" maxlength="120" style="margin-top:6px" value="${esc(d.queries[i] || "")}" placeholder="${i ? "isteğe bağlı" : "ör. fazla mesai ispat yükü"}">`).join("")}
-    <div class="row"><button class="btn btn-ghost" id="dsearch">🔎 Yeniden ara</button></div>
-    <div id="m" class="hidden"></div>
-    <div class="pickbar"><span><b id="pcount">${picked}</b> / ${max} karar seçildi</span>
-      <button class="btn btn-primary" id="dgo2" ${picked ? "" : "disabled"}>Analize geç →</button></div>
-    <div id="dres"></div>
-    <details style="margin-top:14px"><summary>Kendi elimdeki bir kararı eklemek istiyorum</summary>
-      <label for="mk">Künye</label><input id="mk" type="text" maxlength="200" placeholder="ör. Yargıtay 9. HD, E. 2021/1234, K. 2022/5678, T. 12.04.2022">
+    <div class="notice" style="margin-top:12px">Hukuki konu: <b>${esc(d.terim || "—")}</b> · ${d.cands ? `${d.cands.scanned} karar tarandı, ${d.cands.withTerm} kararda bu konu geçiyor` : ""}${d.cands && !d.cands.aiUsed ? " · yapay zekâ seçimi yapılamadı, kararlar ilgi puanına göre sıralandı" : ""}</div>
+    ${sel.length || extra.length || d.manual.length ? `<h3 style="margin:14px 2px 4px;font-size:1rem">Dilekçede kullanılacak kararlar (${pickedN}/${max})</h3>` + sel.map(row).join("") +
+      extra.map(p => `<div class="pick on" data-k="${esc(refKey(p.source, p.item.id))}"><label class="chk"><input type="checkbox" checked></label><button class="pbody"><b>${esc(p.item.daire || "")}</b><span>E. ${esc(p.item.esas || "—")} · K. ${esc(p.item.karar || "—")} · karar ekranından eklendi</span></button></div>`).join("") +
+      d.manual.map((m, i) => `<div class="pick on"><label class="chk"><input type="checkbox" checked data-mdel="${i}"></label><div class="pbody"><b>${esc(m.kunye)}</b><span>Sizin eklediğiniz karar</span></div></div>`).join("")
+      : `<div class="msg err" style="margin-top:12px">Davanıza uygun karar bulunamadı. Aşağıdan hukuki terimi veya arama ifadelerini düzeltip yeniden tarayın.</div>`}
+    <div class="pickbar"><span><b id="pcount">${pickedN}</b> / ${max} karar</span><button class="btn btn-primary" id="dgo2" ${pickedN ? "" : "disabled"}>Analize geç →</button></div>
+    ${rest.length ? `<details style="margin-top:12px"><summary>Diğer adaylar (${rest.length}) — eklemek için işaretleyin</summary>${rest.map(row).join("")}</details>` : ""}
+    <details style="margin-top:12px"><summary>Kendi elimdeki bir kararı eklemek istiyorum</summary>
+      <label for="mk">Künye</label><input id="mk" type="text" maxlength="200" placeholder="ör. Yargıtay 6. HD, E. 2021/1234, K. 2022/5678, T. 12.04.2022">
       <label for="mt">Karar metni</label><textarea id="mt" style="min-height:100px" placeholder="Kararın metnini yapıştırın (en azından gerekçe ve hüküm kısmı)…"></textarea>
-      <div class="row"><button class="btn btn-ghost" id="madd">Kararı ekle</button></div></details>
-    ${d.manual.length ? `<p class="small" style="margin-top:10px"><b>Eklediğiniz kararlar:</b> ${d.manual.map((m, i) => `${esc(m.kunye)} <a href="#" data-mdel="${i}">(çıkar)</a>`).join(" · ")}</p>` : ""}`;
-  box.querySelectorAll(".dq").forEach(inp => inp.oninput = () => { d.queries[+inp.dataset.i] = inp.value; });
-  $("#dsearch").onclick = () => dlRunSearch();
+      <div class="row"><button class="btn btn-ghost" id="madd">Kararı ekle</button></div></details>`;
+  dlDrawFix();
   $("#dgo2").onclick = () => { d.step = 3; d.facts = null; d.analiz = ""; tabDilekce(); };
   $("#madd").onclick = () => {
     const k = $("#mk").value.trim(), t = $("#mt").value.trim();
     if (!k || t.length < 100) return showMsg($("#m"), "Künyeyi ve kararın metnini (en az 100 karakter) girin.");
-    if (dlPickedList().length >= max) return showMsg($("#m"), `En fazla ${max} karar seçebilirsiniz.`);
-    d.manual.push({ manual: true, kunye: k.slice(0, 200), text: t.slice(0, 60000) }); dlStep2();
+    if (dlPickedList().length >= max) return showMsg($("#m"), `En fazla ${max} karar kullanılabilir; önce birinin işaretini kaldırın.`);
+    d.manual.push({ manual: true, kunye: k.slice(0, 200), text: t.slice(0, 60000) }); d.facts = null; dlDrawCands();
   };
-  box.querySelectorAll("[data-mdel]").forEach(a => a.onclick = e => { e.preventDefault(); d.manual.splice(+a.dataset.mdel, 1); dlStep2(); });
-  dlDrawResults();
-}
-async function dlRunSearch(){
-  const d = state.dl;
-  const qs = d.queries.map(q => String(q || "").trim()).filter(q => q.length >= 3);
-  if (!qs.length) return showMsg($("#m"), "En az bir arama ifadesi yazın.");
-  const idari = /idari/i.test(d.tur);
-  const cfg = idari ? "danistay" : "yargitay", fast = idari ? "danistay" : "emsal";
-  d.results = []; d.searching = true; dlDrawResults();
-  const seen = new Set(Object.keys(d.picked));
-  const add = (r, q) => {
-    for (const it of (r.items || [])) {
-      const k = refKey(r.source, it.id); if (seen.has(k)) continue; seen.add(k);
-      d.results.push({ source: r.source, label: r.sourceLabel, q, item: it });
-    }
-    dlDrawResults();
-  };
-  const jobs = [];
-  qs.forEach((q, i) => {
-    jobs.push(api("/api/search", { source: fast, q, page: 1 }).then(r => add(r, q)).catch(() => {}));
-    jobs.push(api("/api/search", { source: "arsiv", q, page: 1, config: cfg, paired: true }).then(r => add(r, q)).catch(() => {}));
-  });
-  await Promise.all(jobs);
-  d.searching = false; dlDrawResults();
-}
-function dlDrawResults(){
-  const d = state.dl, box = $("#dres"); if (!box) return;
-  const pickedRows = Object.values(d.picked);
-  const row = (src, label, it, on) => `<div class="pick ${on ? "on" : ""}" data-k="${esc(refKey(src, it.id))}">
-      <label class="chk"><input type="checkbox" ${on ? "checked" : ""}></label>
-      <button class="pbody"><b>${esc(it.daire || label)}</b><span>E. ${esc(it.esas || "—")} · K. ${esc(it.karar || "—")} · ${esc(it.tarih || "")} · ${esc(src === "arsiv" ? "Arşiv" : label)}</span></button></div>`;
-  box.innerHTML =
-    (pickedRows.length ? `<h3 style="margin:16px 2px 4px;font-size:1rem">Seçilenler</h3>` + pickedRows.map(p => row(p.source, p.label, p.item, true)).join("") : "") +
-    `<h3 style="margin:16px 2px 4px;font-size:1rem">Bulunan kararlar ${d.results.length ? `<span class="muted small">(${d.results.length})</span>` : ""}</h3>` +
-    (d.searching ? `<p class="muted small"><span class="spinner" style="display:inline-block;vertical-align:middle;border-color:#0002;border-top-color:var(--gold)"></span> Arşivde ve resmî kaynaklarda aranıyor… (ilk aramada 10-20 saniye sürebilir)</p>` : "") +
-    (d.results.filter(r => !d.picked[refKey(r.source, r.item.id)]).map(r => row(r.source, r.label, r.item, false)).join("") ||
-      (d.searching ? "" : `<p class="muted small">Sonuç yok. Arama ifadelerini değiştirip yeniden arayın.</p>`));
   box.onclick = async e => {
-    const el = e.target.closest(".pick"); if (!el) return;
+    const md = e.target.closest("[data-mdel]"); if (md) { d.manual.splice(+md.dataset.mdel, 1); d.facts = null; return dlDrawCands(); }
+    const el = e.target.closest(".pick[data-k]"); if (!el) return;
     const k = el.dataset.k;
-    const hit = d.picked[k] || d.results.find(r => refKey(r.source, r.item.id) === k);
+    const c = all.find(x => refKey(x.source, x.item.id) === k);
     if (e.target.closest(".chk")) {
       e.preventDefault();
       if (d.picked[k]) delete d.picked[k];
-      else { if (dlPickedList().length >= dlMax()) return showMsg($("#m"), `En fazla ${dlMax()} karar seçebilirsiniz.`); d.picked[k] = hit; }
-      const c = $("#pcount"); if (c) c.textContent = dlPickedList().length;
-      $("#dgo2").disabled = !dlPickedList().length;
-      return dlDrawResults();
+      else if (c) { if (dlPickedList().length >= max) return showMsg($("#m"), `En fazla ${max} karar kullanılabilir; önce birinin işaretini kaldırın.`); d.picked[k] = { source: c.source, label: c.source === "arsiv" ? "Arşiv" : "UYAP Emsal", q: d.terim, item: c.item, ai: c.ai }; }
+      d.facts = null; return dlDrawCands();
     }
-    // metni göster
+    const src = c || d.picked[k]; if (!src) return;
     const old = el.nextElementSibling; if (old && old.classList.contains("peek")) return old.remove();
     el.insertAdjacentHTML("afterend", `<div class="peek doc"><span class="muted">Karar metni getiriliyor…</span></div>`);
     const pk = el.nextElementSibling;
     try {
-      const { decision } = await api("/api/decision", { source: hit.source, id: hit.item.id, hint: { ...hit.item, q: hit.q } });
-      pk.innerHTML = highlightPhrases(decision.text, hlTerms(hit.q));
+      const { decision } = await api("/api/decision", { source: src.source, id: src.item.id, hint: { ...src.item, q: d.terim } });
+      pk.innerHTML = highlightPhrases(decision.text, [d.terim, ...hlTerms((d.queries || [])[0] || "")].filter(Boolean));
     } catch (err) { pk.innerHTML = `<span class="msg err">${esc(err.message)}</span>`; }
   };
 }
 
 async function dlStep3(){
   const d = state.dl, box = $("#dlbody");
-  box.innerHTML = `<p class="muted small" style="margin:6px 0 0">3. Seçtiğiniz kararların sonucu ve mahkeme düzeyi bilgisayarca çıkarılır; yapay zekâ davanızı bu kararlarla analiz eder. Yüzde veya kazanma olasılığı verilmez.</p>
+  box.innerHTML = `<p class="muted small" style="margin:6px 0 0">3. Seçilen kararların sonucu ve mahkeme düzeyi bilgisayarca çıkarılır; yapay zekâ davanızı bu kararlarla analiz eder. Yüzde veya kazanma olasılığı verilmez.</p>
     <div id="m" class="hidden"></div><div id="facts"><p class="muted small"><span class="spinner" style="display:inline-block;vertical-align:middle;border-color:#0002;border-top-color:var(--gold)"></span> Karar metinleri alınıyor…</p></div>`;
   if (!d.facts) {
     try {
@@ -1490,7 +1514,7 @@ async function dlStep3(){
     <button class="btn btn-gold btn-block" id="dan">🤖 Dava analizini oluştur</button>
     <div id="danout" class="${d.analiz ? "" : "hidden"} card out" style="margin-top:14px"></div>
     <div class="row"><button class="btn btn-primary btn-block" id="dgo3">Dilekçeye geç →</button></div>
-    <p class="muted small">Analiz isteğe bağlıdır; yapılırsa dilekçe, analizdeki lehe noktaları öne çıkarır. Analiz ve dilekçe birer yapay zekâ hakkı kullanır.</p>`;
+    <p class="muted small">Analiz isteğe bağlıdır ama önerilir: dilekçe, analizdeki lehe noktaları öne çıkarır. Kararların taranması, analiz ve dilekçe birer yapay zekâ hakkı kullanır.</p>`;
   if (d.analiz) showAI($("#danout"), { answer: d.analiz, note: "", quota: { used: "–", limit: "–" } });
   $("#dan").onclick = async () => {
     const btn = $("#dan"); busy(btn, true, "Analiz ediliyor…"); $("#m").classList.add("hidden");
@@ -1500,35 +1524,50 @@ async function dlStep3(){
   };
   $("#dgo3").onclick = () => { d.step = 4; tabDilekce(); };
 }
+// Yapay zekâya giden metin: taraf adları YOK (yer tutucularla yazılır, telefonda doldurulur)
 function dlCompose(forPetition){
   const d = state.dl;
   const ok = (d.facts ? d.facts.items : []).filter(x => x.ok);
   const per = forPetition ? 1500 : 2200;
   const kararlar = ok.map((x, i) => `[${i + 1}] ${x.kunye}\nMahkeme düzeyi: ${x.level.label} · Sonuç (otomatik): ${x.outcome.label}\nGerekçe/hüküm kısmı:\n${String(x.excerpt || "").slice(-per)}`).join("\n\n");
   const cnt = {}; ok.forEach(x => cnt[x.outcome.label] = (cnt[x.outcome.label] || 0) + 1);
-  return `DAVA TÜRÜ: ${d.tur}\n\nOLAY:\n${d.olay.trim()}\n\nTALEP:\n${d.talep.trim() || "-"}\n\nDELİLLER:\n${d.deliller.trim() || "-"}\n\n` +
+  const mahTur = (d.mahkeme || "").replace(/^.*?(\d+\.\s*)?((Sulh|Asliye|Aile|İş|Tüketici|İdare|Vergi|Ticaret|Sulh Ceza)[^,]*)$/i, "$2");
+  return `DAVA TÜRÜ: ${d.tur}\nMAHKEME TÜRÜ: ${mahTur || "-"}\nDAVA KONUSU: ${d.konu.trim() || "-"}\nDAVA DEĞERİ: ${d.deger.trim() ? "belirtildi ({{DAVA_DEGERI}})" : "belirtilmedi"}\nDAVALI SAYISI: ${d.davali.trim() ? d.davali.trim().split(/\n+/).filter(Boolean).length : "belirtilmedi"}\n\n` +
+    `OLAY:\n${d.olay.trim()}\n\nTALEP:\n${d.talep.trim() || "-"}\n\nDELİLLER:\n${d.deliller.trim() || "-"}\n\n` +
     `SAYIM: ${ok.length} karar; ${Object.entries(cnt).map(([k, v]) => `${k}: ${v}`).join(", ")}\n\nSEÇİLEN KARARLAR:\n${kararlar}` +
     (forPetition && d.analiz ? `\n\nDAVA ANALİZİ:\n${d.analiz.slice(0, 4000)}` : "");
 }
+// Yer tutucuları telefondaki bilgilerle doldur
+function dlFill(text){
+  const d = state.dl, up = s => s.toLocaleUpperCase("tr-TR");
+  const v = { MAHKEME: d.mahkeme.trim() ? up(d.mahkeme.trim()) : "[MAHKEME ADI]", DAVACI: d.davaci.trim() || "[Davacı ad soyad, T.C. kimlik no, adres]",
+    DAVACI_VEKILI: d.vekil.trim() || "[Vekil ad soyad, baro sicil no, adres]", DAVALI: d.davali.trim() ? d.davali.trim().split(/\n+/).map(x => x.trim()).filter(Boolean).join("\n          ") : "[Davalı ad soyad, adres]",
+    DAVA_DEGERI: d.deger.trim() || "[ ]", TARIH: new Date().toLocaleDateString("tr-TR") };
+  return String(text || "").replace(/\{\{\s*([A-ZÇĞİÖŞÜ_]+)\s*\}\}/g, (m, k) => v[k] !== undefined ? v[k] : m);
+}
 function dlStep4(){
   const d = state.dl, box = $("#dlbody");
-  box.innerHTML = `<p class="muted small" style="margin:6px 0 0">4. Taslak yalnızca seçtiğiniz kararlara atıf yapar. [ ] ile işaretli yerleri doldurun, mevzuat atıflarını kontrol edin.</p>
+  box.innerHTML = `<p class="muted small" style="margin:6px 0 0">4. Taslak yalnızca seçilen kararlara atıf yapar. Mahkeme ve taraf bilgileri 1. adımda yazdıklarınızdan telefonunuzda eklenir. [ ] ile işaretli yerleri doldurun, mevzuat atıflarını kontrol edin.</p>
+    ${!d.mahkeme.trim() || !d.davaci.trim() || !d.davali.trim() ? `<div class="notice">Mahkeme, davacı veya davalı bilgisi eksik. <a href="#" id="dto1">1. adıma dönüp doldurun</a>; doldurduktan sonra taslak kendiliğinden güncellenir, yeniden yazdırmanız gerekmez.</div>` : ""}
     <div id="m" class="hidden"></div>
     <button class="btn btn-gold btn-block" id="dyaz">${d.dilekce ? "🔄 Yeniden yaz" : "✍️ Dilekçe taslağını yaz"}</button>
     <div id="dout" class="${d.dilekce ? "" : "hidden"} card out" style="margin-top:14px"></div>
-    <div id="dact" class="row ${d.dilekce ? "" : "hidden"}"><button class="btn btn-ghost" id="dcopy">Taslağı kopyala</button><button class="btn btn-ghost" id="ddocx">Word (.docx) indir</button></div>
+    <div id="dact" class="row ${d.dilekce ? "" : "hidden"}"><button class="btn btn-ghost" id="dcopy">Taslağı kopyala</button><button class="btn btn-ghost" id="ddocx">Word (.docx) indir</button><button class="btn btn-ghost" id="dfold">📁 Klasöre kaydet</button></div>
     <div class="row"><button class="btn btn-ghost" id="dnew">Yeni dilekçe başlat</button></div>`;
   const out = $("#dout");
-  if (d.dilekce) out.innerHTML = fmtAI(d.dilekce);
+  const final = () => dlFill(d.dilekce);
+  if (d.dilekce) out.innerHTML = fmtAI(final());
+  const to1 = $("#dto1"); if (to1) to1.onclick = e => { e.preventDefault(); d.step = 1; tabDilekce(); };
   $("#dyaz").onclick = async () => {
     const btn = $("#dyaz"); busy(btn, true, "Yazılıyor…"); $("#m").classList.add("hidden");
-    try { d.dilekce = await streamAI({ task: "dilekce_yaz", text: dlCompose(true) }, out); $("#dact").classList.remove("hidden"); }
+    try { d.dilekce = await streamAI({ task: "dilekce_yaz", text: dlCompose(true) }, out); out.innerHTML = fmtAI(final()); $("#dact").classList.remove("hidden"); }
     catch (err) { showMsg($("#m"), err.message); }
     finally { busy(btn, false); }
   };
-  $("#dcopy").onclick = e => copy(d.dilekce, e.target);
-  $("#ddocx").onclick = async e => { try { await downloadDocx(d.dilekce, "dilekce-taslagi.docx"); } catch (err) { showMsg($("#m"), "Word dosyası oluşturulamadı: " + err.message); } };
-  $("#dnew").onclick = () => { if (!confirm("Mevcut olay, seçilen kararlar ve taslak silinsin mi?")) return; state.dl = null; try { localStorage.removeItem(dlKey()); } catch {} tabDilekce(); };
+  $("#dcopy").onclick = e => copy(final(), e.target);
+  $("#dfold").onclick = () => saveToFolder({ tur: "taslak", baslik: "Dilekçe taslağı — " + (d.konu || d.tur.split(" (")[0]).slice(0, 80), metin: final() }, $("#m"));
+  $("#ddocx").onclick = async () => { try { await downloadDocx(final(), "dilekce-taslagi.docx"); } catch (err) { showMsg($("#m"), "Word dosyası oluşturulamadı: " + err.message); } };
+  $("#dnew").onclick = () => { if (!confirm("Mevcut bilgiler, seçilen kararlar ve taslak silinsin mi?")) return; state.dl = null; try { localStorage.removeItem(dlKey()); } catch {} tabDilekce(); };
 }
 
 // Gerçek .docx (Word) dosyası: JSZip ile en küçük geçerli Word belgesi oluşturulur
@@ -1576,6 +1615,457 @@ function addHist(q, source, cfg){
   try { localStorage.setItem(histKey(), JSON.stringify(h.slice(0, 20))); } catch {}
 }
 function clearHist(){ try { localStorage.removeItem(histKey()); } catch {} }
+
+// ---------- Hesaplama araçları (tamamen telefonda çalışır; sunucuya veri gitmez) ----------
+// RESMÎ VERİLER — her Ocak/Temmuz kontrol edilmeli. Son kontrol: 14.10.2026
+const DATA_DATE = "14.10.2026";
+// Kıdem tazminatı tavanı — kaynak: ÇSGB "Kıdem tazminatı yıllar 1980-2026" tablosu
+const KIDEM_TAVAN = [
+  ["2015-01-01", 3541.37], ["2015-07-01", 3709.98], ["2015-09-01", 3828.37], ["2016-01-01", 4092.53], ["2016-07-01", 4297.21],
+  ["2017-01-01", 4426.16], ["2017-07-01", 4732.48], ["2018-01-01", 5001.76], ["2018-07-01", 5434.42], ["2019-01-01", 6017.60],
+  ["2019-07-01", 6379.86], ["2020-01-01", 6730.15], ["2020-07-01", 7117.17], ["2021-01-01", 7638.96], ["2021-07-01", 8284.51],
+  ["2022-01-01", 10848.59], ["2022-07-01", 15371.40], ["2023-01-01", 19982.83], ["2023-07-01", 23489.83], ["2024-01-01", 35058.58],
+  ["2024-07-01", 41828.42], ["2025-01-01", 46655.43], ["2025-07-01", 53919.68], ["2026-01-01", 64948.77], ["2026-07-01", 73729.87],
+];
+const KIDEM_TAVAN_SON = "2026-12-31";   // tablo bu tarihe kadar geçerli
+// Yasal faiz (3095 s.K.) — son dönem 7589 s.K. ile TCMB reeskont oranının %80'ine bağlandı (RG 31.07.2026)
+const YASAL_FAIZ = [["2006-01-01", 9], ["2024-06-01", 24], ["2026-07-31", 31]];
+const YASAL_FAIZ_NOT = "31.07.2026 sonrası oran (7589 s.K.: TCMB reeskont oranının %80'i) kaynaklara göre %31 olarak alınmıştır; kesin oranı ve geçiş dönemi uygulamasını doğrulayıp gerekirse aşağıdan değiştirin.";
+// Resmî tatiller (tam gün) ve yarım günler (arife, 28 Ekim öğleden sonra)
+const TATIL = {
+  2025: ["01-01", "03-30", "03-31", "04-01", "04-23", "05-01", "05-19", "06-06", "06-07", "06-08", "06-09", "07-15", "08-30", "10-29"],
+  2026: ["01-01", "03-20", "03-21", "03-22", "04-23", "05-01", "05-19", "05-27", "05-28", "05-29", "05-30", "07-15", "08-30", "10-29"],
+  2027: ["01-01", "03-09", "03-10", "03-11", "04-23", "05-01", "05-16", "05-17", "05-18", "05-19", "07-15", "08-30", "10-29"],
+};
+const YARIM = { 2025: ["03-29", "06-05", "10-28"], 2026: ["03-19", "05-26", "10-28"], 2027: ["03-08", "05-15", "10-28"] };
+
+// ---- tarih yardımcıları (saat dilimi kaymasın diye UTC öğlen) ----
+const D = s => { const [y, m, d] = String(s).split("-").map(Number); return new Date(Date.UTC(y, m - 1, d, 12)); };
+const iso = d => d.toISOString().slice(0, 10);
+const trDate = d => d.toLocaleDateString("tr-TR", { timeZone: "UTC", day: "2-digit", month: "long", year: "numeric", weekday: "long" });
+const addDays = (d, n) => new Date(d.getTime() + n * 86400000);
+const md = d => iso(d).slice(5);
+const isHoliday = d => (TATIL[d.getUTCFullYear()] || []).includes(md(d));
+const isHalf = d => (YARIM[d.getUTCFullYear()] || []).includes(md(d));
+const isWeekend = d => d.getUTCDay() === 0 || d.getUTCDay() === 6;
+const inAdli = d => { const m = md(d); return m >= "07-20" && m <= "08-31"; };
+const tl = n => (Math.round(n * 100) / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ₺";
+const num = v => { const x = parseFloat(String(v || "").replace(/\./g, "").replace(",", ".")); return isFinite(x) ? x : 0; };
+const daysBetween = (a, b) => Math.round((b - a) / 86400000);
+const pct = v => { const x = parseFloat(String(v || "").trim().replace(",", ".")); return isFinite(x) ? x : NaN; };   // oran: 33,29 veya 33.29
+
+// ---- 1) Süre hesabı ----
+const SURE_HAZIR = [
+  ["", "— hazır süre seçin (isteğe bağlı) —", 0, "gun", "hmk"],
+  ["istinaf-hukuk", "İstinaf (HMK m.345) — 2 hafta", 2, "hafta", "hmk"],
+  ["temyiz-hukuk", "Temyiz (HMK m.361) — 1 ay", 1, "ay", "hmk"],
+  ["cevap", "Cevap dilekçesi (HMK m.127) — 2 hafta", 2, "hafta", "hmk"],
+  ["istinaf-ceza", "İstinaf (CMK m.273) — 2 hafta", 2, "hafta", "cmk"],
+  ["temyiz-ceza", "Temyiz (CMK m.291) — 15 gün", 15, "gun", "cmk"],
+  ["itiraz-ceza", "İtiraz (CMK m.268) — 7 gün", 7, "gun", "cmk"],
+  ["idari-dava", "İdari dava açma (İYUK m.7) — 60 gün", 60, "gun", "iyuk"],
+  ["vergi-dava", "Vergi davası açma (İYUK m.7) — 30 gün", 30, "gun", "iyuk"],
+  ["icra-itiraz", "Ödeme emrine itiraz (İİK m.62) — 7 gün", 7, "gun", "iik"],
+  ["ise-iade", "İşe iade arabuluculuk başvurusu (İş K. m.20) — 1 ay", 1, "ay", "hmk"],
+];
+const REJIM = { hmk: "Hukuk (HMK m.104: adli tatilde biten süre tatilin bittiği günden itibaren 1 hafta uzar)",
+  cmk: "Ceza (CMK m.331/4: tatilin bittiği günden itibaren 3 gün uzar)", iyuk: "İdari / vergi (İYUK: ara vermenin bittiği günü izleyen tarihten itibaren 7 gün uzar)",
+  iik: "İcra (İİK: adli tatil süreleri uzatmaz)", yok: "Adli tatil uygulanmasın" };
+function sureHesapla(baslangic, miktar, birim, rejim){
+  const start = D(baslangic); const notes = [];
+  let end;
+  if (birim === "gun") end = addDays(start, miktar);                 // başladığı gün sayılmaz (HMK m.92/1)
+  else if (birim === "hafta") end = addDays(start, miktar * 7);      // başladığı güne karşılık gelen gün (HMK m.92/2)
+  else {
+    const months = birim === "ay" ? miktar : miktar * 12;
+    const y = start.getUTCFullYear(), m = start.getUTCMonth() + months, d = start.getUTCDate();
+    const last = new Date(Date.UTC(y, m + 1, 0, 12)).getUTCDate();       // ayın son günü (31 Ocak + 1 ay = 28/29 Şubat)
+    end = new Date(Date.UTC(y, m, Math.min(d, last), 12));
+  }
+  notes.push(`Süre ${trDate(start)} tarihinden itibaren işler; başladığı gün hesaba katılmaz. Ham bitiş: <b>${trDate(end)}</b>.`);
+  if (inAdli(end) && rejim !== "yok" && rejim !== "iik") {
+    const tatilSonu = D(end.getUTCFullYear() + "-08-31");
+    const ext = rejim === "cmk" ? 3 : 7;
+    end = addDays(tatilSonu, ext);
+    notes.push(`Son gün adli tatile (20 Temmuz – 31 Ağustos) rastlıyor → ${ext} gün uzar: <b>${trDate(end)}</b>.`);
+  } else if (inAdli(end) && rejim === "iik") notes.push("Son gün adli tatile rastlıyor; icra işlerinde adli tatil süreyi uzatmaz.");
+  let moved = 0;
+  while (isWeekend(end) || isHoliday(end)) { end = addDays(end, 1); moved++; if (moved > 15) break; }
+  if (moved) notes.push(`Son gün hafta sonu / resmî tatile rastladığı için izleyen ilk iş gününe kaydı (HMK m.93): <b>${trDate(end)}</b>.`);
+  const warn = [];
+  if (isHalf(end)) warn.push("Son gün <b>arife veya yarım gün tatil</b>. Yarım günün süreye etkisi uygulamada tartışmalıdır; en güvenlisi işlemi o gün öğleden önce yapmaktır.");
+  if (!TATIL[end.getUTCFullYear()]) warn.push(`${end.getUTCFullYear()} yılının resmî tatilleri araçta tanımlı değil; dinî bayramları ayrıca kontrol edin.`);
+  return { end, notes, warn };
+}
+
+// ---- 2) Kıdem ve ihbar ----
+const tavanAt = dt => { let v = null; for (const [s, x] of KIDEM_TAVAN) if (dt >= s) v = [s, x]; return v; };
+function ihbarHafta(gun){ return gun < 182 ? 2 : gun < 547 ? 4 : gun < 1095 ? 6 : 8; }   // İş K. m.17: 6 ay / 1,5 yıl / 3 yıl
+function kidemHesapla(giris, cikis, brut, ek, gvOran){
+  const g = D(giris), c = D(cikis); const gun = daysBetween(g, c) + 1;
+  const aylik = brut + ek;                       // giydirilmiş brüt ücret
+  const tv = tavanAt(cikis);
+  const esas = tv ? Math.min(aylik, tv[1]) : aylik;
+  const kidemBrut = esas * gun / 365;
+  const damga = 0.00759;
+  const kidemNet = kidemBrut * (1 - damga);       // kıdem tazminatı gelir vergisinden istisnadır
+  const hafta = ihbarHafta(gun);
+  const ihbarBrut = aylik / 30 * hafta * 7;
+  const ihbarGv = ihbarBrut * gvOran / 100, ihbarDv = ihbarBrut * damga;
+  return { gun, yil: Math.floor(gun / 365), kalanGun: gun % 365, aylik, tv, esas, tavanUygulandi: tv && aylik > tv[1], kidemBrut, kidemDv: kidemBrut * damga, kidemNet,
+           hafta, ihbarBrut, ihbarGv, ihbarDv, ihbarNet: ihbarBrut - ihbarGv - ihbarDv, eskiTarih: !tv, sonrasi: cikis > KIDEM_TAVAN_SON };
+}
+
+// ---- 3) Faiz (basit faiz, gün/365, oran değişiminde dönemlere bölünür) ----
+function faizHesapla(ana, bas, bit, tablo){
+  const b = D(bas), e = D(bit); const rows = []; let top = 0;
+  for (let i = 0; i < tablo.length; i++) {
+    const ps = D(tablo[i][0]), pe = i + 1 < tablo.length ? addDays(D(tablo[i + 1][0]), -1) : D("2100-01-01");
+    const s = b > ps ? b : ps, f = e < pe ? e : pe;
+    if (f < s) continue;
+    const gun = daysBetween(s, f) + (s.getTime() === b.getTime() ? 0 : 1);
+    if (gun <= 0) continue;
+    const faiz = ana * tablo[i][1] / 100 * gun / 365; top += faiz;
+    rows.push({ s, f, oran: tablo[i][1], gun, faiz });
+  }
+  return { rows, top, gun: daysBetween(b, e) };
+}
+
+function tabAraclar(){
+  const b = $("#tabbody");
+  state.arac = state.arac || "sure";
+  const T = [["sure", "📅 Süre"], ["kidem", "💼 Kıdem / İhbar"], ["faiz", "📈 Faiz"], ["nafaka", "👪 Nafaka artışı"]];
+  b.innerHTML = `<div class="card"><h2>Hesaplama araçları</h2>
+    <div class="chips" id="arc">${T.map(([k, v]) => `<button data-a="${k}" class="${k === state.arac ? "on" : ""}">${v}</button>`).join("")}</div>
+    <div id="arbody"></div>
+    <p class="muted small" style="margin-top:16px">Hesaplar telefonunuzda yapılır, girdiğiniz bilgiler sunucuya gönderilmez. Resmî oran ve tutarlar ${DATA_DATE} tarihinde kontrol edilmiştir. Sonuçlar bilgi amaçlıdır; dilekçe ve hesap raporlarında mutlaka kontrol edin.</p></div>`;
+  $("#arc").onclick = e => { const a = e.target.dataset.a; if (a) { state.arac = a; tabAraclar(); } };
+  ({ sure: arSure, kidem: arKidem, faiz: arFaiz, nafaka: arNafaka })[state.arac]();
+}
+const todayIso = () => new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10);
+function arSure(){
+  $("#arbody").innerHTML = `
+    <label for="sh">Hazır süre</label><select id="sh">${SURE_HAZIR.map(x => `<option value="${x[0]}">${esc(x[1])}</option>`).join("")}</select>
+    <label for="sb">Tebliğ / öğrenme / başlangıç tarihi</label><input id="sb" type="date" value="${todayIso()}">
+    <div class="row" style="margin-top:0"><div style="flex:1"><label for="sm">Süre</label><input id="sm" type="number" min="1" max="3650" value="14"></div>
+      <div style="flex:1"><label for="su">Birim</label><select id="su"><option value="gun">gün</option><option value="hafta">hafta</option><option value="ay">ay</option><option value="yil">yıl</option></select></div></div>
+    <label for="sr">Usul (adli tatil kuralı)</label><select id="sr">${Object.entries(REJIM).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("")}</select>
+    <button class="btn btn-primary btn-block" id="sgo">Son günü hesapla</button><div id="sout"></div>`;
+  $("#sh").onchange = e => { const x = SURE_HAZIR.find(y => y[0] === e.target.value); if (x && x[0]) { $("#sm").value = x[2]; $("#su").value = x[3]; $("#sr").value = x[4]; } };
+  $("#sgo").onclick = () => {
+    const bas = $("#sb").value, m = parseInt($("#sm").value, 10);
+    if (!bas || !(m > 0)) return $("#sout").innerHTML = `<div class="msg err">Tarih ve süreyi girin.</div>`;
+    const r = sureHesapla(bas, m, $("#su").value, $("#sr").value);
+    const kalan = daysBetween(D(todayIso()), r.end);
+    const sLabel = $("#sh").value ? $("#sh").selectedOptions[0].text.split(" — ")[0] : `${m} ${$("#su").selectedOptions[0].text} süre`;
+    $("#sout").innerHTML = `<div class="card" style="margin-top:14px"><p class="small muted" style="margin:0">Sürenin son günü</p>
+      <div style="font-family:var(--serif);font-size:1.45rem;font-weight:700;margin:4px 0">${trDate(r.end)}</div>
+      <p class="small">${kalan > 0 ? `Bugünden itibaren <b>${kalan} gün</b> kaldı.` : kalan === 0 ? "<b>Bugün son gün.</b>" : `<b>Süre ${-kalan} gün önce doldu.</b>`}</p>
+      <ol class="hist">${r.notes.map(n => `<li>${n}</li>`).join("")}</ol>
+      ${r.warn.map(w => `<div class="notice">${w}</div>`).join("")}
+      <div class="row"><button class="btn btn-gold" id="sAj">📌 Ajandaya ekle</button><a class="btn btn-ghost" target="_blank" rel="noopener" href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent("Süre sonu: " + ($("#sh").selectedOptions[0].value ? $("#sh").selectedOptions[0].text.split(" — ")[0] : m + " " + $("#su").selectedOptions[0].text))}&dates=${iso(r.end).replace(/-/g, "")}/${iso(addDays(r.end, 1)).replace(/-/g, "")}&details=${encodeURIComponent("Hukuk Platformu süre hesabı. Başlangıç: " + bas)}">📅 Google Takvim'e ekle</a></div></div>`;
+    $("#sAj").onclick = () => { state.evDraft = { tip: "Süre sonu", baslik: sLabel, tarih: iso(r.end), not: "Başlangıç: " + fmtD(bas) }; state.tab = "dosyalar"; state.dosMode = "ajanda"; state.dosFolder = null; renderTab(); window.scrollTo(0, 0); };
+  };
+}
+function arKidem(){
+  $("#arbody").innerHTML = `
+    <div class="row" style="margin-top:0"><div style="flex:1"><label for="kg">İşe giriş</label><input id="kg" type="date"></div><div style="flex:1"><label for="kc">İşten çıkış</label><input id="kc" type="date" value="${todayIso()}"></div></div>
+    <label for="kb">Son aylık brüt ücret (₺)</label><input id="kb" type="text" inputmode="decimal" placeholder="ör. 45.000">
+    <label for="ke">Düzenli ek ödemeler, aylık brüt (₺) <span class="muted small">— yemek, yol, ikramiye/12 vb.</span></label><input id="ke" type="text" inputmode="decimal" placeholder="ör. 3.500" value="0">
+    <label for="kv">İhbar tazminatı gelir vergisi oranı (%)</label><select id="kv"><option>15</option><option>20</option><option>27</option><option>35</option><option>40</option></select>
+    <button class="btn btn-primary btn-block" id="kgo">Hesapla</button><div id="kout"></div>`;
+  $("#kgo").onclick = () => {
+    const g = $("#kg").value, c = $("#kc").value, brut = num($("#kb").value), ek = num($("#ke").value);
+    if (!g || !c || c <= g || !(brut > 0)) return $("#kout").innerHTML = `<div class="msg err">Giriş/çıkış tarihlerini ve brüt ücreti doğru girin.</div>`;
+    const r = kidemHesapla(g, c, brut, ek, +$("#kv").value);
+    $("#kout").innerHTML = `<div class="card" style="margin-top:14px">
+      <p class="small">Hizmet süresi: <b>${r.yil} yıl ${r.kalanGun} gün</b> (${r.gun} gün) · Giydirilmiş brüt ücret: <b>${tl(r.aylik)}</b></p>
+      ${r.gun < 365 ? `<div class="notice">Hizmet süresi 1 yıldan az: <b>kıdem tazminatı hakkı doğmaz</b> (1475 s.K. m.14). Aşağıdaki kıdem tutarı yalnızca bilgi içindir.</div>` : ""}
+      <h3 style="margin:12px 0 4px">Kıdem tazminatı</h3>
+      <div class="tbl">
+        <div class="trow"><div>Hesaba esas aylık ücret${r.tavanUygulandi ? ` <span class="muted small">(tavan uygulandı: ${tl(r.tv[1])}, ${r.tv[0].split("-").reverse().join(".")} dönemi)</span>` : ""}</div><div>${tl(r.esas)}</div></div>
+        <div class="trow"><div>Brüt kıdem tazminatı</div><div>${tl(r.kidemBrut)}</div></div>
+        <div class="trow"><div>Damga vergisi (binde 7,59)</div><div>− ${tl(r.kidemDv)}</div></div>
+        <div class="trow"><div><b>Net kıdem tazminatı</b></div><div><b>${tl(r.kidemNet)}</b></div></div></div>
+      <h3 style="margin:14px 0 4px">İhbar tazminatı <span class="muted small" style="font-weight:400">(${r.hafta} hafta, İş K. m.17)</span></h3>
+      <div class="tbl">
+        <div class="trow"><div>Brüt ihbar tazminatı</div><div>${tl(r.ihbarBrut)}</div></div>
+        <div class="trow"><div>Gelir vergisi (%${$("#kv").value})</div><div>− ${tl(r.ihbarGv)}</div></div>
+        <div class="trow"><div>Damga vergisi (binde 7,59)</div><div>− ${tl(r.ihbarDv)}</div></div>
+        <div class="trow"><div><b>Net ihbar tazminatı</b></div><div><b>${tl(r.ihbarNet)}</b></div></div></div>
+      ${r.eskiTarih ? `<div class="notice">Çıkış tarihi 2015 öncesi; tavan tablosu araçta yok. Tavanı ayrıca kontrol edin.</div>` : ""}
+      ${r.sonrasi ? `<div class="notice">Çıkış tarihi ${KIDEM_TAVAN_SON.split("-").reverse().join(".")} sonrası; o döneme ait yeni tavan araçta henüz yok, son bilinen tavan kullanıldı.</div>` : ""}
+      <p class="muted small">Kıdem tazminatı, 1475 s.K. m.14 uyarınca her tam yıl için 30 günlük giydirilmiş brüt ücret üzerinden hesaplanır, yıl artıkları orantılı eklenir; gelir vergisinden istisnadır. İhbar tazminatında gelir vergisi oranı işçinin yıllık kümülatif matrahına göre değişir. Fesih şekli, kıdem hakkını doğuran nedenler ve zamanaşımı ayrıca değerlendirilmelidir.</p>
+      <div class="row"><button class="btn btn-ghost" id="kcp">Hesabı kopyala</button></div></div>`;
+    $("#kcp").onclick = e => copy(`Kıdem/ihbar hesabı (Hukuk Platformu)\nGiriş: ${g} · Çıkış: ${c} · Süre: ${r.yil} yıl ${r.kalanGun} gün\nGiydirilmiş brüt: ${tl(r.aylik)} · Esas ücret: ${tl(r.esas)}${r.tavanUygulandi ? " (tavan)" : ""}\nKıdem: brüt ${tl(r.kidemBrut)}, net ${tl(r.kidemNet)}\nİhbar (${r.hafta} hafta): brüt ${tl(r.ihbarBrut)}, net ${tl(r.ihbarNet)}`, e.target);
+  };
+}
+function arFaiz(){
+  $("#arbody").innerHTML = `
+    <label for="fa">Anapara (₺)</label><input id="fa" type="text" inputmode="decimal" placeholder="ör. 250.000">
+    <div class="row" style="margin-top:0"><div style="flex:1"><label for="fb">Faiz başlangıcı (temerrüt)</label><input id="fb" type="date"></div><div style="flex:1"><label for="fe">Bitiş</label><input id="fe" type="date" value="${todayIso()}"></div></div>
+    <label for="ft">Faiz türü</label>
+    <select id="ft"><option value="yasal">Yasal faiz (3095 s.K. m.1) — oranlar tablodan</option><option value="sabit">Ticari avans / sözleşme faizi — oranı ben gireceğim</option></select>
+    <div id="fyasal"><div class="notice small">${esc(YASAL_FAIZ_NOT)}</div>
+      <label for="fy3">31.07.2026 sonrası yasal faiz oranı (%)</label><input id="fy3" type="text" inputmode="decimal" value="${String(YASAL_FAIZ[2][1]).replace(".", ",")}"></div>
+    <div id="fsabit" class="hidden"><label for="fo">Yıllık oran (%)</label><input id="fo" type="text" inputmode="decimal" placeholder="ör. 42,25">
+      <p class="muted small" style="margin:4px 0 0">Ticari işlerde avans faizi TCMB tarafından sık değiştirilir; güncel oranı TCMB duyurularından girin. Oran dönem içinde değiştiyse dönemleri ayrı ayrı hesaplayın.</p></div>
+    <button class="btn btn-primary btn-block" id="fgo">Hesapla</button><div id="fout"></div>`;
+  $("#ft").onchange = e => { $("#fyasal").classList.toggle("hidden", e.target.value !== "yasal"); $("#fsabit").classList.toggle("hidden", e.target.value === "yasal"); };
+  $("#fgo").onclick = () => {
+    const ana = num($("#fa").value), bas = $("#fb").value, bit = $("#fe").value;
+    if (!(ana > 0) || !bas || !bit || bit <= bas) return $("#fout").innerHTML = `<div class="msg err">Anapara ve tarihleri doğru girin.</div>`;
+    const tablo = $("#ft").value === "yasal" ? YASAL_FAIZ.map((x, i) => i === 2 ? [x[0], pct($("#fy3").value) || x[1]] : x) : [["1900-01-01", pct($("#fo").value) || 0]];
+    if (!tablo[tablo.length - 1][1]) return $("#fout").innerHTML = `<div class="msg err">Faiz oranını girin.</div>`;
+    const r = faizHesapla(ana, bas, bit, tablo);
+    $("#fout").innerHTML = `<div class="card" style="margin-top:14px"><div class="tbl">
+      ${r.rows.map(x => `<div class="trow"><div>${iso(x.s).split("-").reverse().join(".")} – ${iso(x.f).split("-").reverse().join(".")}<span class="muted small">${x.gun} gün · %${x.oran}</span></div><div>${tl(x.faiz)}</div></div>`).join("")}
+      <div class="trow"><div><b>Toplam faiz</b> <span class="muted small">(${r.gun} gün)</span></div><div><b>${tl(r.top)}</b></div></div>
+      <div class="trow"><div><b>Anapara + faiz</b></div><div><b>${tl(ana + r.top)}</b></div></div></div>
+      <p class="muted small">Basit faiz, yıl 365 gün esasıyla hesaplanmıştır; başlangıç günü sayılmaz.</p>
+      <div class="row"><button class="btn btn-ghost" id="fcp">Hesabı kopyala</button></div></div>`;
+    $("#fcp").onclick = e => copy(`Faiz hesabı (Hukuk Platformu)\nAnapara: ${tl(ana)} · ${bas} – ${bit}\n` + r.rows.map(x => `${iso(x.s)} – ${iso(x.f)}: ${x.gun} gün × %${x.oran} = ${tl(x.faiz)}`).join("\n") + `\nToplam faiz: ${tl(r.top)} · Toplam: ${tl(ana + r.top)}`, e.target);
+  };
+}
+function arNafaka(){
+  $("#arbody").innerHTML = `
+    <label for="nm">Mevcut aylık nafaka (₺)</label><input id="nm" type="text" inputmode="decimal" placeholder="ör. 5.000">
+    <label for="no">Artış oranı (%) <span class="muted small">— genellikle TÜİK'in son 12 aylık TÜFE ortalaması veya yıllık değişimi; kararda ÜFE/TÜFE hangisi yazıyorsa</span></label><input id="no" type="text" inputmode="decimal" placeholder="ör. 33,29">
+    <label for="ny">Kaç yıllık artış uygulanacak?</label><select id="ny"><option>1</option><option>2</option><option>3</option></select>
+    <div id="nyb"></div>
+    <button class="btn btn-primary btn-block" id="ngo">Hesapla</button><div id="nout"></div>`;
+  $("#ny").onchange = () => {
+    const n = +$("#ny").value;
+    $("#nyb").innerHTML = n > 1 ? [...Array(n - 1)].map((_, i) => `<label>${i + 2}. yılın artış oranı (%)</label><input class="nyo" type="text" inputmode="decimal">`).join("") : "";
+  };
+  $("#ngo").onclick = () => {
+    const m = num($("#nm").value), o1 = pct($("#no").value);
+    if (!(m > 0) || !isFinite(o1)) return $("#nout").innerHTML = `<div class="msg err">Nafaka tutarını ve artış oranını girin.</div>`;
+    const oranlar = [o1, ...[...document.querySelectorAll(".nyo")].map(x => pct(x.value) || 0)];
+    let cur = m; const rows = oranlar.map((o, i) => { const yeni = cur * (1 + o / 100); const r = { i: i + 1, o, eski: cur, yeni }; cur = yeni; return r; });
+    $("#nout").innerHTML = `<div class="card" style="margin-top:14px"><div class="tbl">
+      ${rows.map(r => `<div class="trow"><div>${r.i}. yıl (%${r.o})<span class="muted small">${tl(r.eski)} → </span></div><div><b>${tl(r.yeni)}</b></div></div>`).join("")}</div>
+      <p class="muted small">Nafakanın artırılması hâkimin takdirindedir; mahkemeler çoğunlukla TÜFE/ÜFE oranını esas alır, tarafların sosyal ve ekonomik durumunu da değerlendirir. Bu hesap yalnızca endeks artışını gösterir.</p></div>`;
+  };
+}
+
+// ---------- Dosyalarım: Ajanda + Klasörler (yalnızca bu cihazda saklanır) ----------
+const filesKey = () => "hp_files_" + ((state.user && state.user.id) || "x");
+function loadFiles(){
+  let f = null; try { f = JSON.parse(localStorage.getItem(filesKey()) || "null"); } catch {}
+  f = f && typeof f === "object" ? f : {};
+  f.folders = Array.isArray(f.folders) ? f.folders : []; f.events = Array.isArray(f.events) ? f.events : [];
+  return f;
+}
+function saveFiles(f){
+  try { localStorage.setItem(filesKey(), JSON.stringify(f)); return true; }
+  catch { alert("Kaydedilemedi: telefonun bu uygulamaya ayırdığı alan dolmuş olabilir. Eski notları silin veya yedeği dışa aktarın."); return false; }
+}
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const EV_TYPES = ["Duruşma", "Süre sonu", "Keşif / bilirkişi", "Arabuluculuk", "Müvekkil görüşmesi", "Diğer"];
+const fmtD = s => s ? s.split("-").reverse().join(".") : "";
+const dayDiff = s => daysBetween(D(todayIso()), D(s));
+
+// Hatırlatmalı takvim dosyası (.ics): telefonun takvimine eklenince 1 gün önce ve 2 saat önce uyarır
+function icsFor(ev){
+  const dt = ev.tarih.replace(/-/g, ""), t = (ev.saat || "").replace(":", "");
+  const esc2 = s => String(s || "").replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/[,;]/g, m => "\\" + m);
+  // Türkiye saati sabit UTC+3: saatli kayıtlar evrensel saate (Z) çevrilir; her takvim uygulaması doğru gösterir
+  const utc = t ? new Date(Date.UTC(+dt.slice(0, 4), +dt.slice(4, 6) - 1, +dt.slice(6, 8), +t.slice(0, 2) - 3, +t.slice(2, 4))).toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z" : "";
+  const when = t ? `DTSTART:${utc}\r\nDURATION:PT1H` : `DTSTART;VALUE=DATE:${dt}\r\nDTEND;VALUE=DATE:${iso(addDays(D(ev.tarih), 1)).replace(/-/g, "")}`;
+  return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Hukuk Platformu//TR", "BEGIN:VEVENT", `UID:${ev.id}@hukukplatformu`,
+    `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").slice(0, 15)}Z`, when, `SUMMARY:${esc2(ev.tip + ": " + ev.baslik)}`,
+    `DESCRIPTION:${esc2((ev.klasor ? "Dosya: " + ev.klasor + "\n" : "") + (ev.not || ""))}`,
+    "BEGIN:VALARM", "TRIGGER:-P1D", "ACTION:DISPLAY", "DESCRIPTION:Yarın: " + esc2(ev.baslik), "END:VALARM",
+    ...(t ? ["BEGIN:VALARM", "TRIGGER:-PT2H", "ACTION:DISPLAY", "DESCRIPTION:2 saat sonra: " + esc2(ev.baslik), "END:VALARM"] : []),
+    "END:VEVENT", "END:VCALENDAR"].join("\r\n");
+}
+function downloadText(text, name, type){
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+const gcalLink = ev => {
+  const d = ev.tarih.replace(/-/g, "");
+  const dates = ev.saat ? (() => { const s = d + "T" + ev.saat.replace(":", "") + "00"; const [h, m] = ev.saat.split(":").map(Number); const e = d + "T" + String((h + 1) % 24).padStart(2, "0") + String(m).padStart(2, "0") + "00"; return s + "/" + e; })()
+    : d + "/" + iso(addDays(D(ev.tarih), 1)).replace(/-/g, "");
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(ev.tip + ": " + ev.baslik)}&dates=${dates}&ctz=Europe/Istanbul&details=${encodeURIComponent((ev.klasor ? "Dosya: " + ev.klasor + "\n" : "") + (ev.not || ""))}`;
+};
+
+// Panel açılınca yaklaşan işler bandı
+function agendaBanner(){
+  const f = loadFiles();
+  const soon = f.events.filter(e => !e.done && dayDiff(e.tarih) >= 0 && dayDiff(e.tarih) <= 3).sort((a, b) => (a.tarih + (a.saat || "")).localeCompare(b.tarih + (b.saat || "")));
+  const late = f.events.filter(e => !e.done && e.tip === "Süre sonu" && dayDiff(e.tarih) < 0);
+  if (!soon.length && !late.length) return "";
+  const lbl = e => { const n = dayDiff(e.tarih); return n === 0 ? "bugün" : n === 1 ? "yarın" : n + " gün sonra"; };
+  return `<div class="notice" id="agb" style="cursor:pointer">📅 <b>Yaklaşan:</b> ${soon.slice(0, 3).map(e => `${esc(e.tip)} — ${esc(e.baslik)} (${lbl(e)}${e.saat ? " " + esc(e.saat) : ""})`).join(" · ")}
+    ${soon.length > 3 ? ` · +${soon.length - 3}` : ""}${late.length ? `<br><b style="color:var(--err)">Tarihi geçmiş ve tamamlanmamış ${late.length} süre sonu var.</b>` : ""}</div>`;
+}
+
+function tabDosyalar(){
+  const b = $("#tabbody");
+  state.dosMode = state.dosMode || "ajanda";
+  b.innerHTML = `<div class="card"><h2>Dosyalarım</h2>
+    <div class="chips" id="dsm"><button data-m="ajanda">📅 Ajanda</button><button data-m="klasor">📁 Klasörler</button></div>
+    <div id="dsbody"></div>
+    <p class="muted small" style="margin-top:16px">🔒 Ajanda ve klasörler yalnızca bu telefonda saklanır, sunucuya gönderilmez. Telefon değiştirirken veya uygulamayı silmeden önce <a href="#" id="bkx">yedeği dışa aktarın</a>.</p></div>`;
+  document.querySelectorAll("#dsm button").forEach(x => x.classList.toggle("on", x.dataset.m === state.dosMode));
+  $("#dsm").onclick = e => { const m = e.target.dataset.m; if (m) { state.dosMode = m; state.dosFolder = null; tabDosyalar(); } };
+  $("#bkx").onclick = e => { e.preventDefault(); exportBackup(); };
+  (state.dosMode === "ajanda" ? dsAjanda : dsKlasor)();
+}
+
+function dsAjanda(){
+  const f = loadFiles(), box = $("#dsbody");
+  const evs = f.events.slice().sort((a, b) => (a.tarih + (a.saat || "")).localeCompare(b.tarih + (b.saat || "")));
+  const up = evs.filter(e => !e.done && dayDiff(e.tarih) >= 0), past = evs.filter(e => e.done || dayDiff(e.tarih) < 0).reverse();
+  const card = e => { const n = dayDiff(e.tarih); return `<div class="evc ${e.done ? "done" : ""} ${!e.done && n < 0 ? "late" : ""} ${!e.done && n >= 0 && n <= 3 ? "soon" : ""}" data-id="${e.id}">
+      <div class="evd"><b>${esc(fmtD(e.tarih).slice(0, 5))}</b><span>${esc(e.saat || "")}</span></div>
+      <div class="evb"><b>${esc(e.baslik)}</b><span>${esc(e.tip)}${e.klasor ? " · 📁 " + esc(e.klasor) : ""} · ${e.done ? "tamamlandı" : n === 0 ? "<b>bugün</b>" : n > 0 ? n + " gün kaldı" : "<b>" + (-n) + " gün geçti</b>"}</span>
+        ${e.not ? `<span class="small">${esc(e.not)}</span>` : ""}
+        <div class="evact"><a href="${esc(gcalLink(e))}" target="_blank" rel="noopener">Google Takvim</a> · <a href="#" data-ics="${e.id}">Hatırlatmalı takvim dosyası</a> · <a href="#" data-done="${e.id}">${e.done ? "Geri al" : "Tamamlandı"}</a> · <a href="#" data-edit="${e.id}">Düzenle</a> · <a href="#" data-del="${e.id}" style="color:var(--err)">Sil</a></div></div></div>`; };
+  box.innerHTML = `
+    <div class="row"><button class="btn btn-primary" id="evnew">+ Yeni kayıt</button></div>
+    <div id="evform"></div>
+    <h3 style="margin:16px 2px 4px;font-size:1rem">Yaklaşan (${up.length})</h3>
+    ${up.map(card).join("") || `<p class="muted small">Yaklaşan kayıt yok. Duruşma ve süre sonlarınızı ekleyin; Hesapla → Süre sonucundan da tek dokunuşla eklenebilir.</p>`}
+    ${past.length ? `<details style="margin-top:12px"><summary>Geçmiş ve tamamlananlar (${past.length})</summary>${past.map(card).join("")}</details>` : ""}`;
+  $("#evnew").onclick = () => evForm();
+  box.onclick = e => {
+    const a = e.target.closest("a[data-ics],a[data-done],a[data-edit],a[data-del]"); if (!a) return;
+    e.preventDefault(); const F = loadFiles(); const id = a.dataset.ics || a.dataset.done || a.dataset.edit || a.dataset.del; const ev = F.events.find(x => x.id === id); if (!ev) return;
+    if (a.dataset.ics) return downloadText(icsFor(ev), "hatirlatma-" + ev.tarih + ".ics", "text/calendar");
+    if (a.dataset.edit) return evForm(ev);
+    if (a.dataset.done) ev.done = !ev.done;
+    if (a.dataset.del) { if (!confirm("Bu kayıt silinsin mi?")) return; F.events = F.events.filter(x => x.id !== id); }
+    saveFiles(F); dsAjanda();
+  };
+  if (state.evDraft) { evForm(state.evDraft); state.evDraft = null; }
+}
+function evForm(ev){
+  const f = loadFiles(); ev = ev || {};
+  $("#evform").innerHTML = `<div class="card" style="margin-top:12px;background:var(--bg)">
+    <label for="evt">Tür</label><select id="evt">${EV_TYPES.map(t => `<option ${t === (ev.tip || "Duruşma") ? "selected" : ""}>${t}</option>`).join("")}</select>
+    <label for="evb">Başlık</label><input id="evb" type="text" maxlength="150" placeholder="ör. İstanbul 5. İş Mah. 2024/123 E. duruşma" value="${esc(ev.baslik || "")}">
+    <div class="row" style="margin-top:0"><div style="flex:1"><label for="evd">Tarih</label><input id="evd" type="date" value="${esc(ev.tarih || todayIso())}"></div><div style="flex:1"><label for="evs">Saat (isteğe bağlı)</label><input id="evs" type="time" value="${esc(ev.saat || "")}"></div></div>
+    <label for="evk">Klasör (isteğe bağlı)</label><select id="evk"><option value="">—</option>${f.folders.map(x => `<option ${x.ad === ev.klasor ? "selected" : ""}>${esc(x.ad)}</option>`).join("")}</select>
+    <label for="evn">Not</label><input id="evn" type="text" maxlength="300" placeholder="ör. tanıklar hazır olacak" value="${esc(ev.not || "")}">
+    <div class="row"><button class="btn btn-primary" id="evsave">Kaydet</button><button class="btn btn-ghost" id="evcancel">Vazgeç</button></div></div>`;
+  $("#evcancel").onclick = () => { $("#evform").innerHTML = ""; };
+  $("#evsave").onclick = () => {
+    const rec = { id: ev.id || uid(), tip: $("#evt").value, baslik: $("#evb").value.trim(), tarih: $("#evd").value, saat: $("#evs").value, klasor: $("#evk").value, not: $("#evn").value.trim(), done: !!ev.done };
+    if (!rec.baslik || !rec.tarih) return alert("Başlık ve tarih gerekli.");
+    const F = loadFiles(); const i = F.events.findIndex(x => x.id === rec.id); if (i >= 0) F.events[i] = rec; else F.events.push(rec);
+    if (saveFiles(F)) dsAjanda();
+  };
+  $("#evform").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function dsKlasor(){
+  const f = loadFiles(), box = $("#dsbody");
+  if (state.dosFolder) return dsFolder(state.dosFolder);
+  const q = trLower(state.dosQ || "");
+  const hit = x => !q || trLower(x.ad + " " + (x.no || "")).includes(q) || x.items.some(i => trLower((i.baslik || "") + " " + (i.metin || "")).includes(q));
+  box.innerHTML = `
+    <div class="row"><button class="btn btn-primary" id="fnew">+ Yeni klasör</button></div>
+    <input id="fq" type="text" style="margin-top:10px" placeholder="Klasörlerde ve notlarda ara…" value="${esc(state.dosQ || "")}">
+    <div id="flist">${f.folders.filter(hit).map(x => `<button class="result" data-f="${x.id}"><b>📁 ${esc(x.ad)}</b><span>${x.no ? esc(x.no) + " · " : ""}${x.items.length} kayıt · ${f.events.filter(e => e.klasor === x.ad && !e.done && dayDiff(e.tarih) >= 0).length} yaklaşan iş</span></button>`).join("") ||
+      `<p class="muted small" style="margin-top:10px">${f.folders.length ? "Aramaya uyan klasör yok." : "Henüz klasör yok. Her dava veya müvekkil için bir klasör açın; notlarınızı, kaydettiğiniz kararları ve dilekçe taslaklarını orada toplayın."}</p>`}</div>
+    <div class="row" style="margin-top:16px"><button class="btn btn-ghost" id="bkx2">⬇ Yedeği dışa aktar</button><label class="btn btn-ghost" style="margin:0">⬆ Yedeği içe aktar<input id="bki" type="file" accept=".json,application/json" class="hidden"></label></div>`;
+  $("#fnew").onclick = () => {
+    const ad = (prompt("Klasör adı (ör. Ahmet Y. – işçilik alacağı). Müvekkilin tam adını yazmamanızı öneririz.") || "").trim().slice(0, 80); if (!ad) return;
+    const no = (prompt("Dosya / esas no (isteğe bağlı)") || "").trim().slice(0, 60);
+    const F = loadFiles(); if (F.folders.some(x => x.ad === ad)) return alert("Bu adda bir klasör zaten var.");
+    F.folders.unshift({ id: uid(), ad, no, items: [], t: Date.now() }); saveFiles(F); dsKlasor();
+  };
+  $("#fq").oninput = e => { state.dosQ = e.target.value; const pos = e.target.selectionStart; dsKlasor(); const n = $("#fq"); n.focus(); n.setSelectionRange(pos, pos); };
+  $("#flist").onclick = e => { const x = e.target.closest("[data-f]"); if (x) { state.dosFolder = x.dataset.f; dsKlasor(); } };
+  $("#bkx2").onclick = exportBackup;
+  $("#bki").onchange = importBackup;
+}
+function dsFolder(id){
+  const f = loadFiles(), box = $("#dsbody"), fo = f.folders.find(x => x.id === id);
+  if (!fo) { state.dosFolder = null; return dsKlasor(); }
+  const ICON = { not: "📝", karar: "⚖️", taslak: "✍️" };
+  const evs = f.events.filter(e => e.klasor === fo.ad).sort((a, b) => a.tarih.localeCompare(b.tarih));
+  box.innerHTML = `
+    <div class="row"><button class="btn btn-ghost" id="fback">← Klasörler</button></div>
+    <h3 style="margin:14px 0 2px">📁 ${esc(fo.ad)}</h3><p class="muted small" style="margin:0">${esc(fo.no || "")}</p>
+    <div class="row"><button class="btn btn-primary" id="nnew">+ Not</button><button class="btn btn-ghost" id="enew">+ Ajanda kaydı</button>
+      <button class="btn btn-ghost" id="fren">Yeniden adlandır</button><button class="btn btn-ghost" id="fdel" style="color:var(--err)">Klasörü sil</button></div>
+    <div id="nform"></div>
+    ${evs.length ? `<h4 style="margin:14px 0 4px">Ajanda</h4>${evs.map(e => `<p class="small" style="margin:4px 0">${e.done ? "✔" : "📅"} ${esc(fmtD(e.tarih))} ${esc(e.saat || "")} — ${esc(e.tip)}: ${esc(e.baslik)}</p>`).join("")}` : ""}
+    <h4 style="margin:14px 0 4px">Kayıtlar (${fo.items.length})</h4>
+    ${fo.items.map(i => `<div class="card" style="margin-top:8px;padding:14px">
+      <b>${ICON[i.tur] || "📝"} ${esc(i.baslik || "Not")}</b> <span class="muted small">${new Date(i.t).toLocaleDateString("tr-TR")}</span>
+      ${i.metin ? `<div class="small" style="white-space:pre-wrap;margin-top:6px;max-height:${i.tur === "taslak" ? "160px" : "none"};overflow:auto">${esc(i.metin)}</div>` : ""}
+      <div class="evact">${i.tur === "karar" && i.ref ? `<a href="#" data-open="${i.id}">Kararı aç</a> · ` : ""}<a href="#" data-cp="${i.id}">Kopyala</a> · ${i.tur === "not" ? `<a href="#" data-ed="${i.id}">Düzenle</a> · ` : ""}<a href="#" data-rm="${i.id}" style="color:var(--err)">Sil</a></div></div>`).join("") || `<p class="muted small">Bu klasörde kayıt yok. Not ekleyin; karar ekranındaki ve Dilekçe Asistanı'ndaki "📁 Klasöre kaydet" düğmeleriyle de buraya ekleyebilirsiniz.</p>`}`;
+  $("#fback").onclick = () => { state.dosFolder = null; dsKlasor(); };
+  $("#nnew").onclick = () => noteForm(fo.id);
+  $("#enew").onclick = () => { state.dosMode = "ajanda"; state.evDraft = { klasor: fo.ad }; state.dosFolder = null; tabDosyalar(); };
+  $("#fren").onclick = () => {
+    const ad = (prompt("Yeni klasör adı", fo.ad) || "").trim().slice(0, 80); if (!ad || ad === fo.ad) return;
+    const F = loadFiles(); if (F.folders.some(x => x.ad === ad)) return alert("Bu adda bir klasör zaten var.");
+    const x = F.folders.find(y => y.id === id); F.events.forEach(e => { if (e.klasor === x.ad) e.klasor = ad; }); x.ad = ad; saveFiles(F); dsFolder(id);
+  };
+  $("#fdel").onclick = () => {
+    if (!confirm(`"${fo.ad}" klasörü ve içindeki ${fo.items.length} kayıt silinsin mi? Ajanda kayıtları silinmez.`)) return;
+    const F = loadFiles(); F.folders = F.folders.filter(x => x.id !== id); saveFiles(F); state.dosFolder = null; dsKlasor();
+  };
+  box.onclick = async e => {
+    const a = e.target.closest("a[data-open],a[data-cp],a[data-ed],a[data-rm]"); if (!a) return; e.preventDefault();
+    const F = loadFiles(), x = F.folders.find(y => y.id === id), it = x.items.find(y => y.id === (a.dataset.open || a.dataset.cp || a.dataset.ed || a.dataset.rm)); if (!it) return;
+    if (a.dataset.cp) return copy((it.baslik ? it.baslik + "\n" : "") + (it.metin || ""), a);
+    if (a.dataset.ed) return noteForm(id, it);
+    if (a.dataset.open) { state.tab = "ara"; renderTab(); return openDecision(it.ref.source, it.ref.item); }
+    if (a.dataset.rm) { if (!confirm("Bu kayıt silinsin mi?")) return; x.items = x.items.filter(y => y.id !== it.id); saveFiles(F); dsFolder(id); }
+  };
+}
+function noteForm(fid, it){
+  it = it || {};
+  $("#nform").innerHTML = `<div class="card" style="margin-top:12px;background:var(--bg)">
+    <label for="nb">Başlık</label><input id="nb" type="text" maxlength="150" value="${esc(it.baslik || "")}" placeholder="ör. Tanık listesi">
+    <label for="nt">Not</label><textarea id="nt" style="min-height:120px">${esc(it.metin || "")}</textarea>
+    <div class="row"><button class="btn btn-primary" id="nsave">Kaydet</button><button class="btn btn-ghost" id="ncancel">Vazgeç</button></div></div>`;
+  $("#ncancel").onclick = () => { $("#nform").innerHTML = ""; };
+  $("#nsave").onclick = () => {
+    const baslik = $("#nb").value.trim(), metin = $("#nt").value.trim(); if (!baslik && !metin) return;
+    const F = loadFiles(), x = F.folders.find(y => y.id === fid); if (!x) return;
+    if (it.id) Object.assign(x.items.find(y => y.id === it.id) || {}, { baslik, metin });
+    else x.items.unshift({ id: uid(), tur: "not", baslik, metin, t: Date.now() });
+    if (saveFiles(F)) dsFolder(fid);
+  };
+}
+// Başka ekranlardan klasöre kayıt (karar künyesi, dilekçe taslağı)
+function saveToFolder(item, msgEl){
+  const F = loadFiles();
+  const names = F.folders.map((x, i) => `${i + 1}) ${x.ad}`).join("\n");
+  const ans = (prompt(F.folders.length ? `Hangi klasöre kaydedilsin?\n${names}\n\nNumarasını yazın veya yeni klasör adı girin:` : "Henüz klasör yok. Yeni klasör adı girin:") || "").trim();
+  if (!ans) return false;
+  let fo = /^\d+$/.test(ans) ? F.folders[+ans - 1] : F.folders.find(x => x.ad === ans);
+  if (!fo) { fo = { id: uid(), ad: ans.slice(0, 80), no: "", items: [], t: Date.now() }; F.folders.unshift(fo); }
+  fo.items.unshift({ id: uid(), t: Date.now(), ...item });
+  if (saveFiles(F)) { if (msgEl) showMsg(msgEl, `"${fo.ad}" klasörüne kaydedildi.`, true); return true; }
+  return false;
+}
+function exportBackup(){
+  const data = { app: "hukuk-platformu", version: 1, exportedAt: new Date().toISOString(), files: loadFiles() };
+  downloadText(JSON.stringify(data, null, 1), `hukuk-platformu-yedek-${todayIso()}.json`, "application/json");
+}
+async function importBackup(e){
+  const file = e.target.files[0]; e.target.value = ""; if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    if (!data || data.app !== "hukuk-platformu" || !data.files) throw new Error("Bu dosya bir Hukuk Platformu yedeği değil.");
+    const cur = loadFiles(), inc = data.files;
+    const mode = confirm(`Yedekte ${(inc.folders || []).length} klasör ve ${(inc.events || []).length} ajanda kaydı var.\n\nTamam: mevcut verilerle BİRLEŞTİR\nİptal: işlemi durdur`);
+    if (!mode) return;
+    const fIds = new Set(cur.folders.map(x => x.id)), eIds = new Set(cur.events.map(x => x.id));
+    (inc.folders || []).forEach(x => { if (!fIds.has(x.id)) cur.folders.push(x); });
+    (inc.events || []).forEach(x => { if (!eIds.has(x.id)) cur.events.push(x); });
+    if (saveFiles(cur)) { alert("Yedek içe aktarıldı."); tabDosyalar(); }
+  } catch (err) { alert("Yedek okunamadı: " + err.message); }
+}
 
 async function tabAccount(){
   const b = $("#tabbody");
@@ -1691,7 +2181,7 @@ function pageTerms(){
   <h2>5. Kullanıcı içeriği</h2>
   <p>Kullanıcı, analiz için gönderdiği metinler üzerinde gerekli haklara sahip olduğunu ve bu metinlerin hukuka aykırı içerik barındırmadığını kabul eder. Kişisel verileri, özellikle özel nitelikli kişisel verileri (sağlık, ceza mahkûmiyeti vb.) göndermeden önce anonimleştirmek Kullanıcının sorumluluğundadır. Analiz için gönderilen metinler işlendikten sonra saklanmaz.</p>
   <h2>5/A. Avukatlık meslek sırrı</h2>
-  <p>Avukat Kullanıcılar, 1136 sayılı Avukatlık Kanunu m.36 uyarınca sır saklama yükümlülüğü altındadır. Müvekkile ait bilgileri, dosya ve belgeleri analiz için göndermeden önce müvekkili tanıtıcı bilgileri (ad, T.C. kimlik no, adres, telefon, dosya numarası vb.) çıkarmak veya maskelemek Kullanıcının sorumluluğundadır. Platform gönderilen metinleri yalnızca işlem anında işler ve saklamaz; Kullanıcının taslakları ve arama geçmişi yalnızca kendi cihazında tutulur.</p>
+  <p>Avukat Kullanıcılar, 1136 sayılı Avukatlık Kanunu m.36 uyarınca sır saklama yükümlülüğü altındadır. Müvekkile ait bilgileri, dosya ve belgeleri analiz için göndermeden önce müvekkili tanıtıcı bilgileri (ad, T.C. kimlik no, adres, telefon, dosya numarası vb.) çıkarmak veya maskelemek Kullanıcının sorumluluğundadır. Platform gönderilen metinleri yalnızca işlem anında işler ve saklamaz; Kullanıcının taslakları, arama geçmişi, ajanda kayıtları, klasör ve notları yalnızca kendi cihazında tutulur; cihaz değişikliği veya uygulamanın silinmesi hâlinde kaybolmaması için yedeğin dışa aktarılması Kullanıcının sorumluluğundadır.</p>
   <h2>5/B. Yapay zekâ çıktılarının niteliği ve sorumluluk</h2>
   <p>Karar özetleri, dava analizleri, dilekçe ve sözleşme taslakları ile çeviriler yapay zekâ tarafından otomatik üretilir; hatalı, eksik veya bağlamdan kopuk olabilir. Dava analizi bir kazanma olasılığı veya sonuç garantisi değildir. Karar sonuçları (onama, bozma vb.) karar metninden otomatik çıkarılır ve hatalı olabilir. Çıktıların doğruluğunu, güncelliğini ve somut olaya uygunluğunu kontrol etmek ve bunları kullanma kararı tamamen Kullanıcıya aittir; çıktılar üzerinden yapılan işlemlerden doğan mesleki sorumluluk Kullanıcıdadır. Resmî işlemlerde kullanılacak çeviriler için yeminli tercüman onayı gerekir.</p>
   <h2>6. Paketler ve ücretlendirme</h2>
@@ -1716,7 +2206,7 @@ function pageKvkk(){
   <li>Kullanım: paket bilgisi, günlük arama ve işlem sayıları</li>
   <li>Analiz için gönderdiğiniz metinler: yalnızca işlem anında işlenir, kaydedilmez</li>
   <li>Açtığınız mahkeme kararları: kamuya açık resmî metinlerdir; hızlı erişim için önbellekte tutulur, hesabınızla ilişkilendirilmez</li>
-  <li>Cihazınızda (sunucuya gönderilmeden) tutulanlar: arama geçmişiniz ve dilekçe taslaklarınız; uygulamadan veya tarayıcı verilerini silerek temizleyebilirsiniz</li></ul>
+  <li>Cihazınızda (sunucuya gönderilmeden) tutulanlar: arama geçmişiniz, dilekçe taslaklarınız, ajanda kayıtlarınız, klasör ve notlarınız; bunlar Hizmet Sağlayıcı tarafından görülemez, uygulamadan veya tarayıcı verilerini silerek temizleyebilirsiniz. Yedeği yalnızca siz dışa aktarabilirsiniz.</li></ul>
   <h2>3. Amaçlar ve hukuki sebepler</h2>
   <p>Verileriniz; üyelik sözleşmesinin kurulması ve ifası (KVKK m.5/2-c), hesap güvenliğinin ve hizmet sürekliliğinin sağlanması ile kötüye kullanımın önlenmesi için veri sorumlusunun meşru menfaati (m.5/2-f) ve yasal yükümlülüklerin yerine getirilmesi (m.5/2-ç) hukuki sebeplerine dayanılarak işlenir.</p>
   <h2>4. Aktarım</h2>
@@ -1760,10 +2250,10 @@ function pageGuide(){
   <b>İpucu:</b> Sözleşmenin tamamını ekleyin; tek bir madde gönderildiğinde eksik hüküm değerlendirmesi yapılamaz.</p>
   <h3>✍️ Dilekçe Asistanı <span class="small muted">(Optimus: 5 karar, Maximus: 10 karar)</span></h3>
   <p><b>Panelim → Dilekçe</b> sekmesinde 4 adımda çalışır:<br>
-  <b>1. Olay:</b> Dava türünü seçin; olayı tarih sırasıyla, talebi ve delilleri yazın. Müvekkil adı ve kimlik bilgisi yazmayın. Taslağınız telefonunuzda saklanır.<br>
-  <b>2. Kararlar:</b> Platform olayınızdan arama ifadeleri çıkarır ve 11M arşiv ile UYAP Emsal/Danıştay'da arar. İfadeleri düzenleyip yeniden arayabilirsiniz. Bir karara dokunarak metnini okuyun, kutucuğu işaretleyerek seçin. Elinizdeki bir kararı <i>Kendi elimdeki kararı ekle</i> ile ekleyebilirsiniz. Karar arama ekranındaki <b>+ Dilekçeye ekle</b> düğmesi de kararı buraya ekler.<br>
-  <b>3. Analiz:</b> Seçtiğiniz kararların sonucu (onama, bozma, ret…) ve mahkeme düzeyi bilgisayarca sayılır. <b>Dava analizini oluştur</b> düğmesi; olayla benzerlikleri, lehe ve aleyhe noktaları, ispat ve usul kontrollerini yazar. Yüzde veya kazanma olasılığı verilmez.<br>
-  <b>4. Dilekçe:</b> Taslak yalnızca seçtiğiniz kararlara künyesiyle atıf yapar; bilinmeyen bilgiler [ ] ile bırakılır. <b>Word (.docx) indir</b> ile dosya olarak alabilirsiniz.<br>
+  <b>1. Olay ve taraflar:</b> Dava türünü seçin; mahkeme, davacı, vekil, davalı(lar), dava konusu ve değerini yazın; olayı tarih sırasıyla, talebi ve delilleri ekleyin. <b>Taraf ve vekil bilgileri yapay zekâya gönderilmez</b>; taslağa telefonunuzda yerleştirilir. Bilgiler bu telefonda saklanır.<br>
+  <b>2. Kararlar:</b> Platform davanın hukuki adını belirler (ör. kardeşler arasında ortak malın paylaşılması için <i>ortaklığın giderilmesi</i>), 11M arşivde ve UYAP Emsal'de bu konuyu içeren kararları tarar; yapay zekâ kararları okuyup <b>en ilgilileri sizin için seçer</b> ve her birinin neden seçildiğini yazar. İsterseniz bir kararın işaretini kaldırabilir, <i>Diğer adaylar</i>dan ekleyebilir, elinizdeki bir kararı ekleyebilir veya <i>Aramayı düzelt</i> ile hukuki terimi değiştirip yeniden taratabilirsiniz.<br>
+  <b>3. Analiz:</b> Seçilen kararların sonucu (onama, bozma, ret…) ve mahkeme düzeyi bilgisayarca sayılır. <b>Dava analizini oluştur</b>; olayla benzerlikleri, lehe ve aleyhe noktaları, ispat ve usul kontrollerini yazar. Yüzde veya kazanma olasılığı verilmez.<br>
+  <b>4. Dilekçe:</b> Mahkeme başlığı, taraflar, konu, açıklamalar, emsal kararlar (künyeleriyle), hukuki nedenler, deliller ve sonuç-istem bölümleriyle taslak hazırlanır. <b>Word (.docx) indir</b> veya <b>Klasöre kaydet</b>. 1. adımda bir bilgiyi sonradan düzeltirseniz taslak yeniden yazdırmadan güncellenir.<br>
   <b>Önemli:</b> Mevzuat atıflarını ve kararların kesinleşme durumunu kontrol edin; taslak avukat denetimi olmadan kullanılmamalıdır.</p>
   <h3>📑 Sözleşme: yeni versiyon <span class="small muted">(Optimus ve Maximus)</span></h3>
   <p>Sözleşme risk analizi bittikten sonra <b>Önerileri uygula — yeni versiyon oluştur</b> düğmesine dokunun. Yapay zekâ sözleşmenin düzeltilmiş tam metnini yazar; değişiklikler <del>kırmızı</del> / <ins>yeşil</ins> gösterilir. Yeni metni kopyalayabilir veya Word dosyası olarak indirebilirsiniz.</p>
@@ -1783,6 +2273,17 @@ function pageGuide(){
   <h3>⚖️ Metin karşılaştır <span class="small muted">(karşılaştırma tüm paketlerde; yapay zekâ açıklaması Optimus ve Maximus)</span></h3>
   <p><b>Ne girilir:</b> Eski ve yeni metin: kanun maddesinin iki hâli, sözleşmenin iki versiyonu veya iki dilekçe.<br>
   <b>Ne verir:</b> Kelime kelime fark: <del>çıkarılan</del> kırmızı, <ins>eklenen</ins> yeşil. Farkları bilgisayar hesaplar, bu yüzden atlanan değişiklik olmaz. İsterseniz <b>Değişikliği yapay zekâ ile açıkla</b> düğmesi değişikliğin hukuki anlamını, kimi etkilediğini ve dikkat edilecek noktaları yazar.</p>
+  <h2>4/A. Hesaplama araçları <span class="small muted">(tüm paketler)</span></h2>
+  <p><b>Panelim → Hesapla</b> sekmesinde dört araç vardır. Hesaplar telefonunuzda yapılır, bilgileriniz sunucuya gitmez.</p>
+  <ul><li><b>📅 Süre:</b> Tebliğ tarihini ve süreyi girin (veya istinaf, temyiz, itiraz gibi hazır sürelerden seçin). Son gün; hafta sonu, resmî tatil ve usule göre adli tatil (HMK 1 hafta, CMK 3 gün, İYUK 7 gün uzama) dikkate alınarak bulunur. Sonucu tek dokunuşla Google Takvim'e ekleyebilirsiniz. Son gün arifeye rastlarsa uyarı verilir.</li>
+  <li><b>💼 Kıdem / İhbar:</b> Giriş-çıkış tarihi ve giydirilmiş brüt ücretle kıdem tazminatı (dönemin tavanı otomatik uygulanır) ve ihbar tazminatı brüt/net hesaplanır.</li>
+  <li><b>📈 Faiz:</b> Yasal faiz dönem dönem (oran değişikliklerine göre bölünerek) veya girdiğiniz oranla (ticari avans, sözleşme faizi) basit faiz hesaplanır.</li>
+  <li><b>👪 Nafaka artışı:</b> Mevcut nafakaya girdiğiniz TÜFE/ÜFE oranı uygulanır; birden fazla yıl için art arda hesaplanabilir.</li></ul>
+  <p class="small muted">Kıdem tavanı ve yasal faiz oranları resmî kaynaklardan alınmış ve her dönem güncellenir; yine de hesap raporlarında kontrol ediniz.</p>
+  <h2>4/B. Dosyalarım: ajanda ve klasörler <span class="small muted">(tüm paketler)</span></h2>
+  <ul><li><b>📅 Ajanda:</b> Duruşma, süre sonu, keşif, arabuluculuk ve görüşmelerinizi kaydedin. Panel açıldığında 3 gün içindeki işler üstte uyarı olarak görünür; tarihi geçmiş süre sonları kırmızıyla işaretlenir. Her kayıt <b>Google Takvim</b>'e veya <b>hatırlatmalı takvim dosyasıyla</b> telefonunuzun takvimine eklenebilir (1 gün ve 2 saat önce uyarır). Hesapla → Süre sonucundaki <b>Ajandaya ekle</b> düğmesi süre sonunu doğrudan kaydeder.</li>
+  <li><b>📁 Klasörler:</b> Her dava veya müvekkil için klasör açın; notlarınızı, karar ekranındaki <b>Klasöre kaydet</b> ile kararları ve Dilekçe Asistanı'ndaki taslakları burada toplayın. Klasörlerde ve notlarda arama yapabilirsiniz.</li>
+  <li><b>🔒 Gizlilik ve yedek:</b> Ajanda ve klasörler yalnızca telefonunuzda saklanır, sunucuya gitmez. Telefon değiştirmeden veya uygulamayı silmeden önce <b>Yedeği dışa aktar</b> ile dosyayı saklayın; yeni cihazda <b>Yedeği içe aktar</b> ile geri yükleyin.</li></ul>
   <h2>5. UYAP'tan belge almak</h2>
   <ol><li>UYAP Avukat Portal'da veya UYAP Avukat mobil uygulamasında ilgili dosyayı açın.</li>
   <li>Belgeyi telefonunuza indirin (UDF, EYP veya PDF olarak).</li>
