@@ -961,6 +961,9 @@ const VERB = { "değişik": "değiştirildi", "değiştirilen": "değiştirildi"
 function htmlToLines(html){
   const doc = new DOMParser().parseFromString(html, "text/html");
   doc.querySelectorAll("script,style,head").forEach(n => n.remove());
+  // mevzuat.gov.tr metinleri Word çıktısıdır: kaynak koddaki satır sonları cümle ortasında olabilir (ör. "Madde\n699-").
+  // Önce metin düğümlerindeki tüm boşluklar teke indirilir, satırlar yalnızca paragraf/satır sonu etiketlerinden oluşturulur.
+  if (doc.body) { const w = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) n.nodeValue = n.nodeValue.replace(/\s+/g, " "); }
   doc.querySelectorAll("br").forEach(n => n.replaceWith("\n"));
   doc.querySelectorAll("p,div,tr,li,h1,h2,h3,h4,h5,h6,table").forEach(n => n.append("\n"));
   return (doc.body ? doc.body.textContent : "").replace(/\u00a0/g, " ").split("\n")
@@ -1012,7 +1015,7 @@ function parseLaw(html){
     a.last = a.notes.reduce((x, n) => Math.max(x, n.sort), 0);
     delete a.lines;
   });
-  return { title, arts };
+  return { title, arts, full: lines.join("\n") };
 }
 function normMadde(s){
   let t = trLower(s).replace(/madde(si)?/g, " ").replace(/\s+/g, " ").trim();
@@ -1817,22 +1820,37 @@ async function dlLoadMev(extra){
     try { law = await fetchLaw({ no, tur: "1", tertip: ({ "2004": 3, "2644": 3 })[no] || 5 }); } catch (e) { err = e.message; }
     for (const x of d.mev.filter(y => y.no === no && y.status === "yükleniyor")) {
       if (!law) { x.status = "alınamadı"; x.err = err; if (x.src !== "kb") x.on = false; continue; }
-      const a = law.arts.find(a => a.key === normMadde(x.m));
-      if (!a) { x.status = "bulunamadı"; x.on = false; continue; }
+      const nrm = t => trLower(t || "").replace(/\s+/g, " ");
+      const hits = law.arts.filter(a => a.key === normMadde(x.m));
+      let a = hits.find(h => !x.kw || nrm(h.text + " " + h.heading).includes(nrm(x.kw))) || hits[0];
+      if (!a && law.full && !/\s/.test(x.m)) {
+        // Yedek: satır başında yakalanamadıysa metnin içinde "Madde 699 -" ara
+        const num = x.m.replace(/\//g, "\\s*\\/\\s*");
+        const re = new RegExp("(?:^|\\n)[^\\n]{0,40}?(?<!(?:Ek|EK|Geçici|GEÇİCİ)\\s)(?:MADDE|Madde)\\s+" + num + "\\s*[-–—]", "i");
+        const mm = re.exec(law.full);
+        if (mm) { const rest = law.full.slice(mm.index + mm[0].length); const end = rest.search(/\n[^\n]{0,40}?(?:MADDE|Madde)\s+\d+(?:\s*\/\s*[A-Za-z])?\s*[-–—]/); a = { text: (mm[0] + (end > 0 ? rest.slice(0, end) : rest.slice(0, 3000))).trim(), heading: "" }; }
+      }
+      x.url = law.url || "";
+      if (!a) {
+        if (x.src === "kb") { x.status = "metinsiz"; continue; }   // bilgi tabanındaki madde: konusuyla kullanılır
+        x.status = "bulunamadı"; x.on = false; continue;            // öneri / elle eklenen: listeden çıkarılır
+      }
       const raw = a.text, clean = mevClean(raw);
       x.heading = a.heading || ""; x.text = clean.slice(0, 1600);
       if (!x.konu) x.konu = a.heading || "";
       if (/^\s*(?:ek\s+|geçici\s+)?madde\s+[\w\/]+\s*[-–—]\s*\(\s*(mülga|iptal)/i.test(raw) || clean.length < 40) { x.status = "mülga"; x.on = false; continue; }
-      if (x.kw && !trLower(raw + " " + (a.heading || "")).includes(trLower(x.kw))) { x.status = "uyumsuz"; x.on = false; continue; }
+      if (x.kw && !nrm(raw + " " + (a.heading || "")).includes(nrm(x.kw))) { x.status = "uyumsuz"; x.on = false; continue; }
       x.status = "ok"; if (x.src !== "kb") x.on = true;      // yapay zekâ önerisi, metni doğrulanınca işaretlenir
     }
   }));
+  const gone = d.mev.filter(x => x.status === "bulunamadı" || (x.status === "mülga" && x.src !== "kb"));
+  if (gone.length) { d.mevNot = `${gone.map(mevLabel).join(", ")} bulunamadı veya yürürlükte değil; listeye alınmadı.`; d.mev = d.mev.filter(x => !gone.includes(x)); }
   dlDrawMev();
 }
 function dlDrawMev(){
   const d = state.dl, box = $("#dmev"); if (!box || !d.mev) return;
   const st = { "yükleniyor": ["…", "metin alınıyor"], ok: ["✔", "metin alındı"], "alınamadı": ["!", "metin alınamadı — konusuyla kullanılır"],
-               "bulunamadı": ["✖", "kanunda bu numarada madde bulunamadı"], "mülga": ["✖", "madde yürürlükten kaldırılmış / iptal edilmiş"], "uyumsuz": ["⚠", "madde metni beklenen konuyu içermiyor, kontrol edin"] };
+               "bulunamadı": ["✖", "kanunda bu numarada madde bulunamadı"], "metinsiz": ["!", "metin ayıklanamadı — konusuyla kullanılır"], "mülga": ["✖", "madde yürürlükten kaldırılmış / iptal edilmiş"], "uyumsuz": ["⚠", "madde metni beklenen konuyu içermiyor, kontrol edin"] };
   const loading = d.mev.some(x => x.status === "yükleniyor");
   const open = box.querySelector("details") ? box.querySelector("details").open : false;
   box.innerHTML = `<details class="card" style="margin-top:12px;padding:10px 12px" ${open ? "open" : ""}><summary><b>📚 Mevzuat: ${dlMevOn().length} madde</b>${loading ? ` <span class="muted small">— metinler alınıyor…</span>` : ""}
@@ -1842,6 +1860,7 @@ function dlDrawMev(){
       <button class="pbody"><b>${esc(mevLabel(x))}</b><span>${esc(x.konu || "")}${x.src === "ai" ? " · 🤖 yapay zekâ önerisi" : x.src === "user" ? " · sizin eklediğiniz" : ""}</span>
         <span class="small" style="color:${x.status === "ok" ? "var(--ok)" : x.status === "yükleniyor" ? "var(--muted)" : "var(--err)"}">${st[x.status][0]} ${st[x.status][1]}</span></button></div>`).join("")}
     <div class="row" style="margin-top:8px"><input id="madd2" type="text" maxlength="40" placeholder="Madde ekle: ör. TMK 642, HMK 119, İş K. 25" style="flex:1"><button class="btn btn-ghost" id="madd2b">Ekle</button></div>
+    ${d.mevNot ? `<p class="small" style="margin:6px 2px 0;color:var(--err)">${esc(d.mevNot)}</p>` : ""}
     <p class="muted small" style="margin:6px 2px 0">Dilekçede yalnızca işaretli maddeler kullanılır. Maddeye dokunarak metnini görebilirsiniz.</p></details>`;
   $("#madd2b").onclick = () => {
     const p = parseMaddeC($("#madd2").value);
@@ -1853,7 +1872,7 @@ function dlDrawMev(){
     const x = d.mev[+el.dataset.mi];
     if (e.target.closest(".chk")) { e.preventDefault(); if (["bulunamadı", "yükleniyor"].includes(x.status)) return; x.on = !x.on; dlDrawMev(); dlUpdateBar(); return; }
     const old = el.nextElementSibling; if (old && old.classList.contains("peek")) return old.remove();
-    el.insertAdjacentHTML("afterend", `<div class="peek doc">${x.text ? esc(x.text) : `<span class="muted">${esc(x.err || "Metin yok.")}</span>`}</div>`);
+    el.insertAdjacentHTML("afterend", `<div class="peek doc">${x.text ? esc(x.text) : `<span class="muted">${esc(x.err || "Bu maddenin metni otomatik ayıklanamadı.")}</span>`}${x.url ? `<br><a class="small" href="${esc(x.url)}" target="_blank" rel="noopener">Kanunu Mevzuat Bilgi Sistemi'nde aç ↗</a>` : ""}</div>`);
   };
 }
 function dlUpdateBar(){ const b = $("#dgo2"); if (b) b.disabled = !dlCanGo(3); const c = $("#pcount"); if (c) c.textContent = dlPickedList().length; }
