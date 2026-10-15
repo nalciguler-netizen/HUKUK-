@@ -1542,6 +1542,49 @@ function dlState(){
   return state.dl;
 }
 function dlSaveDraft(){ const d = state.dl, o = { ozel: d.ozel }; DL_FIELDS.forEach(k => o[k] = d[k]); try { localStorage.setItem(dlKey(), JSON.stringify(o)); } catch {} }
+function dlReset(){ state.dl = null; try { localStorage.removeItem(dlKey()); } catch {} tabDilekce(); }
+// ---------- Önceki dilekçeler: yalnızca bu telefonda saklanır (en fazla 20) ----------
+const dlHistKey = () => "hp_dlh_" + ((state.user && state.user.id) || "x");
+function dlHist(){ try { const a = JSON.parse(localStorage.getItem(dlHistKey()) || "[]"); return Array.isArray(a) ? a : []; } catch { return []; } }
+function dlHistSave(a){ try { localStorage.setItem(dlHistKey(), JSON.stringify(a.slice(0, 20))); return true; } catch { return false; } }
+function dlHistAdd(){
+  const d = state.dl; if (!d || !d.dilekce) return;
+  // Madde metinleri ve karar alıntıları da saklanır: kayıt açıldığında "Yeniden yaz" aynı kaynaklarla çalışır
+  const snap = { ozel: d.ozel, mev: (d.mev || []).filter(x => x.on), terim: d.terim,
+    facts: d.facts ? { items: d.facts.items.filter(x => x.ok).map(x => ({ ...x, excerpt: String(x.excerpt || "").slice(-3500) })) } : null, dilekce: d.dilekce };
+  DL_FIELDS.forEach(k => snap[k] = d[k]);
+  const baslik = (d.konu || d.tur.split(" (")[0]).slice(0, 90);
+  const a = dlHist();
+  if (!d.histId) d.histId = Date.now().toString(36);
+  const rec = { id: d.histId, t: Date.now(), baslik, tur: d.tur, davali: (d.davali.split(/[\n,]/)[0] || "").trim().slice(0, 60), snap };
+  const i = a.findIndex(x => x.id === rec.id); if (i >= 0) a.splice(i, 1);
+  a.unshift(rec);
+  if (!dlHistSave(a)) { a.pop(); dlHistSave(a); }        // depolama doluysa en eskisi silinir
+}
+function dlDrawHist(){
+  const box = $("#dhist"); if (!box) return;
+  const a = dlHist();
+  if (!a.length) { box.innerHTML = ""; return; }
+  box.innerHTML = `<details style="margin:10px 0 4px"><summary class="small"><b>📂 Önceki dilekçeler (${a.length})</b></summary>
+    ${a.map(r => `<div class="trow" style="align-items:center"><div><b>${esc(r.baslik)}</b><span class="muted small">${esc(r.tur.split(" (")[0])}${r.davali ? " · " + esc(r.davali) : ""} · ${new Date(r.t).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" })}</span></div>
+      <div style="display:flex;gap:6px;flex-shrink:0"><button class="btn btn-ghost" data-hopen="${esc(r.id)}" style="margin:0;padding:6px 10px">Aç</button><button class="btn btn-ghost" data-hdel="${esc(r.id)}" style="margin:0;padding:6px 10px;color:var(--err)">Sil</button></div></div>`).join("")}
+    <div class="row"><button class="btn btn-ghost" id="dhclear" style="color:var(--err)">🗑 Tüm kayıtları temizle</button></div>
+    <p class="muted small" style="margin:4px 0 0">Kayıtlar yalnızca bu telefonda tutulur; yazılan her taslak buraya kendiliğinden eklenir (en fazla 20).</p></details>`;
+  box.onclick = e => {
+    const o = e.target.closest("[data-hopen]"), dl = e.target.closest("[data-hdel]");
+    if (e.target.id === "dhclear") { if (confirm("Önceki dilekçe kayıtlarının tamamı silinsin mi? Bu işlem geri alınamaz.")) { try { localStorage.removeItem(dlHistKey()); } catch {} dlDrawHist(); } return; }
+    if (dl) { if (!confirm("Bu kayıt silinsin mi?")) return; dlHistSave(dlHist().filter(x => x.id !== dl.dataset.hdel)); return dlDrawHist(); }
+    if (o) {
+      const r = dlHist().find(x => x.id === o.dataset.hopen); if (!r) return;
+      if (state.dl && state.dl.olay && state.dl.histId !== r.id && !confirm("Açık olan dilekçenin yerine bu kayıt açılsın mı? (Açık dilekçe yazıldıysa önceki dilekçelerde durur.)")) return;
+      const sn = r.snap; dlState();
+      state.dl = { step: 4, picked: {}, manual: [], cands: null, queries: [], analiz: "", histId: r.id,
+        ozel: sn.ozel || {}, terim: sn.terim || "", mev: sn.mev || [], facts: sn.facts || { items: [] }, dilekce: sn.dilekce || "" };
+      DL_FIELDS.forEach(k => state.dl[k] = sn[k] || "");
+      dlSaveDraft(); tabDilekce(); window.scrollTo(0, 0);
+    }
+  };
+}
 const dlMax = () => ({ basic: 0, optimus: 5, maximus: 10 })[myPlan()] || 0;
 const refKey = (s, id) => s + ":" + id;
 function outcomeOf(text){
@@ -1571,11 +1614,15 @@ function tabDilekce(){
     return;
   }
   b.innerHTML = `<div class="card">
-    <h2>Dilekçe Asistanı</h2>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><h2 style="margin:0">Dilekçe Asistanı</h2>
+      <button class="btn btn-ghost" id="dclear" style="margin:0;padding:6px 12px;font-size:.85rem">🧹 Formu temizle</button></div>
+    <div id="dhist"></div>
     <div class="steps" id="dlsteps">${DL_STEPS.map((s, i) => `<button data-s="${i + 1}" class="${d.step === i + 1 ? "on" : ""} ${dlCanGo(i + 1) ? "" : "off"}"><b>${i + 1}</b> ${s}</button>`).join("")}</div>
     <div id="dlbody"></div>
   </div>`;
   $("#dlsteps").onclick = e => { const x = e.target.closest("[data-s]"); if (x && dlCanGo(+x.dataset.s)) { d.step = +x.dataset.s; tabDilekce(); } };
+  $("#dclear").onclick = () => { if (!confirm("Bu dilekçedeki bütün bilgiler (taraflar, olay, seçilen karar ve maddeler, taslak) temizlensin mi? Önceki dilekçeler listesindeki kayıtlar silinmez.")) return; dlReset(); };
+  dlDrawHist();
   ({ 1: dlStep1, 2: dlStep2, 3: dlStep3, 4: dlStep4 })[d.step]();
 }
 
@@ -2034,18 +2081,18 @@ function dlStep4(){
     const btn = $("#dyaz"); busy(btn, true, "Yazılıyor…"); $("#m").classList.add("hidden"); $("#dqa").innerHTML = "";
     try {
       d.dilekce = await streamAI({ task: "dilekce_yaz", text: dlCompose(true, sorunlar) }, out);
-      $("#dact").classList.remove("hidden");
+      $("#dact").classList.remove("hidden"); dlHistAdd(); dlDrawHist();
     } catch (err) { showMsg($("#m"), err.message); }
     finally { busy(btn, false); if (d.dilekce) render(); }
   };
   if (d.dilekce) render();
   [$("#dto1"), $("#dto1b")].forEach(a => { if (a) a.onclick = e => { e.preventDefault(); d.step = 1; tabDilekce(); }; });
   $("#dyaz").onclick = () => write();
-  $("#dek").oninput = () => { d.ekler = $("#dek").value; dlSaveDraft(); if (d.dilekce) render(); };
+  $("#dek").oninput = () => { d.ekler = $("#dek").value; dlSaveDraft(); if (d.dilekce) { render(); dlHistAdd(); } };
   $("#dcopy").onclick = e => copy(dlAssemble(), e.target);
   $("#dfold").onclick = () => saveToFolder({ tur: "taslak", baslik: "Dilekçe taslağı — " + (d.konu || d.tur.split(" (")[0]).slice(0, 80), metin: dlAssemble() }, $("#m"));
   $("#ddocx").onclick = async () => { try { await downloadDocx(dlAssemble(), "dilekce-taslagi.docx"); } catch (err) { showMsg($("#m"), "Word dosyası oluşturulamadı: " + err.message); } };
-  $("#dnew").onclick = () => { if (!confirm("Mevcut bilgiler, seçilen kararlar ve taslak silinsin mi?")) return; state.dl = null; try { localStorage.removeItem(dlKey()); } catch {} tabDilekce(); };
+  $("#dnew").onclick = () => { if (!confirm("Yeni dilekçe başlatılsın mı? Bu taslak 📂 Önceki dilekçeler listesinde kalır.")) return; dlReset(); };
 }
 
 // Gerçek .docx (Word) dosyası: JSZip ile en küçük geçerli Word belgesi oluşturulur
@@ -2734,6 +2781,7 @@ function pageGuide(){
   <b>📚 Öğrenen arama:</b> Sistem avukatların seçimlerinden öğrenir. Bir konuda sık tutulan kararlar sonraki aramalarda öne çıkar ("👍 Avukatlar bu konuda n kez seçti"), sık çıkarılanlar geriye düşer; yapay zekânın önerdiği terim avukatlarca sık düzeltilirse sistem doğru terimle başlar. Bu öğrenmede yalnızca hukuki konu ve karar künyesi anonim olarak tutulur.<br>
   <b>3. Analiz:</b> Seçilen kararların sonucu (onama, bozma, ret…) ve mahkeme düzeyi bilgisayarca sayılır. <b>Dava analizini oluştur</b>; olayla benzerlikleri, lehe ve aleyhe noktaları, ispat ve usul kontrollerini yazar. Yüzde veya kazanma olasılığı verilmez.<br>
   <b>4. Dilekçe:</b> Taslak, avukat dilekçesi düzeninde hazırlanır: "… MAHKEMESİ BAŞKANLIĞI'NA", DAVACI / VEKİLİ / DAVALI, KONUSU ("… talebinden ibarettir"), "1-)" diye numaralı AÇIKLAMALAR (vakıalar, madde içerikleri ve emsal kararlar), TANIKLAR, HUKUKİ NEDENLER, HUKUKİ DELİLLER, NETİCE VE TALEP, tarih-imza ve EKLER. Ardından <b>otomatik kontrol</b> çalışır: eksik bölüm, seçilen kararlar arasında olmayan künye, listede olmayan kanun maddesi, tekrar eden cümle, arabuluculuk eksikliği ve doldurulacak yerler gösterilir; <b>Bu sorunları düzelterek yeniden yaz</b> ile düzelttirebilirsiniz. Ekler listesini düzenleyebilir, <b>Word (.docx) indir</b> veya <b>Klasöre kaydet</b> ile saklayabilirsiniz. 1. adımda taraf bilgisini sonradan düzeltirseniz taslak yeniden yazdırmadan güncellenir.<br>
+  <b>📂 Önceki dilekçeler:</b> Yazılan her taslak kendiliğinden kaydedilir (en fazla 20, yalnızca bu telefonda). Listeden <b>Aç</b> ile kaldığınız yerden devam edin, <b>Sil</b> ile tek tek veya <b>Tüm kayıtları temizle</b> ile hepsini silin. <b>🧹 Formu temizle</b> açık dilekçedeki bütün bilgileri boşaltır; kayıtlı dilekçeler silinmez.<br>
   <b>Önemli:</b> Mevzuat atıflarını ve kararların kesinleşme durumunu kontrol edin; taslak avukat denetimi olmadan kullanılmamalıdır.</p>
   <h3>📑 Sözleşme: yeni versiyon <span class="small muted">(Optimus ve Maximus)</span></h3>
   <p>Sözleşme risk analizi bittikten sonra <b>Önerileri uygula — yeni versiyon oluştur</b> düğmesine dokunun. Yapay zekâ sözleşmenin düzeltilmiş tam metnini yazar; değişiklikler <del>kırmızı</del> / <ins>yeşil</ins> gösterilir. Yeni metni kopyalayabilir veya Word dosyası olarak indirebilirsiniz.</p>
