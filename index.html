@@ -1040,10 +1040,18 @@ async function fetchLaw(sel){
     const e = new Error(d.error || `İşlem başarısız (HTTP ${res.status}).`); e.officialUrl = d.officialUrl; throw e;
   }
   const buf = await res.arrayBuffer();
-  let cs = (/charset=([\w-]+)/i.exec(res.headers.get("Content-Type") || "") || [])[1] || "utf-8";
-  let html = new TextDecoder(cs).decode(buf);
-  const meta = /<meta[^>]+charset=["']?([\w-]+)/i.exec(html.slice(0, 3000));
-  if (meta && trLower(meta[1]) !== trLower(cs)) { try { html = new TextDecoder(meta[1]).decode(buf); } catch {} }
+  // Kodlama: önce metnin geçerli UTF-8 olup olmadığına bakılır (mevzuat.gov.tr bazı metinleri UTF-8 gönderip
+  // windows-1254 diye etiketleyebiliyor → "BorÃ§lanma"). Geçerli UTF-8 değilse etiket / meta / windows-1254 kullanılır.
+  let html;
+  try { html = new TextDecoder("utf-8", { fatal: true }).decode(buf); }
+  catch {
+    let cs = (/charset=([\w-]+)/i.exec(res.headers.get("Content-Type") || "") || [])[1] || "windows-1254";
+    if (/utf-?8/i.test(cs)) cs = "windows-1254";
+    const head = new TextDecoder("latin1").decode(buf.slice(0, 3000));
+    const meta = /<meta[^>]+charset=["']?([\w-]+)/i.exec(head);
+    if (meta && !/utf-?8/i.test(meta[1])) cs = meta[1];
+    try { html = new TextDecoder(cs).decode(buf); } catch { html = new TextDecoder("windows-1254").decode(buf); }
+  }
   const law = parseLaw(html);
   if (!law.arts.length) throw new Error("Metin alındı ama maddeler ayrıştırılamadı. Lütfen bize bildirin; bu sırada metni Mevzuat Bilgi Sistemi'nde açabilirsiniz.");
   law.no = sel.no; law.tur = sel.tur; law.url = res.headers.get("X-Mevzuat-Url") || "";
