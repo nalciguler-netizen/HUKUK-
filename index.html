@@ -1040,18 +1040,7 @@ async function fetchLaw(sel){
     const e = new Error(d.error || `İşlem başarısız (HTTP ${res.status}).`); e.officialUrl = d.officialUrl; throw e;
   }
   const buf = await res.arrayBuffer();
-  // Kodlama: önce metnin geçerli UTF-8 olup olmadığına bakılır (mevzuat.gov.tr bazı metinleri UTF-8 gönderip
-  // windows-1254 diye etiketleyebiliyor → "BorÃ§lanma"). Geçerli UTF-8 değilse etiket / meta / windows-1254 kullanılır.
-  let html;
-  try { html = new TextDecoder("utf-8", { fatal: true }).decode(buf); }
-  catch {
-    let cs = (/charset=([\w-]+)/i.exec(res.headers.get("Content-Type") || "") || [])[1] || "windows-1254";
-    if (/utf-?8/i.test(cs)) cs = "windows-1254";
-    const head = new TextDecoder("latin1").decode(buf.slice(0, 3000));
-    const meta = /<meta[^>]+charset=["']?([\w-]+)/i.exec(head);
-    if (meta && !/utf-?8/i.test(meta[1])) cs = meta[1];
-    try { html = new TextDecoder(cs).decode(buf); } catch { html = new TextDecoder("windows-1254").decode(buf); }
-  }
+  const html = decodeHtml(buf, res.headers.get("Content-Type"));
   const law = parseLaw(html);
   if (!law.arts.length) throw new Error("Metin alındı ama maddeler ayrıştırılamadı. Lütfen bize bildirin; bu sırada metni Mevzuat Bilgi Sistemi'nde açabilirsiniz.");
   law.no = sel.no; law.tur = sel.tur; law.url = res.headers.get("X-Mevzuat-Url") || "";
@@ -1060,6 +1049,21 @@ async function fetchLaw(sel){
   law.name = known ? known.name : law.title ? law.title.charAt(0) + law.title.slice(1).toLocaleLowerCase("tr-TR") : `${sel.no} sayılı ${typeName}`;
   law.quota = { used: res.headers.get("X-Quota-Used"), limit: res.headers.get("X-Quota-Limit") };
   return (lawCache[ck] = law);
+}
+function decodeHtml(buf, contentType){
+  // Kodlama: önce metnin geçerli UTF-8 olup olmadığına bakılır (mevzuat.gov.tr bazı metinleri UTF-8 gönderip
+  // windows-1254 diye etiketleyebiliyor → "BorÃ§lanma"). Geçerli UTF-8 değilse etiket / meta / windows-1254 kullanılır.
+  let html;
+  try { html = new TextDecoder("utf-8", { fatal: true }).decode(buf); }
+  catch {
+    let cs = (/charset=([\w-]+)/i.exec(contentType || "") || [])[1] || "windows-1254";
+    if (/utf-?8/i.test(cs)) cs = "windows-1254";
+    const head = new TextDecoder("latin1").decode(buf.slice(0, 3000));
+    const meta = /<meta[^>]+charset=["']?([\w-]+)/i.exec(head);
+    if (meta && !/utf-?8/i.test(meta[1])) cs = meta[1];
+    try { html = new TextDecoder(cs).decode(buf); } catch { html = new TextDecoder("windows-1254").decode(buf); }
+  }
+  return html;
 }
 // Kullanıcı girişini çöz: mevzuat.gov.tr bağlantısı, "Ad (no)", yalnızca numara veya kanun adı
 function resolveLaw(q, tur){
@@ -1088,6 +1092,113 @@ function noteLine(n){
     ${q ? ` <a href="https://www.google.com/search?q=${q}" target="_blank" rel="noopener" class="small">Değişiklik kanununu bul ↗</a>` : ""}</li>`;
 }
 
+
+// ---------- Madde sürümleri: ilk hâli (Resmî Gazete) + her değişiklikle gelen metin (değiştiren kanun) + güncel ----------
+const rgCache = {};
+function rgDateOf(law){
+  const t = String(law.full || "").slice(0, 4000);
+  const m = /(?:R\.\s*Gazete|Resm[îi]\s*Gazete)[\s\S]{0,80}?(\d{1,2})\s*[\/.]\s*(\d{1,2})\s*[\/.]\s*(\d{4})/i.exec(t);
+  return m ? { ymd: m[3] + m[2].padStart(2, "0") + m[1].padStart(2, "0"), label: `${m[1].padStart(2, "0")}.${m[2].padStart(2, "0")}.${m[3]}` } : null;
+}
+async function rgFetchLaw(ymd, no){
+  const ck = ymd + "/" + no; if (rgCache[ck]) return rgCache[ck];
+  const headers = { "Content-Type": "application/json" }; if (state.token) headers.Authorization = "Bearer " + state.token;
+  let res;
+  try { res = await fetch(apiBase() + "/api/resmigazete", { method: "POST", headers, body: JSON.stringify({ tarih: ymd, no }) }); }
+  catch { throw new Error("Sunucuya ulaşılamadı."); }
+  if (!res.ok) { let d = {}; try { d = await res.json(); } catch {} const e = new Error(d.error || `HTTP ${res.status}`); e.officialUrl = d.officialUrl; throw e; }
+  const law = parseLaw(decodeHtml(await res.arrayBuffer(), res.headers.get("Content-Type")));
+  law.url = res.headers.get("X-RG-Url") || "";
+  return (rgCache[ck] = law);
+}
+const artClean = t => String(t || "").replace(/^\s*(?:ek\s+|geçici\s+)?madde\s+[\w\/]+\s*[-–—]\s*/i, "").replace(/\((Değişik|Ek|Mülga|İptal|Yeniden düzenleme)[^()]{0,200}\)\s*/g, "").replace(/[ \t]+/g, " ").trim();
+// Değiştiren kanun maddesinden yeni metni çıkar: "MADDE 344-" ile başlayan alıntı ya da ilk tırnak içi metin
+function quotedNew(t, num){
+  const flat = String(t || "").replace(/\s+/g, " ");
+  const re = new RegExp("(?:MADDE|Madde)\\s+" + String(num).replace("/", "\\s*\\/\\s*") + "\\s*[-–—]", "i");
+  const m = re.exec(flat.slice(12)); 
+  if (m) { const rest = flat.slice(12 + m.index); const end = rest.search(/[”"]\s*(?:$|şeklinde|olarak|biçiminde)|[”"]\s+(?=[A-ZÇĞİÖŞÜ(]|\d)/); return artClean(end > 0 ? rest.slice(0, end) : rest); }
+  const q = /[“"]([^”"]{20,})[”"]/.exec(flat);
+  return q ? q[1].trim() : "";
+}
+async function mvVersions(law, a){
+  const out = [];
+  const notes = a.notes.filter(n => n.date).slice().sort((x, y) => x.sort - y.sort);
+  const addedLater = notes.find(n => n.type === "ek" && !n.scope);
+  if (!addedLater) {
+    const rg = rgDateOf(law);
+    const v = { label: `İlk hâli${rg ? ` (Resmî Gazete ${rg.label})` : ""}`, full: true, kind: "ilk" };
+    if (!rg) v.err = "Kanunun Resmî Gazete tarihi metinde bulunamadı.";
+    else try {
+      const L = await rgFetchLaw(rg.ymd, law.no); const x = L.arts.find(z => z.key === a.key);
+      if (x) { v.text = artClean(x.text); v.url = L.url; } else { v.err = "Resmî Gazete metninde bu madde bulunamadı."; v.url = L.url; }
+    } catch (e) { v.err = e.message; v.url = e.officialUrl || ""; }
+    out.push(v);
+  }
+  for (const n of notes) {
+    const by = n.law ? `${n.law.startsWith("KHK") ? n.law + " s. KHK" : n.law + " s.K."}${n.art ? " m." + n.art : ""}` : "";
+    const v = { label: `${n.date} · ${n.scope ? n.scope + " " : ""}${VERB[n.type] || n.type}${by ? " (" + by + ")" : ""}`, full: !n.scope, kind: n.type };
+    if (n.type === "mülga") { v.text = ""; v.info = "Madde yürürlükten kaldırıldı."; out.push(v); continue; }
+    if (n.type === "iptal") { v.info = `Anayasa Mahkemesi iptal kararı${n.aym ? " " + n.aym : ""}; metin değişikliği kararda yer alır.`; out.push(v); continue; }
+    if (!n.law || !n.art) { v.err = "Değiştiren düzenleme bilgisi notta yok."; out.push(v); continue; }
+    try {
+      const khk = n.law.startsWith("KHK"); const no = n.law.replace(/\D/g, "");
+      const L = await fetchLaw({ no, tur: khk ? "4" : "1" });
+      const x = L.arts.find(z => z.key === normMadde(n.art));
+      v.url = L.url;
+      if (!x) v.err = `${by} metinde bulunamadı.`;
+      else {
+        // Alıntılanan yeni madde satır başında "MADDE 344-" ile başlıyorsa ayrıştırıcı onu ayrı madde sanabilir: sonraki gerçek maddeye kadar birleştir
+        const ix = L.arts.indexOf(x), nextKey = normMadde(String((parseInt(n.art) || 0) + 1));
+        let combined = x.text;
+        for (let j = ix + 1; j < Math.min(L.arts.length, ix + 6) && L.arts[j].key !== nextKey; j++) combined += "\n" + L.arts[j].text;
+        v.text = quotedNew(combined, a.num); v.source = artClean(combined).slice(0, 1200); if (!v.text) v.err = "Değiştiren kanunda yeni metin ayıklanamadı; değişiklik maddesini aşağıda görebilirsiniz."; }
+    } catch (e) { v.err = e.message; }
+    out.push(v);
+  }
+  out.push({ label: "Güncel hâli (mevzuat.gov.tr)", full: true, kind: "guncel", text: artClean(a.text), url: law.url });
+  return out;
+}
+function mvShowVersions(law, a){
+  const box = $("#mvver");
+  box.innerHTML = `<p class="muted small"><span class="spinner" style="display:inline-block;vertical-align:middle;border-color:#0002;border-top-color:var(--gold)"></span> Eski hâller getiriliyor: kanunun ilk metni Resmî Gazete'den, değişiklikler değiştiren kanunlardan…</p>`;
+  mvVersions(law, a).then(vs => {
+    state.mvVers = vs;
+    const usable = vs.map((v, i) => [v, i]).filter(([v]) => v.text && v.full);
+    // Varsayılan: güncelden önceki son tam metin ↔ güncel
+    const nz = t => String(t || "").replace(/\s+/g, " ").trim();
+    const newI = vs.length - 1, oldI = (usable.filter(([v, i]) => i < newI && nz(v.text) !== nz(vs[newI].text)).pop() || usable.filter(([, i]) => i < newI).pop() || [, -1])[1];
+    const opt = sel => vs.map((v, i) => v.text && v.full ? `<option value="${i}" ${i === sel ? "selected" : ""}>${esc(v.label)}</option>` : "").join("");
+    box.innerHTML = `<h4 style="margin:14px 0 6px">Maddenin sürümleri</h4>
+      ${vs.map((v, i) => `<details class="card" style="margin:6px 0;padding:10px 12px"><summary><b>${esc(v.label)}</b>${v.err ? ` <span class="small" style="color:var(--err)">— ${esc(v.err)}</span>` : v.info ? ` <span class="small muted">— ${esc(v.info)}</span>` : !v.full ? ` <span class="small muted">— yalnızca ilgili kısım</span>` : ""}</summary>
+        ${v.text ? `<div class="doc" style="margin-top:6px">${esc(v.text)}</div>` : ""}
+        ${v.source && (!v.text || !v.full) ? `<p class="small muted" style="margin:6px 0 2px">Değiştiren madde:</p><div class="doc">${esc(v.source)}</div>` : ""}
+        ${v.url ? `<a class="small" href="${esc(v.url)}" target="_blank" rel="noopener">Kaynağı aç ↗</a>` : ""}</details>`).join("")}
+      ${usable.length >= 2 ? `<div class="card" style="margin-top:10px"><b>Karşılaştır</b>
+        <label for="vo">Eski</label><select id="vo">${opt(oldI)}</select>
+        <label for="vn">Yeni</label><select id="vn">${opt(newI)}</select>
+        <button class="btn btn-primary btn-block" id="vgo">Farkları göster</button><div id="vout"></div></div>`
+      : `<p class="small muted">Karşılaştırılabilecek iki tam metin bulunamadı. ${vs.some(v => v.text && !v.full) ? "Bu maddede değişiklikler yalnızca fıkra/bent düzeyinde; değiştiren metinleri yukarıda görebilirsiniz. " : ""}Eski metin elinizdeyse <a href="#" id="vman">elle karşılaştırın</a>.</p>`}`;
+    const man = $("#vman"); if (man) man.onclick = e => { e.preventDefault(); state.mvNew = artClean(a.text); state.mvOld = ""; state.mvMode = "fark"; tabMevzuat(); };
+    const go = $("#vgo"); if (go) go.onclick = () => {
+      const o = vs[+$("#vo").value].text, n = vs[+$("#vn").value].text;
+      const g = wordDiff(o, n), changes = diffSummary(g);
+      const del = g.filter(x => x.t === "-").reduce((s2, x) => s2 + x.v.length, 0), ins = g.filter(x => x.t === "+").reduce((s2, x) => s2 + x.v.length, 0);
+      const canAI = allowed(TASK_MIN.degisiklik);
+      $("#vout").innerHTML = changes.length ? `<p class="small" style="margin-top:10px"><b>${changes.length}</b> değişiklik · <del>${del} kelime çıkarıldı</del> · <ins>${ins} kelime eklendi</ins></p>
+        <div class="doc diff">${diffHtml(g)}</div>
+        <div class="row"><button class="btn btn-gold ${canAI ? "" : "locked"}" id="vai" ${canAI ? "" : "disabled"}>🤖 Değişikliği yapay zekâ ile açıkla</button></div>
+        ${canAI ? "" : `<p class="muted small">Yapay zekâ açıklaması ${PLAN_NAME[TASK_MIN.degisiklik]} ve üzeri paketlerde kullanılabilir.</p>`}
+        <div id="vm" class="hidden"></div><div id="vaiout" class="hidden card out" style="margin-top:14px"></div>`
+        : `<p class="msg ok" style="margin-top:10px">İki sürüm aynı; kelime farkı yok.</p>`;
+      const ai = $("#vai"); if (ai && canAI) ai.onclick = async () => {
+        busy(ai, true, "Yapay zekâ çalışıyor…");
+        const text = `MADDE: ${law.name} ${a.label}\nESKİ METİN (${vs[+$("#vo").value].label}):\n${o}\n\nYENİ METİN (${vs[+$("#vn").value].label}):\n${n}\n\nOTOMATİK TESPİT EDİLEN FARKLAR:\n` + changes.slice(0, 60).map((c, i) => `${i + 1}. ${c}`).join("\n");
+        try { await streamAI({ task: "degisiklik", text }, $("#vaiout")); } catch (err) { showMsg($("#vm"), err.message); } finally { busy(ai, false); }
+      };
+    };
+  });
+}
 function tabMevzuat(){
   const b = $("#tabbody");
   state.mvMode = state.mvMode || "gecmis";
@@ -1173,8 +1284,11 @@ function mvShow(law, key){
       <h4 style="margin:14px 0 4px">Güncel metin</h4>
       <div class="doc">${markNotes(a.text)}</div>
       <p class="muted small">Sarı işaretli kısımlar resmî değişiklik notlarıdır.</p>
+      <div class="row"><button class="btn btn-gold" id="ver">📜 Eski hâllerini getir ve karşılaştır</button></div>
       <div class="row"><button class="btn btn-ghost" id="cpy">Maddeyi kopyala</button>
-        <button class="btn btn-gold" id="cmp">Eski hâliyle karşılaştır →</button></div></div>`;
+        <button class="btn btn-ghost" id="cmp">Elle karşılaştır</button></div>
+      <div id="mvver"></div></div>`;
+    $("#ver").onclick = () => mvShowVersions(law, a);
     $("#cpy").onclick = e => copy(`${law.name} ${a.label}${a.heading ? " (" + a.heading + ")" : ""}\n${a.text}`, e.target);
     $("#cmp").onclick = () => { state.mvNew = a.text.replace(/^\s*(?:ek\s+|geçici\s+)?madde\s+[\w\/]+\s*[-–—]\s*/i, "").replace(/\((Değişik|Ek|Mülga|İptal|Yeniden düzenleme)[^()]{0,200}\)\s*/g, "").trim(); state.mvOld = ""; state.mvMode = "fark"; tabMevzuat(); };
     return;
@@ -2823,7 +2937,7 @@ function pageGuide(){
   <h3>📜 Madde geçmişi <span class="small muted">(tüm paketler; arama hakkından düşer)</span></h3>
   <p><b>Ne girilir:</b> Kanunun adını yazın (ör. <i>borçlar</i>, <i>tebligat</i>; öneriler çıkar) veya numarasını girin (ör. <i>6098</i>). Ardından madde numarasını yazın: <i>344</i>, <i>geçici 1</i>, <i>ek 2</i>. Madde boş bırakılırsa <b>son değişen maddeler</b> listelenir.<br>
   <b>KHK, Cumhurbaşkanlığı kararnamesi, yönetmelik:</b> Metni mevzuat.gov.tr'de açın, adres çubuğundaki bağlantıyı kopyalayıp kanun kutusuna yapıştırın.<br>
-  <b>Ne verir:</b> Maddenin güncel metni ve <b>değişiklik geçmişi</b>: hangi tarihte, hangi kanunun kaçıncı maddesiyle değiştirildiği, eklendiği, yürürlükten kaldırıldığı veya Anayasa Mahkemesince iptal edildiği. Bilgiler Mevzuat Bilgi Sistemi'ndeki resmî değişiklik notlarından alınır; sarıyla işaretlenir.<br>
+  <b>Ne verir:</b> Maddenin güncel metni ve <b>değişiklik geçmişi</b>: hangi tarihte, hangi kanunun kaçıncı maddesiyle değiştirildiği, eklendiği, yürürlükten kaldırıldığı veya Anayasa Mahkemesince iptal edildiği. Bilgiler Mevzuat Bilgi Sistemi'ndeki resmî değişiklik notlarından alınır; sarıyla işaretlenir.<br><b>📜 Eski hâllerini getir ve karşılaştır:</b> Maddenin ilk hâli kanunun yayımlandığı Resmî Gazete'den, her değişiklikle gelen metin değiştiren kanundan otomatik getirilir; istediğiniz iki sürümü seçip farkları renkli görebilir, yapay zekâya açıklatabilirsiniz. Fıkra düzeyindeki değişikliklerde yalnızca değişen kısım gösterilir; eski tarihli (PDF) Resmî Gazetelerde ilk hâl getirilemeyebilir.<br>
   <b>Önemli:</b> Platform eski metni tahmin etmez. Eski metin için <b>Değişiklik kanununu bul</b> bağlantısını kullanın; bulduğunuz eski metni <b>Eski hâliyle karşılaştır</b> düğmesiyle yeni metinle karşılaştırabilirsiniz.</p>
   <h3>⚖️ Metin karşılaştır <span class="small muted">(karşılaştırma tüm paketlerde; yapay zekâ açıklaması Optimus ve Maximus)</span></h3>
   <p><b>Ne girilir:</b> Eski ve yeni metin: kanun maddesinin iki hâli, sözleşmenin iki versiyonu veya iki dilekçe.<br>
