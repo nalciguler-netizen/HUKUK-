@@ -1121,83 +1121,100 @@ function quotedNew(t, num){
   const q = /[“"]([^”"]{20,})[”"]/.exec(flat);
   return q ? q[1].trim() : "";
 }
-async function mvVersions(law, a){
-  const out = [];
-  const notes = a.notes.filter(n => n.date).slice().sort((x, y) => x.sort - y.sort);
-  const addedLater = notes.find(n => n.type === "ek" && !n.scope);
-  if (!addedLater) {
+// Geçmiş tarihli metin: mevzuat.gov.tr sayfasının Web Arşivi kaydı (sunucu üzerinden)
+const arsivCache = {};
+const ymdOf = d => d.getUTCFullYear() + String(d.getUTCMonth() + 1).padStart(2, "0") + String(d.getUTCDate()).padStart(2, "0");
+const dayBefore = sortNum => { const x = String(sortNum); const d = new Date(Date.UTC(+x.slice(0, 4), +x.slice(4, 6) - 1, +x.slice(6, 8))); d.setUTCDate(d.getUTCDate() - 1); return ymdOf(d); };
+const fmtYmd = y => `${y.slice(6, 8)}.${y.slice(4, 6)}.${y.slice(0, 4)}`;
+async function arsivFetchLaw(law, ymd){
+  const ck = `${law.tur}/${law.no}/${ymd}`; if (arsivCache[ck]) return arsivCache[ck];
+  const tertip = +((/MevzuatTertip=(\d)/.exec(law.url || "") || [])[1]) || 5;
+  const headers = { "Content-Type": "application/json" }; if (state.token) headers.Authorization = "Bearer " + state.token;
+  let res;
+  try { res = await fetch(apiBase() + "/api/mevzuat-arsiv", { method: "POST", headers, body: JSON.stringify({ no: law.no, tur: law.tur, tertip, tarih: ymd }) }); }
+  catch { throw new Error("Sunucuya ulaşılamadı."); }
+  if (!res.ok) { let d = {}; try { d = await res.json(); } catch {} throw new Error(d.error || `HTTP ${res.status}`); }
+  const L = parseLaw(decodeHtml(await res.arrayBuffer(), res.headers.get("Content-Type")));
+  L.date = res.headers.get("X-Arsiv-Tarih") || ""; L.url = res.headers.get("X-Arsiv-Url") || "";
+  return (arsivCache[ck] = L);
+}
+// Bir değişikliğin öncesi / sonrası
+async function mvChangePair(law, a, changes, i){
+  const nz = t => String(t || "").replace(/\s+/g, " ").trim();
+  const ch = changes[i];
+  const fromArsiv = async (ymd, minSort) => {
+    const L = await arsivFetchLaw(law, ymd); const x = L.arts.find(z => z.key === a.key);
+    if (!x) throw new Error(`arşiv kaydında (${fmtYmd(L.date)}) bu madde yok`);
+    const old = minSort && +L.date < minSort;
+    return { text: artClean(x.text), src: `Web Arşivi kaydı, ${fmtYmd(L.date)}${old ? " (bir önceki değişiklikten de eski)" : ""}`, url: L.url };
+  };
+  const fromAmend = async c => {   // değiştiren kanundaki yeni metin (yalnızca maddenin tamamı değiştiyse tam metindir)
+    if (!c || !c.law || !c.art || c.scope) return null;
+    const L = await fetchLaw({ no: c.law.replace(/\D/g, ""), tur: c.law.startsWith("KHK") ? "4" : "1" });
+    const x = L.arts.find(z => z.key === normMadde(c.art)); if (!x) return null;
+    const ix = L.arts.indexOf(x), nextKey = normMadde(String((parseInt(c.art) || 0) + 1)); let comb = x.text;
+    for (let j = ix + 1; j < Math.min(L.arts.length, ix + 6) && L.arts[j].key !== nextKey; j++) comb += "\n" + L.arts[j].text;
+    const t = quotedNew(comb, a.num); return t ? { text: t, src: `${c.law} sayılı ${c.law.startsWith("KHK") ? "KHK" : "Kanun"} m.${c.art} (değişiklikle gelen metin)`, url: L.url } : null;
+  };
+  const errs = [];
+  // ÖNCESİ
+  let before = null;
+  if (ch.type === "ek" && !ch.scope) before = { text: "", src: "Madde bu tarihte eklendi; öncesinde yoktu." };
+  if (!before) try { before = await fromArsiv(dayBefore(ch.sort), i > 0 ? changes[i - 1].sort : 0); } catch (e) { errs.push("Web Arşivi: " + e.message); }
+  if (!before && i > 0) try { before = await fromAmend(changes[i - 1]); } catch {}
+  if (!before && i === 0) try {
     const rg = rgDateOf(law);
-    const v = { label: `İlk hâli${rg ? ` (Resmî Gazete ${rg.label})` : ""}`, full: true, kind: "ilk" };
-    if (!rg) v.err = "Kanunun Resmî Gazete tarihi metinde bulunamadı.";
-    else try {
-      const L = await rgFetchLaw(rg.ymd, law.no); const x = L.arts.find(z => z.key === a.key);
-      if (x) { v.text = artClean(x.text); v.url = L.url; } else { v.err = "Resmî Gazete metninde bu madde bulunamadı."; v.url = L.url; }
-    } catch (e) { v.err = e.message; v.url = e.officialUrl || ""; }
-    out.push(v);
+    if (rg) { const L = await rgFetchLaw(rg.ymd, law.no); const x = L.arts.find(z => z.key === a.key); if (x) before = { text: artClean(x.text), src: `Kanunun ilk hâli, Resmî Gazete ${rg.label}`, url: L.url }; }
+  } catch (e) { errs.push("Resmî Gazete: " + e.message); }
+  // SONRASI
+  let after = null;
+  if (i === changes.length - 1) after = { text: artClean(a.text), src: "Güncel metin (mevzuat.gov.tr)", url: law.url };
+  else {
+    try { after = await fromArsiv(dayBefore(changes[i + 1].sort), ch.sort); } catch (e) { errs.push("Web Arşivi (sonrası): " + e.message); }
+    if (!after) try { after = await fromAmend(ch); } catch {}
   }
-  for (const n of notes) {
-    const by = n.law ? `${n.law.startsWith("KHK") ? n.law + " s. KHK" : n.law + " s.K."}${n.art ? " m." + n.art : ""}` : "";
-    const v = { label: `${n.date} · ${n.scope ? n.scope + " " : ""}${VERB[n.type] || n.type}${by ? " (" + by + ")" : ""}`, full: !n.scope, kind: n.type };
-    if (n.type === "mülga") { v.text = ""; v.info = "Madde yürürlükten kaldırıldı."; out.push(v); continue; }
-    if (n.type === "iptal") { v.info = `Anayasa Mahkemesi iptal kararı${n.aym ? " " + n.aym : ""}; metin değişikliği kararda yer alır.`; out.push(v); continue; }
-    if (!n.law || !n.art) { v.err = "Değiştiren düzenleme bilgisi notta yok."; out.push(v); continue; }
-    try {
-      const khk = n.law.startsWith("KHK"); const no = n.law.replace(/\D/g, "");
-      const L = await fetchLaw({ no, tur: khk ? "4" : "1" });
-      const x = L.arts.find(z => z.key === normMadde(n.art));
-      v.url = L.url;
-      if (!x) v.err = `${by} metinde bulunamadı.`;
-      else {
-        // Alıntılanan yeni madde satır başında "MADDE 344-" ile başlıyorsa ayrıştırıcı onu ayrı madde sanabilir: sonraki gerçek maddeye kadar birleştir
-        const ix = L.arts.indexOf(x), nextKey = normMadde(String((parseInt(n.art) || 0) + 1));
-        let combined = x.text;
-        for (let j = ix + 1; j < Math.min(L.arts.length, ix + 6) && L.arts[j].key !== nextKey; j++) combined += "\n" + L.arts[j].text;
-        v.text = quotedNew(combined, a.num); v.source = artClean(combined).slice(0, 1200); if (!v.text) v.err = "Değiştiren kanunda yeni metin ayıklanamadı; değişiklik maddesini aşağıda görebilirsiniz."; }
-    } catch (e) { v.err = e.message; }
-    out.push(v);
-  }
-  out.push({ label: "Güncel hâli (mevzuat.gov.tr)", full: true, kind: "guncel", text: artClean(a.text), url: law.url });
-  return out;
+  if (before && after && before.text && nz(before.text) === nz(after.text)) errs.push("Bulunan eski kayıt güncel metinle aynı; arşiv kaydı değişiklik işlendikten sonra alınmış olabilir.");
+  return { before, after, errs };
 }
 function mvShowVersions(law, a){
   const box = $("#mvver");
-  box.innerHTML = `<p class="muted small"><span class="spinner" style="display:inline-block;vertical-align:middle;border-color:#0002;border-top-color:var(--gold)"></span> Eski hâller getiriliyor: kanunun ilk metni Resmî Gazete'den, değişiklikler değiştiren kanunlardan…</p>`;
-  mvVersions(law, a).then(vs => {
-    state.mvVers = vs;
-    const usable = vs.map((v, i) => [v, i]).filter(([v]) => v.text && v.full);
-    // Varsayılan: güncelden önceki son tam metin ↔ güncel
-    const nz = t => String(t || "").replace(/\s+/g, " ").trim();
-    const newI = vs.length - 1, oldI = (usable.filter(([v, i]) => i < newI && nz(v.text) !== nz(vs[newI].text)).pop() || usable.filter(([, i]) => i < newI).pop() || [, -1])[1];
-    const opt = sel => vs.map((v, i) => v.text && v.full ? `<option value="${i}" ${i === sel ? "selected" : ""}>${esc(v.label)}</option>` : "").join("");
-    box.innerHTML = `<h4 style="margin:14px 0 6px">Maddenin sürümleri</h4>
-      ${vs.map((v, i) => `<details class="card" style="margin:6px 0;padding:10px 12px"><summary><b>${esc(v.label)}</b>${v.err ? ` <span class="small" style="color:var(--err)">— ${esc(v.err)}</span>` : v.info ? ` <span class="small muted">— ${esc(v.info)}</span>` : !v.full ? ` <span class="small muted">— yalnızca ilgili kısım</span>` : ""}</summary>
-        ${v.text ? `<div class="doc" style="margin-top:6px">${esc(v.text)}</div>` : ""}
-        ${v.source && (!v.text || !v.full) ? `<p class="small muted" style="margin:6px 0 2px">Değiştiren madde:</p><div class="doc">${esc(v.source)}</div>` : ""}
-        ${v.url ? `<a class="small" href="${esc(v.url)}" target="_blank" rel="noopener">Kaynağı aç ↗</a>` : ""}</details>`).join("")}
-      ${usable.length >= 2 ? `<div class="card" style="margin-top:10px"><b>Karşılaştır</b>
-        <label for="vo">Eski</label><select id="vo">${opt(oldI)}</select>
-        <label for="vn">Yeni</label><select id="vn">${opt(newI)}</select>
-        <button class="btn btn-primary btn-block" id="vgo">Farkları göster</button><div id="vout"></div></div>`
-      : `<p class="small muted">Karşılaştırılabilecek iki tam metin bulunamadı. ${vs.some(v => v.text && !v.full) ? "Bu maddede değişiklikler yalnızca fıkra/bent düzeyinde; değiştiren metinleri yukarıda görebilirsiniz. " : ""}Eski metin elinizdeyse <a href="#" id="vman">elle karşılaştırın</a>.</p>`}`;
-    const man = $("#vman"); if (man) man.onclick = e => { e.preventDefault(); state.mvNew = artClean(a.text); state.mvOld = ""; state.mvMode = "fark"; tabMevzuat(); };
-    const go = $("#vgo"); if (go) go.onclick = () => {
-      const o = vs[+$("#vo").value].text, n = vs[+$("#vn").value].text;
-      const g = wordDiff(o, n), changes = diffSummary(g);
+  const changes = a.notes.filter(n => n.date && n.sort).slice().sort((x, y) => x.sort - y.sort);
+  if (!changes.length) { box.innerHTML = `<p class="msg ok" style="margin-top:10px">Bu maddede değişiklik notu yok; madde kanunun ilk kabul edildiği hâliyle yürürlükte. Karşılaştırılacak eski hâli yok.</p>`; return; }
+  const lbl = c => `${c.date} · ${c.scope ? c.scope + " " : ""}${VERB[c.type] || c.type}${c.law ? ` (${c.law.startsWith("KHK") ? c.law + " s. KHK" : c.law + " s.K."}${c.art ? " m." + c.art : ""})` : c.aym ? ` (AYM ${c.aym})` : ""}`;
+  box.innerHTML = `<div class="card" style="margin-top:12px"><label for="vch">Değişiklik</label>
+    <select id="vch">${changes.map((c, i) => `<option value="${i}" ${i === changes.length - 1 ? "selected" : ""}>${esc(lbl(c))}</option>`).join("")}</select>
+    <div id="vres"></div></div>`;
+  const run = async () => {
+    const i = +$("#vch").value, res = $("#vres");
+    res.innerHTML = `<p class="muted small" style="margin-top:10px"><span class="spinner" style="display:inline-block;vertical-align:middle;border-color:#0002;border-top-color:var(--gold)"></span> Maddenin eski hâli alınıyor…</p>`;
+    const { before, after, errs } = await mvChangePair(law, a, changes, i);
+    const link = x => x && x.url ? ` <a class="small" href="${esc(x.url)}" target="_blank" rel="noopener">Kaynağı aç ↗</a>` : "";
+    if (before && after && (before.text || after.text)) {
+      const g = wordDiff(before.text || "", after.text || ""), changesList = diffSummary(g);
       const del = g.filter(x => x.t === "-").reduce((s2, x) => s2 + x.v.length, 0), ins = g.filter(x => x.t === "+").reduce((s2, x) => s2 + x.v.length, 0);
       const canAI = allowed(TASK_MIN.degisiklik);
-      $("#vout").innerHTML = changes.length ? `<p class="small" style="margin-top:10px"><b>${changes.length}</b> değişiklik · <del>${del} kelime çıkarıldı</del> · <ins>${ins} kelime eklendi</ins></p>
+      res.innerHTML = `<p class="small" style="margin:10px 0 4px"><b>Eski hâli:</b> ${esc(before.src)}${link(before)}<br><b>Yeni hâli:</b> ${esc(after.src)}${link(after)}</p>
+        ${changesList.length ? `<p class="small"><b>${changesList.length}</b> değişiklik · <del>${del} kelime çıkarıldı</del> · <ins>${ins} kelime eklendi</ins></p>` : `<p class="msg ok">İki metin aynı; kelime farkı yok.</p>`}
         <div class="doc diff">${diffHtml(g)}</div>
+        <details style="margin-top:8px"><summary class="small">Eski metnin tamamı</summary><div class="doc">${esc(before.text || "(madde yoktu)")}</div></details>
+        <details><summary class="small">Yeni metnin tamamı</summary><div class="doc">${esc(after.text || "(madde kaldırıldı)")}</div></details>
+        ${errs.length ? `<p class="small muted" style="margin-top:6px">${errs.map(esc).join("<br>")}</p>` : ""}
         <div class="row"><button class="btn btn-gold ${canAI ? "" : "locked"}" id="vai" ${canAI ? "" : "disabled"}>🤖 Değişikliği yapay zekâ ile açıkla</button></div>
-        ${canAI ? "" : `<p class="muted small">Yapay zekâ açıklaması ${PLAN_NAME[TASK_MIN.degisiklik]} ve üzeri paketlerde kullanılabilir.</p>`}
-        <div id="vm" class="hidden"></div><div id="vaiout" class="hidden card out" style="margin-top:14px"></div>`
-        : `<p class="msg ok" style="margin-top:10px">İki sürüm aynı; kelime farkı yok.</p>`;
+        <div id="vm" class="hidden"></div><div id="vaiout" class="hidden card out" style="margin-top:14px"></div>`;
       const ai = $("#vai"); if (ai && canAI) ai.onclick = async () => {
         busy(ai, true, "Yapay zekâ çalışıyor…");
-        const text = `MADDE: ${law.name} ${a.label}\nESKİ METİN (${vs[+$("#vo").value].label}):\n${o}\n\nYENİ METİN (${vs[+$("#vn").value].label}):\n${n}\n\nOTOMATİK TESPİT EDİLEN FARKLAR:\n` + changes.slice(0, 60).map((c, i) => `${i + 1}. ${c}`).join("\n");
+        const text = `MADDE: ${law.name} ${a.label}\nDEĞİŞİKLİK: ${lbl(changes[i])}\nESKİ METİN:\n${before.text || "(madde yoktu)"}\n\nYENİ METİN:\n${after.text || "(madde kaldırıldı)"}\n\nOTOMATİK TESPİT EDİLEN FARKLAR:\n` + changesList.slice(0, 60).map((c, k) => `${k + 1}. ${c}`).join("\n");
         try { await streamAI({ task: "degisiklik", text }, $("#vaiout")); } catch (err) { showMsg($("#vm"), err.message); } finally { busy(ai, false); }
       };
-    };
-  });
+    } else {
+      res.innerHTML = `<div class="msg err" style="margin-top:10px">Bu değişiklikten önceki metin otomatik alınamadı.</div>
+        ${errs.length ? `<p class="small muted">${errs.map(esc).join("<br>")}</p>` : ""}
+        ${after && after.text ? `<p class="small" style="margin:8px 0 2px"><b>Yeni hâli:</b> ${esc(after.src)}${link(after)}</p><div class="doc">${esc(after.text)}</div>` : ""}
+        <p class="small">Eski metin elinizdeyse <a href="#" id="vman">elle karşılaştırın</a>.</p>`;
+      $("#vman").onclick = e => { e.preventDefault(); state.mvNew = artClean(a.text); state.mvOld = ""; state.mvMode = "fark"; tabMevzuat(); };
+    }
+  };
+  $("#vch").onchange = run; run();
 }
 function tabMevzuat(){
   const b = $("#tabbody");
@@ -1284,7 +1301,7 @@ function mvShow(law, key){
       <h4 style="margin:14px 0 4px">Güncel metin</h4>
       <div class="doc">${markNotes(a.text)}</div>
       <p class="muted small">Sarı işaretli kısımlar resmî değişiklik notlarıdır.</p>
-      <div class="row"><button class="btn btn-gold" id="ver">📜 Eski hâllerini getir ve karşılaştır</button></div>
+      <div class="row"><button class="btn btn-gold" id="ver">📜 Eski hâliyle karşılaştır</button></div>
       <div class="row"><button class="btn btn-ghost" id="cpy">Maddeyi kopyala</button>
         <button class="btn btn-ghost" id="cmp">Elle karşılaştır</button></div>
       <div id="mvver"></div></div>`;
