@@ -185,7 +185,7 @@ const CONFIG = {
   SUPPORT_EMAIL: "yolhava.destek@gmail.com",
   API_URL: "https://hukuk-api.yolhava-destek.workers.dev",   // Cloudflare Worker adresi
   TERMS_DATE: "14.10.2026",
-  FEATURES: { mevzuat: false },   // Mevzuat sekmesi test sonrasında açılacak
+  FEATURES: { mevzuat: true },
 };
 // ============================================
 
@@ -1168,7 +1168,7 @@ function mvShow(law, key){
       <div class="row"><button class="btn btn-ghost" id="cpy">Maddeyi kopyala</button>
         <button class="btn btn-gold" id="cmp">Eski hâliyle karşılaştır →</button></div></div>`;
     $("#cpy").onclick = e => copy(`${law.name} ${a.label}${a.heading ? " (" + a.heading + ")" : ""}\n${a.text}`, e.target);
-    $("#cmp").onclick = () => { state.mvNew = a.text; state.mvOld = ""; state.mvMode = "fark"; tabMevzuat(); };
+    $("#cmp").onclick = () => { state.mvNew = a.text.replace(/^\s*(?:ek\s+|geçici\s+)?madde\s+[\w\/]+\s*[-–—]\s*/i, "").replace(/\((Değişik|Ek|Mülga|İptal|Yeniden düzenleme)[^()]{0,200}\)\s*/g, "").trim(); state.mvOld = ""; state.mvMode = "fark"; tabMevzuat(); };
     return;
   }
   const changed = law.arts.filter(x => x.notes.length).sort((x, y) => y.last - x.last);
