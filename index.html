@@ -636,7 +636,7 @@ const TASKS = {
   karsilastir: ["Karar karşılaştırma", "Karşılaştırılacak kararların metinlerini art arda yapıştırın…"],
 };
 const PLAN_RANK = { basic: 0, optimus: 1, maximus: 2 };
-const TASK_MIN = { ozet: "basic", sozlesme: "optimus", sozlesme_revize: "optimus", ceviri: "optimus", karsilastir: "maximus", degisiklik: "optimus", dava_analiz: "optimus", dilekce_yaz: "optimus" };
+const TASK_MIN = { ozet: "basic", sozlesme: "optimus", sozlesme_revize: "optimus", ceviri: "optimus", karsilastir: "maximus", degisiklik: "optimus", dava_analiz: "optimus", dilekce_yaz: "optimus", evrak_analiz: "optimus" };
 const PLAN_NAME = { basic: "Basic", optimus: "Optimus", maximus: "Maximus" };
 function myPlan(){ return (state.user && state.user.plan) || "basic"; }
 function allowed(min){ return PLAN_RANK[myPlan()] >= PLAN_RANK[min]; }
@@ -1668,10 +1668,140 @@ const DAVA_KB = [
   { id: "diger", ad: "Diğer", mahkeme: "", terim: "", konu: "", kanun: [], alanlar: [], delil: "", ekler: ["Vekâletname"], istem: [], kontrol: [] },
 ];
 const kbOf = tur => DAVA_KB.find(k => k.ad === tur) || DAVA_KB.find(k => tur && trLower(tur).startsWith(trLower(k.ad.split(" (")[0]).slice(0, 12))) || DAVA_KB[DAVA_KB.length - 1];
-const KANUN_ADI = { "4721": "TMK", "6098": "TBK", "6100": "HMK", "2004": "İİK", "6102": "TTK", "4857": "İş K.", "1475": "1475 s. K.", "7036": "7036 s. İş Mahk. K.", "6325": "6325 s. HUAK", "6502": "TKHK", "2918": "KTK", "5490": "5490 s. NHK", "634": "KMK", "2644": "Tapu K.", "2577": "İYUK", "3095": "3095 s. K." };
+const KANUN_ADI = { "4721": "TMK", "6098": "TBK", "6100": "HMK", "2004": "İİK", "6102": "TTK", "4857": "İş K.", "1475": "1475 s. K.", "7036": "7036 s. İş Mahk. K.", "6325": "6325 s. HUAK", "6502": "TKHK", "2918": "KTK", "5490": "5490 s. NHK", "634": "KMK", "2644": "Tapu K.", "2577": "İYUK", "3095": "3095 s. K.", "5271": "CMK", "5237": "TCK" };
+// ---------- Dilekçe türleri (dava dışındaki dilekçeler: kanun yolu, cevap, itiraz…) ----------
+// sure: kararın/evrakın tebliğinden itibaren yasal süre (m, b: gun|hafta|ay, r: süre rejimi) — kararda yazan kanun yolu cümlesi önceliklidir
+// biz/karsi: başlıktaki taraf etiketleri ({S} = müvekkilin sıfatı, {K} = karşı tarafın sıfatı)
+const HMK_YOL = { m: 2, b: "hafta", r: "hmk" };
+const DTUR = [
+  { id: "dava", ad: "Dava dilekçesi" },
+  { id: "istinaf", ad: "İstinaf başvuru dilekçesi (hukuk)", doc: "İlk derece mahkemesi kararı", sure: HMK_YOL,
+    ust: "{UST} BÖLGE ADLİYE MAHKEMESİ İLGİLİ HUKUK DAİRESİ BAŞKANLIĞI'NA", gonder: true, biz: "İSTİNAF EDEN ({S})", karsi: "KARŞI TARAF ({K})", karar: "İSTİNAF EDİLEN KARAR",
+    konu: "… Mahkemesinin … tarihli, … E., … K. sayılı kararının … yönünden kaldırılması talebinden ibarettir.",
+    bolum: ["KONUSU", "AÇIKLAMALAR VE İSTİNAF SEBEPLERİ", "HUKUKİ NEDENLER", "NETİCE VE TALEP"],
+    kanun: [["HMK", "6100", "341", "İstinaf yoluna başvurulabilen kararlar", "istinaf"], ["HMK", "6100", "342", "İstinaf dilekçesinin içeriği", "dilekçe"],
+            ["HMK", "6100", "345", "İstinaf süresi", "hafta"], ["HMK", "6100", "353", "Ön inceleme sonucu verilecek kararlar", "kaldır"], ["HMK", "6100", "355", "İncelemenin istinaf sebepleriyle sınırlı olması", "sebep"]],
+    istem: ["İlk derece mahkemesi kararının kaldırılmasına ve esas hakkında yeniden yapılacak yargılama sonucunda davanın … karar verilmesine (HMK m.353/1-b)", "Yargılama giderleri ile ilk derece ve istinaf aşaması vekâlet ücretinin karşı tarafa yükletilmesine"],
+    kontrol: ["Süre: kararın tebliğinden itibaren iki hafta (HMK m.345); kararın kanun yolu bölümünü kontrol edin", "İnceleme dilekçedeki sebeplerle sınırlıdır (kamu düzeni hariç, HMK m.355): itiraz ettiğiniz bütün noktaları yazın", "Kesinlik sınırını (HMK m.341) kontrol edin; parasal sınırlar her yıl güncellenir", "İstinaf başvuru ve karar harçları yatırılmalı"],
+    ekler: ["İstinaf edilen karar", "Vekâletname"] },
+  { id: "temyiz", ad: "Temyiz dilekçesi (hukuk)", doc: "Bölge adliye mahkemesi kararı", sure: { m: 1, b: "ay", r: "hmk" },
+    ust: "YARGITAY İLGİLİ HUKUK DAİRESİ BAŞKANLIĞI'NA", gonder: true, biz: "TEMYİZ EDEN ({S})", karsi: "KARŞI TARAF ({K})", karar: "TEMYİZ EDİLEN KARAR",
+    konu: "… Bölge Adliye Mahkemesi … Hukuk Dairesinin … tarihli, … E., … K. sayılı kararının bozulması talebinden ibarettir.",
+    bolum: ["KONUSU", "AÇIKLAMALAR VE TEMYİZ SEBEPLERİ", "HUKUKİ NEDENLER", "NETİCE VE TALEP"],
+    kanun: [["HMK", "6100", "361", "Temyiz edilebilen kararlar ve süre", "temyiz"], ["HMK", "6100", "362", "Temyiz edilemeyen kararlar", "kesin"],
+            ["HMK", "6100", "364", "Temyiz dilekçesinin içeriği", "dilekçe"], ["HMK", "6100", "371", "Bozma sebepleri", "bozma"]],
+    istem: ["Bölge adliye mahkemesi kararının bozulmasına", "Yargılama giderleri ile vekâlet ücretinin karşı tarafa yükletilmesine"],
+    kontrol: ["Süre: kararın tebliğinden itibaren bir ay (HMK m.361); kararın kanun yolu bölümünü kontrol edin", "Temyiz kesinlik sınırı (HMK m.362) her yıl güncellenir", "Temyiz harçları yatırılmalı"],
+    ekler: ["Temyiz edilen karar", "Vekâletname"] },
+  { id: "cevap", ad: "Cevap dilekçesi", doc: "Karşı tarafın dava dilekçesi", sure: HMK_YOL,
+    ust: "{MAH}", biz: "CEVAP VEREN ({S})", karsi: "{K}", dosya: true,
+    konu: "Davacı tarafından açılan davaya karşı cevaplarımızın sunulmasından ibarettir.",
+    bolum: ["KONUSU", "USULE İLİŞKİN İTİRAZLARIMIZ", "ESASA İLİŞKİN CEVAPLARIMIZ", "HUKUKİ NEDENLER", "HUKUKİ DELİLLER", "NETİCE VE TALEP"],
+    kanun: [["HMK", "6100", "127", "Cevap dilekçesi verme süresi", "hafta"], ["HMK", "6100", "129", "Cevap dilekçesinin içeriği", "cevap"],
+            ["HMK", "6100", "116", "İlk itirazlar", "itiraz"], ["HMK", "6100", "114", "Dava şartları", "dava şart"]],
+    istem: ["Davanın usulden, aksi hâlde esastan reddine", "Yargılama giderleri ile vekâlet ücretinin davacıya yükletilmesine"],
+    kontrol: ["Süre: dava dilekçesinin tebliğinden itibaren iki hafta; gerekirse ek süre istenebilir (HMK m.127)", "Yetki itirazı gibi ilk itirazlar cevap dilekçesinde ileri sürülmelidir (HMK m.116-117)"],
+    ekler: ["Vekâletname"] },
+  { id: "replik", ad: "Cevaba cevap (replik) dilekçesi", doc: "Karşı tarafın cevap dilekçesi", sure: HMK_YOL,
+    ust: "{MAH}", biz: "{S}", karsi: "{K}", dosya: true,
+    konu: "Davalının cevap dilekçesine karşı beyanlarımızın sunulmasından ibarettir.",
+    bolum: ["KONUSU", "AÇIKLAMALAR", "HUKUKİ NEDENLER", "NETİCE VE TALEP"],
+    kanun: [["HMK", "6100", "136", "Cevaba cevap ve ikinci cevap dilekçeleri", "cevap"], ["HMK", "6100", "141", "İddia ve savunmanın genişletilmesi yasağı", "genişlet"]],
+    istem: ["Davamızın kabulüne", "Yargılama giderleri ile vekâlet ücretinin davalıya yükletilmesine"],
+    kontrol: ["Süre: cevap dilekçesinin tebliğinden itibaren iki hafta (HMK m.136)", "Bu aşamada iddia ancak HMK m.141'deki sınırlar içinde genişletilebilir"],
+    ekler: ["Vekâletname"] },
+  { id: "duplik", ad: "İkinci cevap (düplik) dilekçesi", doc: "Karşı tarafın cevaba cevap dilekçesi", sure: HMK_YOL,
+    ust: "{MAH}", biz: "{S}", karsi: "{K}", dosya: true,
+    konu: "Davacının cevaba cevap dilekçesine karşı ikinci cevaplarımızın sunulmasından ibarettir.",
+    bolum: ["KONUSU", "AÇIKLAMALAR", "HUKUKİ NEDENLER", "NETİCE VE TALEP"],
+    kanun: [["HMK", "6100", "136", "Cevaba cevap ve ikinci cevap dilekçeleri", "cevap"], ["HMK", "6100", "141", "İddia ve savunmanın genişletilmesi yasağı", "genişlet"]],
+    istem: ["Davanın reddine", "Yargılama giderleri ile vekâlet ücretinin davacıya yükletilmesine"],
+    kontrol: ["Süre: cevaba cevap dilekçesinin tebliğinden itibaren iki hafta (HMK m.136)"], ekler: ["Vekâletname"] },
+  { id: "istinaf_cevap", ad: "İstinafa cevap dilekçesi", doc: "Karşı tarafın istinaf dilekçesi", sure: HMK_YOL,
+    ust: "{UST} BÖLGE ADLİYE MAHKEMESİ İLGİLİ HUKUK DAİRESİ BAŞKANLIĞI'NA", gonder: true, biz: "CEVAP VEREN ({S})", karsi: "İSTİNAF EDEN ({K})", karar: "İSTİNAF EDİLEN KARAR",
+    konu: "Karşı tarafın istinaf başvurusuna karşı cevaplarımızın sunulmasından ibarettir.",
+    bolum: ["KONUSU", "AÇIKLAMALAR", "HUKUKİ NEDENLER", "NETİCE VE TALEP"],
+    kanun: [["HMK", "6100", "347", "İstinaf dilekçesine cevap", "cevap"], ["HMK", "6100", "348", "Katılma yoluyla istinaf", "katılma"]],
+    istem: ["Karşı tarafın istinaf başvurusunun esastan reddine", "İstinaf aşaması yargılama giderleri ile vekâlet ücretinin karşı tarafa yükletilmesine"],
+    kontrol: ["Süre: istinaf dilekçesinin tebliğinden itibaren iki hafta (HMK m.347)", "Katılma yoluyla istinaf da bu sürede yapılabilir (HMK m.348)"], ekler: ["Vekâletname"] },
+  { id: "bilirkisi", ad: "Bilirkişi raporuna itiraz dilekçesi", doc: "Bilirkişi raporu", sure: HMK_YOL,
+    ust: "{MAH}", biz: "{S}", karsi: "{K}", dosya: true,
+    konu: "Dosyaya sunulan … tarihli bilirkişi raporuna karşı itirazlarımızın sunulmasından ibarettir.",
+    bolum: ["KONUSU", "İTİRAZLARIMIZ", "HUKUKİ NEDENLER", "NETİCE VE TALEP"],
+    kanun: [["HMK", "6100", "281", "Bilirkişi raporuna itiraz", "itiraz"], ["HMK", "6100", "266", "Bilirkişiye başvurma", "bilirkişi"]],
+    istem: ["Raporun hükme esas alınmamasına", "Yukarıda belirtilen itirazlarımız doğrultusunda ek rapor alınmasına, olmadığı takdirde yeni bir bilirkişi heyetinden rapor alınmasına"],
+    kontrol: ["Süre: raporun tebliğinden itibaren iki hafta (HMK m.281)"], ekler: ["Vekâletname"] },
+  { id: "islah", ad: "Islah dilekçesi", sure: null,
+    ust: "{MAH}", biz: "{S}", karsi: "{K}", dosya: true,
+    konu: "HMK m.176 vd. uyarınca … ıslahı talebinden ibarettir.",
+    bolum: ["KONUSU", "AÇIKLAMALAR", "HUKUKİ NEDENLER", "NETİCE VE TALEP"],
+    kanun: [["HMK", "6100", "176", "Islah", "ıslah"], ["HMK", "6100", "177", "Islahın zamanı", "tahkikat"], ["HMK", "6100", "109", "Kısmi dava; m.109/4: talebin bir defaya mahsus artırılması", "kısmi"]],
+    istem: ["Islah talebimizin kabulüne", "… TL'nin … tarihinden itibaren işleyecek faiziyle davalıdan tahsiline"],
+    kontrol: ["Islah tahkikat sona erinceye kadar yapılabilir (HMK m.177)", "Kısmi davada talep artırımı için HMK m.109/4 (7589 s.K.) değerlendirilmeli", "Islah harcı yatırılmalı"], ekler: ["Vekâletname"] },
+  { id: "tedbir", ad: "İhtiyati tedbir talep dilekçesi", sure: null,
+    ust: "{MAH}", biz: "{S}", karsi: "{K}", dosya: true,
+    konu: "Dava konusu … hakkında ihtiyati tedbir kararı verilmesi talebinden ibarettir.",
+    bolum: ["KONUSU", "AÇIKLAMALAR", "HUKUKİ NEDENLER", "HUKUKİ DELİLLER", "NETİCE VE TALEP"],
+    kanun: [["HMK", "6100", "389", "İhtiyati tedbirin şartları", "tedbir"], ["HMK", "6100", "390", "İhtiyati tedbir talebi", "talep"], ["HMK", "6100", "392", "Teminat", "teminat"]],
+    istem: ["Dava konusu … üzerine ihtiyati tedbir konulmasına", "Teminat şartının … olarak belirlenmesine"],
+    kontrol: ["Tedbir sebebi ve dayanılan hak yaklaşık ispat ölçüsünde gösterilmeli (HMK m.390)", "Teminat konusu değerlendirilmeli (HMK m.392)"], ekler: ["Vekâletname"] },
+  { id: "ceza_sikayet", ad: "Suç duyurusu / şikâyet dilekçesi", sure: null,
+    ust: "{UST} CUMHURİYET BAŞSAVCILIĞI'NA", biz: "MÜŞTEKİ", karsi: "ŞÜPHELİ", sucTarihi: true,
+    konu: "Şüpheli hakkında … suçundan soruşturma başlatılarak kamu davası açılması talebinden ibarettir.",
+    bolum: ["KONUSU", "AÇIKLAMALAR", "HUKUKİ NEDENLER", "DELİLLER", "NETİCE VE TALEP"],
+    kanun: [["CMK", "5271", "158", "İhbar ve şikâyet", "şikâyet"], ["CMK", "5271", "160", "Cumhuriyet savcısının araştırma yükümlülüğü", "savcı"]],
+    istem: ["Şüpheli hakkında soruşturma başlatılmasına ve kamu davası açılmasına"],
+    kontrol: ["Şikâyete bağlı suçlarda şikâyet süresi fiilin ve failin öğrenilmesinden itibaren altı aydır (TCK m.73)", "Suç tarihi, yeri ve deliller açıkça yazılmalı"], ekler: ["Vekâletname"] },
+  { id: "ceza_itiraz", ad: "Sulh ceza hâkimliği kararına itiraz (KYOK vb.)", doc: "İtiraz edilen karar (kovuşturmaya yer olmadığı, tutuklama vb.)", sure: { m: 7, b: "gun", r: "cmk" },
+    ust: "{UST} SULH CEZA HÂKİMLİĞİ'NE", biz: "İTİRAZ EDEN ({S})", karsi: "{K}", karar: "İTİRAZ EDİLEN KARAR",
+    konu: "… tarihli, … sayılı kararın kaldırılması talebinden ibarettir.",
+    bolum: ["KONUSU", "İTİRAZ SEBEPLERİ", "HUKUKİ NEDENLER", "NETİCE VE TALEP"],
+    kanun: [["CMK", "5271", "267", "İtiraz edilebilecek kararlar", "itiraz"], ["CMK", "5271", "268", "İtiraz usulü ve inceleme mercii", "itiraz"], ["CMK", "5271", "173", "Kovuşturmaya yer olmadığı kararına itiraz", "kovuşturma"]],
+    istem: ["İtiraz edilen kararın kaldırılmasına"],
+    kontrol: ["İtiraz süresini kararın kanun yolu bölümünden kontrol edin (CMK m.268; KYOK için CMK m.173)", "KYOK'a itiraz savcılığın bağlı olduğu yer sulh ceza hâkimliğine yapılır (CMK m.173)"], ekler: ["İtiraz edilen karar", "Vekâletname"] },
+  { id: "idari_istinaf", ad: "İdari yargı istinaf dilekçesi", doc: "İdare / vergi mahkemesi kararı", sure: { m: 30, b: "gun", r: "iyuk" },
+    ust: "{UST} BÖLGE İDARE MAHKEMESİ İLGİLİ DAİRE BAŞKANLIĞI'NA", gonder: true, biz: "İSTİNAF EDEN ({S})", karsi: "KARŞI TARAF ({K})", karar: "İSTİNAF EDİLEN KARAR",
+    konu: "… Mahkemesinin … tarihli, … E., … K. sayılı kararının kaldırılması talebinden ibarettir.",
+    bolum: ["KONUSU", "AÇIKLAMALAR VE İSTİNAF SEBEPLERİ", "HUKUKİ NEDENLER", "NETİCE VE TALEP"],
+    kanun: [["İYUK", "2577", "45", "İstinaf", "istinaf"]],
+    istem: ["İlk derece mahkemesi kararının kaldırılmasına", "Yargılama giderleri ile vekâlet ücretinin karşı tarafa yükletilmesine"],
+    kontrol: ["Süre: kararın tebliğinden itibaren otuz gün (İYUK m.45); kararın kanun yolu bölümünü kontrol edin"], ekler: ["İstinaf edilen karar", "Vekâletname"] },
+  { id: "idari_temyiz", ad: "Danıştay temyiz dilekçesi", doc: "Bölge idare mahkemesi kararı", sure: { m: 30, b: "gun", r: "iyuk" },
+    ust: "DANIŞTAY İLGİLİ DAİRE BAŞKANLIĞI'NA", gonder: true, biz: "TEMYİZ EDEN ({S})", karsi: "KARŞI TARAF ({K})", karar: "TEMYİZ EDİLEN KARAR",
+    konu: "… tarihli, … E., … K. sayılı kararın bozulması talebinden ibarettir.",
+    bolum: ["KONUSU", "AÇIKLAMALAR VE TEMYİZ SEBEPLERİ", "HUKUKİ NEDENLER", "NETİCE VE TALEP"],
+    kanun: [["İYUK", "2577", "46", "Temyiz", "temyiz"], ["İYUK", "2577", "49", "Temyiz incelemesi ve bozma sebepleri", "bozul"]],
+    istem: ["Temyiz edilen kararın bozulmasına", "Yargılama giderleri ile vekâlet ücretinin karşı tarafa yükletilmesine"],
+    kontrol: ["Süre: kararın tebliğinden itibaren otuz gün (İYUK m.46); kararın kanun yolu bölümünü kontrol edin"], ekler: ["Temyiz edilen karar", "Vekâletname"] },
+  { id: "diger", ad: "Diğer dilekçe (serbest)", doc: "İlgili evrak (isteğe bağlı)", docOpt: true, sure: null,
+    ust: "{MAH}", biz: "{S}", karsi: "{K}", dosya: true, konu: "", bolum: ["KONUSU", "AÇIKLAMALAR", "HUKUKİ NEDENLER", "NETİCE VE TALEP"], kanun: [], istem: [], kontrol: [], ekler: ["Vekâletname"] },
+];
+const dturOf = id => DTUR.find(t => t.id === id) || DTUR[0];
+const ONERI_MAP = [[/temyiz/i, "temyiz"], [/istinafa cevap|istinaf.*cevap/i, "istinaf_cevap"], [/istinaf/i, "istinaf"], [/ikinci cevap|düplik/i, "duplik"], [/cevaba cevap|replik/i, "replik"], [/bilirkişi/i, "bilirkisi"], [/cevap/i, "cevap"], [/itiraz/i, "ceza_itiraz"]];
+// Evraktaki taraf adlarını ve T.C. kimlik numaralarını gönderimden önce gizle
+function evrakMask(t){
+  let s = String(t || "");
+  const roles = ["DAVACI", "DAVALI", "VEKİLİ", "VEKİLLERİ", "MÜŞTEKİ", "ŞÜPHELİ", "SANIK", "KATILAN", "İSTİNAF EDEN", "TEMYİZ EDEN", "KARŞI TARAF", "MÜDAHİL", "BORÇLU", "ALACAKLI"];
+  const found = [];
+  for (const r of roles) {
+    const re = new RegExp("(?:^|\\n)\\s*" + r + "(?:LAR|LER)?\\s*(?:\\([^)]{0,30}\\))?\\s*:\\s*([^\\n]{3,200})", "g");
+    for (const m of s.matchAll(re)) {
+      for (const part of m[1].split(/\s*(?:,|;|\s-\s|\/)\s*/)) {
+        const nm = part.replace(/^(Av\.?|Avukat)\s*/i, "").replace(/\bT\.?\s?C\.?.*$/i, "").replace(/\(.*?\)/g, "").trim();
+        if (nm.split(/\s+/).length >= 2 && nm.length <= 60 && !/müdürlüğü|bakanlığı|belediye|başkanlığı|hazine|kurumu|a\.ş|ltd|şti|şirketi/i.test(nm)) found.push([nm, r.split(" ")[0]]);
+      }
+    }
+  }
+  found.sort((a, b) => b[0].length - a[0].length);
+  for (const [nm, r] of found) s = s.split(nm).join(`[${r}]`);
+  return s.replace(/\b[1-9]\d{10}\b/g, "[TCKN]");
+}
+// Evrak analizinden alan çek
+function evrakAlan(txt, label){ const m = new RegExp("^\\s*\\**" + label + "\\**\\s*:\\s*(.*)$", "mi").exec(txt || ""); const v = m ? m[1].trim() : ""; return v === "-" ? "" : v; }
+
 const DAVA_TURLERI = DAVA_KB.map(k => [k.ad, k.mahkeme ? "… " + k.mahkeme.split(" / ")[0] + " Mahkemesi" : "… Mahkemesi"]);
 const DL_STEPS = ["Olay ve taraflar", "Araştırma", "Analiz", "Dilekçe"];
-const DL_FIELDS = ["tur", "mahkeme", "davaci", "vekil", "davali", "konu", "deger", "olay", "talep", "deliller", "taniklar", "ekler"];
+const DL_FIELDS = ["tur", "mahkeme", "davaci", "vekil", "davali", "konu", "deger", "olay", "talep", "deliller", "taniklar", "ekler", "dtur", "kmah", "kesas", "kkarar", "ktarih", "ttarih", "sifat", "ust", "evrak", "evrakAd", "evrakAnaliz"];
 const dlKey = () => "hp_dl_" + ((state.user && state.user.id) || "x");
 const srcLabel = s => ({ arsiv: "Arşiv", emsal: "UYAP Emsal", yargitay: "Yargıtay", danistay: "Danıştay" })[s] || s;
 function dlState(){
@@ -1680,6 +1810,7 @@ function dlState(){
     state.dl = { step: 1, picked: {}, manual: [], cands: null, terim: "", queries: [], facts: null, analiz: "", dilekce: "", mev: null, ozel: saved.ozel || {} };
     DL_FIELDS.forEach(k => state.dl[k] = saved[k] || "");
     if (!DAVA_KB.some(k => k.ad === state.dl.tur)) state.dl.tur = DAVA_KB[0].ad;
+    if (!DTUR.some(t => t.id === state.dl.dtur)) state.dl.dtur = "dava";
   }
   return state.dl;
 }
@@ -1741,7 +1872,7 @@ const dlMevOn = () => (state.dl.mev || []).filter(x => x.on);
 function dlCanGo(n){
   const d = state.dl;
   if (n <= 1) return true;
-  if (n === 2) return d.olay.trim().length >= 30;
+  if (n === 2) return d.olay.trim().length >= 30 || (d.dtur !== "dava" && !!d.evrakAnaliz);
   if (n === 3) return dlCanGo(2) && (dlPickedList().length > 0 || dlMevOn().length > 0);
   if (n === 4) return !!d.facts;
   return false;
@@ -1768,11 +1899,16 @@ function tabDilekce(){
   ({ 1: dlStep1, 2: dlStep2, 3: dlStep3, 4: dlStep4 })[d.step]();
 }
 
+const dturSelect = d => `<label for="dlt">Dilekçe türü</label><select id="dlt">${DTUR.map(t => `<option value="${t.id}" ${t.id === d.dtur ? "selected" : ""}>${esc(t.ad)}</option>`).join("")}</select>`;
+function dturBind(){ const d = state.dl; $("#dlt").onchange = e => { d.dtur = e.target.value; d.ekler = ""; d.mev = null; d.cands = null; d.facts = null; d.dilekce = ""; dlSaveDraft(); dlStep1(); }; }
 function dlStep1(){
-  const d = state.dl, box = $("#dlbody"), kb = kbOf(d.tur);
+  const d = state.dl;
+  if (d.dtur !== "dava") return dlStep1Tur();
+  const box = $("#dlbody"), kb = kbOf(d.tur);
   const mahTur = kb.mahkeme ? kb.mahkeme.split(" / ")[0] : "";
   box.innerHTML = `
     <p class="muted small" style="margin:6px 0 0">1. Dava türünü seçin ve bilgileri yazın. <b>Taraf, vekil, tanık bilgileri ve 🔒 işaretli alanlar yapay zekâya gönderilmez</b>; taslağa yalnızca telefonunuzda eklenir.</p>
+    ${dturSelect(d)}
     <label for="dtur">Dava türü</label>
     <select id="dtur">${DAVA_KB.map(k => `<option ${k.ad === d.tur ? "selected" : ""}>${esc(k.ad)}</option>`).join("")}</select>
     ${kb.id !== "diger" ? `<div class="notice" style="margin-top:10px">
@@ -1815,6 +1951,7 @@ function dlStep1(){
   };
   Object.keys(map).forEach(id => $("#" + id).oninput = keep);
   document.querySelectorAll("[data-ozel]").forEach(el => el.oninput = keep);
+  dturBind();
   $("#dtur").onchange = () => {
     keep(); const old = kbOf(d.tur);
     d.tur = $("#dtur").value;
@@ -1842,7 +1979,7 @@ async function dlRunSearch(custom){
   box.innerHTML = `<div class="card" style="margin-top:12px"><p style="margin:0"><span class="spinner" style="display:inline-block;vertical-align:middle;border-color:#0002;border-top-color:var(--gold)"></span> <b>Kararlar taranıyor…</b></p>
     <p class="muted small" style="margin:8px 0 0">Hukuki konu belirleniyor → Yargıtay, UYAP Emsal ve 11M arşiv taranıyor → yapay zekâ kararları okuyup davanın asıl konusu olanları seçiyor. Bu işlem 20-60 saniye sürebilir.</p></div>`;
   try {
-    const body = { tur: d.tur, konu: d.konu, olay: d.olay, talep: d.talep, ...(custom || {}) };
+    const body = { tur: d.tur, konu: d.dtur === "dava" ? d.konu : (evrakAlan(d.evrakAnaliz, "DAVA TÜRÜ") || d.konu), olay: d.dtur === "dava" ? d.olay : dlMask(dlTurOlay()), talep: d.talep, ...(custom || {}) };
     let r = await api("/api/dilekce/ara", body);
     if (!(r.candidates || []).length) {
       // Karar kaynakları ilk denemede yavaş kalabiliyor: bir kez otomatik tekrar
@@ -1933,7 +2070,7 @@ function dlLearn(){
 // ---------- Mevzuat taraması: bilgi tabanındaki ve yapay zekânın önerdiği maddelerin canlı metni ----------
 const KANUN_KISA_C = { "tmk": "4721", "tbk": "6098", "hmk": "6100", "iik": "2004", "ttk": "6102", "is k": "4857", "is kanunu": "4857", "1475": "1475",
   "is mahk k": "7036", "is mahkemeleri k": "7036", "7036": "7036", "huak": "6325", "6325": "6325", "tkhk": "6502", "6502": "6502", "ktk": "2918", "2918": "2918",
-  "nhk": "5490", "5490": "5490", "kmk": "634", "634": "634", "tapu k": "2644", "iyuk": "2577", "2577": "2577", "3095": "3095", "4721": "4721", "6098": "6098", "6100": "6100", "2004": "2004", "4857": "4857" };
+  "nhk": "5490", "5490": "5490", "kmk": "634", "634": "634", "tapu k": "2644", "iyuk": "2577", "2577": "2577", "3095": "3095", "4721": "4721", "6098": "6098", "6100": "6100", "2004": "2004", "4857": "4857", "cmk": "5271", "5271": "5271", "tck": "5237", "5237": "5237" };
 function parseMaddeC(x){
   const m = /^(.+?)\s+(?:m\.?\s*|md\.?\s*|madde\s*)?((?:ek|geçici)\s*)?(\d{1,4}(?:\s*\/\s*[a-zçğıöşü])?)\b/i.exec(String(x || "").trim());
   if (!m) return null;
@@ -1945,9 +2082,164 @@ const mevKey = (no, m) => no + ":" + normMadde(m);
 const mevLabel = x => `${KANUN_ADI[x.no] || x.no + " s. K."} m.${x.m}`;
 // Madde metninden değişiklik notlarını ayıkla, kısalt
 const mevClean = t => String(t || "").replace(/\((Değişik|Ek|Mülga|İptal|Yeniden düzenleme)[^()]{0,200}\)/g, "").replace(/[ \t]+/g, " ").replace(/\n{2,}/g, "\n").trim();
+// ---------- Dava dışı dilekçeler: 1. adım (evrak yükle → analiz → bilgiler) ----------
+const SIFATLAR = ["Davacı", "Davalı", "Müşteki", "Şüpheli", "Sanık", "Katılan", "Alacaklı", "Borçlu", "Diğer"];
+const KARSI_SIFAT = { "Davacı": "Davalı", "Davalı": "Davacı", "Müşteki": "Şüpheli", "Şüpheli": "Müşteki", "Sanık": "Katılan", "Katılan": "Sanık", "Alacaklı": "Borçlu", "Borçlu": "Alacaklı", "Diğer": "Karşı taraf" };
+function sureFromText(t){
+  const W = { bir: 1, iki: 2, "üç": 3, yedi: 7, on: 10, "onbeş": 15, otuz: 30, "altmış": 60 };
+  const m = /(\d{1,3}|bir|iki|üç|yedi|on\s*beş|onbeş|otuz|altmış|on)\s*\(?\d*\)?\s*(gün|hafta|ay)/i.exec(t || "");
+  if (!m) return null;
+  const k = trLower(m[1]).replace(/\s+/g, "");
+  const n = /^\d+$/.test(k) ? +k : W[k] || null;
+  return n ? { m: n, b: { "gün": "gun", hafta: "hafta", ay: "ay" }[trLower(m[2])] } : null;
+}
+function dlSure(d){
+  const t = dturOf(d.dtur);
+  const fromKY = sureFromText(evrakAlan(d.evrakAnaliz, "KANUN YOLU"));
+  const s = fromKY ? { ...fromKY, r: (t.sure && t.sure.r) || "hmk", src: "kararın kanun yolu bölümü" } : t.sure ? { ...t.sure, src: "kanundaki genel süre" } : null;
+  if (!s || !d.ttarih) return { s, html: s ? `<span class="muted">Süre: ${s.m} ${{ gun: "gün", hafta: "hafta", ay: "ay" }[s.b]} (${s.src}). Son günü görmek için tebliğ tarihini girin.</span>` : "" };
+  try { const r = sureHesapla(d.ttarih, s.m, s.b, s.r); return { s, end: r.end, html: `⏰ <b>Son gün: ${trDate(r.end)}</b> <span class="muted">(${s.m} ${{ gun: "gün", hafta: "hafta", ay: "ay" }[s.b]}, ${s.src}; adli tatil ve resmî tatiller hesaba katıldı)</span>` }; }
+  catch { return { s, html: "" }; }
+}
+function dlStep1Tur(){
+  const d = state.dl, box = $("#dlbody"), t = dturOf(d.dtur), kb = kbOf(d.tur);
+  const an = d.evrakAnaliz || "";
+  const row = (lb, key) => { const v = evrakAlan(an, key); return v ? `<div class="small" style="margin:3px 0"><b>${esc(lb)}:</b> ${esc(v)}</div>` : ""; };
+  const oneri = (ONERI_MAP.find(([re]) => re.test(evrakAlan(an, "ÖNERİLEN DİLEKÇE"))) || [])[1];
+  const isYol = !!t.karar, needUst = /\{UST\}/.test(t.ust);
+  box.innerHTML = `
+    <p class="muted small" style="margin:6px 0 0">1. Dilekçe türünü seçin${t.doc ? ", ilgili evrakı ekleyin ve analiz ettirin" : ""}. <b>Taraf, vekil ve tanık bilgileri yapay zekâya gönderilmez</b>; evraktaki taraf adları ve T.C. kimlik numaraları da gönderilmeden gizlenir.</p>
+    ${dturSelect(d)}
+    ${t.kontrol && t.kontrol.length ? `<div class="notice" style="margin-top:10px"><b>Bu dilekçede dikkat:</b><ul class="small" style="margin:6px 0 0;padding-left:18px">${t.kontrol.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
+    ${t.doc ? `<div class="card" style="margin-top:12px">
+      <b>📎 ${esc(t.doc)}</b>${t.docOpt ? ` <span class="muted small">(isteğe bağlı)</span>` : ""}
+      <div class="row" style="margin-top:8px;flex-wrap:wrap;gap:6px">
+        <label class="btn btn-ghost" style="margin:0">📄 Dosya<input id="evf" type="file" accept=".udf,.eyp,.pdf,.docx,.txt,.zip" class="hidden"></label>
+        <label class="btn btn-ghost" style="margin:0">📷 Fotoğraf<input id="evc" type="file" accept="image/*" capture="environment" class="hidden"></label>
+        <label class="btn btn-ghost" style="margin:0">🖼️ Galeri<input id="evg" type="file" accept="image/*" multiple class="hidden"></label></div>
+      <div id="evst" class="small muted" style="margin-top:6px">${d.evrak ? `📄 ${esc(d.evrakAd || "Evrak")} · ${d.evrak.length.toLocaleString("tr-TR")} karakter okundu` : "UDF, EYP, PDF, Word veya kâğıt evrakın fotoğrafı"}</div>
+      ${d.evrak ? `<button class="btn btn-gold btn-block" id="evan" style="margin-top:8px">${an ? "🔄 Evrakı yeniden analiz et" : "🔍 Evrakı analiz et"}</button>` : ""}
+      <div id="evout" class="hidden card out" style="margin-top:10px"></div>
+      ${an ? `<div style="margin-top:10px">${row("Belge", "BELGE TÜRÜ")}${row("Mahkeme", "MAHKEME")}${row("Esas / Karar", "ESAS NO")}${row("Karar no", "KARAR NO")}${row("Karar tarihi", "KARAR TARİHİ")}${row("Dava türü", "DAVA TÜRÜ")}${row("Hüküm", "HÜKÜM")}${row("Gerekçe", "GEREKÇE ÖZETİ")}${row("Davacı aleyhine", "DAVACI ALEYHİNE NOKTALAR")}${row("Davalı aleyhine", "DAVALI ALEYHİNE NOKTALAR")}${row("Olası itirazlar", "OLASI İTİRAZ NOKTALARI")}${row("Kanun yolu", "KANUN YOLU")}${row("Eksik bilgi", "EKSİK BİLGİ")}
+        ${oneri && oneri !== d.dtur ? `<div class="notice" style="margin-top:8px">Bu evrak için önerilen: <b>${esc(dturOf(oneri).ad)}</b> <a href="#" id="evone">Bu türe geç</a></div>` : ""}</div>` : ""}
+    </div>` : ""}
+    <label for="dtur">Davanın türü <span class="muted small">— mevzuat ve emsal karar araması için</span></label>
+    <select id="dtur">${DAVA_KB.map(k => `<option ${k.ad === d.tur ? "selected" : ""}>${esc(k.ad)}</option>`).join("")}</select>
+    <label for="kmah">${isYol ? "Kararı veren mahkeme" : "Mahkeme / makam"}</label>
+    <input id="kmah" type="text" maxlength="160" placeholder="ör. Niğde 1. Sulh Hukuk Mahkemesi" value="${esc(d.kmah)}">
+    ${needUst ? `<label for="kust">${/BAŞSAVCILI|SULH CEZA/.test(t.ust) ? "Yer (il / ilçe)" : "Üst mahkeme yeri"}</label><input id="kust" type="text" maxlength="80" placeholder="${/BÖLGE/.test(t.ust) ? "ör. Konya (Bölge Adliye / İdare Mahkemesi)" : "ör. Niğde"}" value="${esc(d.ust)}">` : ""}
+    <div class="row" style="gap:8px"><div style="flex:1"><label for="kesas">Esas no</label><input id="kesas" type="text" maxlength="40" placeholder="2025/123" value="${esc(d.kesas)}"></div>
+      ${isYol ? `<div style="flex:1"><label for="kkarar">Karar no</label><input id="kkarar" type="text" maxlength="40" placeholder="2026/45" value="${esc(d.kkarar)}"></div>` : ""}</div>
+    ${isYol || t.doc ? `<div class="row" style="gap:8px">${isYol ? `<div style="flex:1"><label for="ktarih">Karar tarihi</label><input id="ktarih" type="text" maxlength="20" placeholder="gg.aa.yyyy" value="${esc(d.ktarih)}"></div>` : ""}
+      ${t.sure || t.doc ? `<div style="flex:1"><label for="ttarih">Tebliğ tarihi</label><input id="ttarih" type="date" value="${esc(d.ttarih)}"></div>` : ""}</div>
+      <div id="sure" class="small" style="margin-top:6px">${dlSure(d).html}</div>` : ""}
+    <label for="dcvi">Müvekkil (sizin taraf)</label>
+    <input id="dcvi" type="text" maxlength="300" placeholder="Ad soyad, T.C. kimlik no, adres" value="${esc(d.davaci)}">
+    <label for="dsif">Müvekkilin sıfatı</label>
+    <select id="dsif">${SIFATLAR.map(x => `<option ${x === (d.sifat || "Davacı") ? "selected" : ""}>${x}</option>`).join("")}</select>
+    <label for="dvek">Vekil</label>
+    <input id="dvek" type="text" maxlength="300" placeholder="Av. ad soyad, baro sicil no, adres" value="${esc(d.vekil)}">
+    <label for="dcli">Karşı taraf</label>
+    <textarea id="dcli" style="min-height:60px" maxlength="1200" placeholder="Her birini ayrı satıra: ad soyad / kurum, adres">${esc(d.davali)}</textarea>
+    <label for="dolay">${isYol ? "Karara itiraz ettiğiniz noktalar" : /cevap|replik|duplik/.test(d.dtur) ? "Karşı tarafın iddialarına karşı açıklamalarınız" : "Olay ve açıklamalar"}</label>
+    <textarea id="dolay" placeholder="Madde madde yazın. Evrak analizindeki olası itirazlar başlangıç olarak buraya eklenir; düzenleyebilirsiniz.">${esc(d.olay)}</textarea>
+    <label for="dtalep">Talep</label>
+    <textarea id="dtalep" style="min-height:70px" placeholder="${esc((t.istem[0] || "Mahkemeden ne istiyorsunuz?").slice(0, 160))}">${esc(d.talep)}</textarea>
+    ${t.bolum.some(b => /DELİL/.test(b)) ? `<label for="ddelil">Deliller</label><textarea id="ddelil" style="min-height:60px">${esc(d.deliller)}</textarea>` : ""}
+    <div id="m" class="hidden"></div>
+    <button class="btn btn-primary btn-block" id="dgo1">Mevzuat ve kararları tara →</button>`;
+  const map = { kmah: "kmah", kust: "ust", kesas: "kesas", kkarar: "kkarar", ktarih: "ktarih", ttarih: "ttarih", dcvi: "davaci", dsif: "sifat", dvek: "vekil", dcli: "davali", dolay: "olay", dtalep: "talep", ddelil: "deliller" };
+  const keep = () => { Object.entries(map).forEach(([id, k]) => { const el = $("#" + id); if (el) d[k] = el.value; }); dlSaveDraft(); const su = $("#sure"); if (su) su.innerHTML = dlSure(d).html; };
+  Object.keys(map).forEach(id => { const el = $("#" + id); if (el) { el.oninput = keep; el.onchange = keep; } });
+  dturBind();
+  $("#dtur").onchange = () => { keep(); d.tur = $("#dtur").value; d.mev = null; dlSaveDraft(); };
+  const one = $("#evone"); if (one) one.onclick = e => { e.preventDefault(); keep(); d.dtur = oneri; d.ekler = ""; d.mev = null; dlSaveDraft(); dlStep1(); };
+  const setEvrak = (txt, ad) => { d.evrak = String(txt || "").slice(0, 120000); d.evrakAd = ad; d.evrakAnaliz = ""; dlSaveDraft(); dlStep1(); };
+  const st = m => { const e = $("#evst"); if (e) e.textContent = m; };
+  const ef = $("#evf"); if (ef) ef.onchange = async e => { const f = e.target.files[0]; e.target.value = ""; if (!f) return; st("Okunuyor…"); try { const tx = (await fileText(f.name, await f.arrayBuffer())).trim(); if (tx.length < 50) throw new Error("Belgeden yeterli metin çıkmadı; taranmış bir PDF ise sayfaların fotoğrafını yükleyin."); setEvrak(tx, f.name); } catch (err) { st(""); showMsg($("#m"), err.message); } };
+  const img = async e => { const fs = [...e.target.files]; e.target.value = ""; if (!fs.length) return; try { const tx = await ocrImages(fs, m => st(`${m.status}${m.progress ? " %" + Math.round(m.progress * 100) : ""}`)); setEvrak(tx, fs.length > 1 ? `${fs.length} sayfa fotoğraf` : "Fotoğraf"); } catch (err) { st(""); showMsg($("#m"), "Fotoğraf okunamadı: " + err.message); } };
+  ["#evc", "#evg"].forEach(id => { const x = $(id); if (x) x.onchange = img; });
+  const ea = $("#evan"); if (ea) ea.onclick = async () => {
+    keep(); busy(ea, true, "Evrak analiz ediliyor…");
+    const m = evrakMask(d.evrak), text = m.length > 22000 ? m.slice(0, 13000) + "\n[...]\n" + m.slice(-9000) : m;
+    try {
+      const out = $("#evout");
+      d.evrakAnaliz = await streamAI({ task: "evrak_analiz", text }, out);
+      // Boş alanları analizden doldur
+      const A = k => evrakAlan(d.evrakAnaliz, k);
+      if (!d.kmah) d.kmah = A("MAHKEME"); if (!d.kesas) d.kesas = A("ESAS NO"); if (!d.kkarar) d.kkarar = A("KARAR NO"); if (!d.ktarih) d.ktarih = A("KARAR TARİHİ");
+      const dt = trLower(A("DAVA TÜRÜ")); const k = dt && DAVA_KB.find(x => x.terim && (dt.includes(trLower(x.terim)) || trLower(x.ad).startsWith(dt.slice(0, 10))));
+      if (k) { d.tur = k.ad; d.mev = null; }
+      if (!d.olay.trim()) { const side = (d.sifat || "Davacı") === "Davalı" ? "DAVALI ALEYHİNE NOKTALAR" : "DAVACI ALEYHİNE NOKTALAR"; const pts = [A("OLASI İTİRAZ NOKTALARI"), A(side)].join("; ").split(/\s*;\s*/).map(x => x.trim()).filter(x => x.length > 3); d.olay = [...new Set(pts)].map((x, i) => `${i + 1}. ${x}`).join("\n"); }
+      if (!d.talep.trim() && t.istem[0]) d.talep = t.istem[0];
+      dlSaveDraft(); dlStep1();
+    } catch (err) { showMsg($("#m"), err.message); busy(ea, false); }
+  };
+  $("#dgo1").onclick = () => {
+    keep();
+    if (t.doc && !t.docOpt && !d.evrak) return showMsg($("#m"), `Önce ${t.doc.toLocaleLowerCase("tr-TR")} ekleyin.`);
+    if (!d.evrakAnaliz && d.olay.trim().length < 30) return showMsg($("#m"), d.evrak ? "Evrakı analiz ettirin veya açıklamaları biraz daha ayrıntılı yazın." : "Lütfen açıklamaları biraz daha ayrıntılı yazın (en az 30 karakter).");
+    d.cands = null; d.picked = {}; d.facts = null; d.analiz = ""; d.dilekce = ""; d.terim = ""; d.queries = []; d.mev = null;
+    d.step = 2; tabDilekce();
+  };
+}
+// Arama ve analiz için evrakın özeti + avukatın açıklamaları (adlar gizli)
+function dlTurOlay(){
+  const d = state.dl, A = k => evrakAlan(d.evrakAnaliz, k);
+  return [A("DAVA TÜRÜ") && "Dava türü: " + A("DAVA TÜRÜ"), A("HÜKÜM") && "Hüküm: " + A("HÜKÜM"), A("GEREKÇE ÖZETİ") && "Gerekçe: " + A("GEREKÇE ÖZETİ"), d.olay.trim()].filter(Boolean).join("\n");
+}
+function dlBaseKanun(){
+  const d = state.dl, kb = kbOf(d.tur);
+  if (d.dtur === "dava") return kb.kanun;
+  const t = dturOf(d.dtur);
+  const skip = k => ["6325", "7036"].includes(k[1]) || (k[1] === "6100" && ["4", "12", "109"].includes(k[2]));
+  const seen = new Set(); return [...t.kanun, ...kb.kanun.filter(k => !skip(k))].filter(k => { const key = k[1] + ":" + k[2]; if (seen.has(key)) return false; seen.add(key); return true; });
+}
+function dlComposeTur(forPetition, sorunlar){
+  const d = state.dl, t = dturOf(d.dtur), kb = kbOf(d.tur);
+  const ok = (d.facts ? d.facts.items : []).filter(x => x.ok);
+  const per = forPetition ? (ok.length > 5 ? 1200 : 1800) : 2000;
+  const kararlar = ok.map(x => `- ${x.kunye}\n  Mahkeme düzeyi: ${x.level.label} · Sonuç (otomatik): ${x.outcome.label}\n  Alıntı:\n${String(x.excerpt || "").slice(-per)}`).join("\n\n");
+  const mev = dlMevOn().map(x => `- ${mevLabel(x)}${x.konu ? ` (${x.konu})` : ""}${x.text ? `:\n${x.text.slice(0, forPetition ? 800 : 1000)}` : " — metin alınamadı; yalnızca konusuyla kullan"}`).join("\n");
+  const ev = d.evrak ? evrakMask(d.evrak) : "", evx = ev.length > 9000 ? ev.slice(0, 4000) + "\n[...]\n" + ev.slice(-5000) : ev;
+  const S = d.sifat || "Davacı";
+  return `DİLEKÇE TÜRÜ: ${t.ad}\nBÖLÜMLER: ${t.bolum.join(", ")}\n${t.konu ? `KONU KALIBI (örnek): ${t.konu}\n` : ""}` +
+    `MÜVEKKİLİN SIFATI: ${S} · KARŞI TARAF: ${KARSI_SIFAT[S] || "karşı taraf"}\nDAVANIN TÜRÜ: ${kb.id === "diger" ? "-" : kb.ad}\n` +
+    `İLGİLİ DOSYA: ${[d.kmah, d.kesas && "E. " + d.kesas, d.kkarar && "K. " + d.kkarar, d.ktarih && "T. " + d.ktarih].filter(Boolean).join(", ") || "-"}\n\n` +
+    (d.evrakAnaliz ? `EVRAK ANALİZİ:\n${dlMask(d.evrakAnaliz)}\n\n` : "") +
+    (evx ? `EVRAK METNİ (${d.evrakAd || "evrak"}; adlar gizlendi):\n${evx}\n\n` : "") +
+    `AVUKATIN AÇIKLAMALARI / İTİRAZ NOKTALARI:\n${dlMask(fixTypos(d.olay.trim())) || "-"}\n\nTALEP:\n${dlMask(fixTypos(d.talep.trim())) || "-"}\n\n` +
+    (t.bolum.some(b => /DELİL/.test(b)) ? `DELİLLER:\n${d.deliller.trim() || "-"}\n\n` : "") +
+    `MEVZUAT (yalnızca bunlara dayan):\n${mev || "- seçilmedi; madde numarası yazma, 'ilgili mevzuat' de"}\n\n` +
+    (t.istem.length ? `STANDART İSTEMLER:\n${t.istem.map((x, i) => `${i + 1}- ${x}`).join("\n")}\n\n` : "") +
+    `SEÇİLEN EMSAL KARARLAR:\n${kararlar || "- yok (emsal karara atıf yapma)"}` +
+    (forPetition && d.analiz ? `\n\nDAVA ANALİZİ:\n${d.analiz.slice(0, 3000)}` : "") +
+    (sorunlar && sorunlar.length ? `\n\nÖNCEKİ TASLAKTA BULUNAN SORUNLAR (bu sefer bunları yapma):\n${sorunlar.map(x => "- " + x).join("\n")}` : "");
+}
+function dlHeaderTur(){
+  const d = state.dl, t = dturOf(d.dtur), S = d.sifat || "Davacı", K = KARSI_SIFAT[S] || "Karşı taraf";
+  const up = x => String(x || "").toLocaleUpperCase("tr-TR");
+  const mah = mahkemeAdi(d.kmah) || "[MAHKEME ADI]";
+  const ustAd = up(d.ust).trim() || "[ ]";
+  const fill = x => x.replace("{UST}", ustAd).replace("{MAH}", /MAHKEMES[İI]$/.test(mah) ? mah + " BAŞKANLIĞI'NA" : mah + yonelme(mah)).replace("{S}", up(S)).replace("{K}", up(K));
+  const pad = l => (l + " ".repeat(16)).slice(0, Math.max(16, l.length + 1)) + ": ";
+  const lines = [fill(t.ust)];
+  if (t.gonder) lines.push("Gönderilmek üzere", /MAHKEMES[İI]$/.test(mah) ? mah + " BAŞKANLIĞI'NA" : mah + yonelme(mah));
+  lines.push("");
+  if (d.kesas) lines.push(pad("DOSYA NO") + d.kesas + " E.");
+  if (t.sucTarihi) { /* şikâyette dosya no yoktur */ }
+  lines.push(pad(fill(t.biz)) + (d.davaci.trim() || "[Ad soyad, T.C. kimlik no, adres]"));
+  lines.push(pad("VEKİLİ") + (d.vekil.trim() || "[Av. ad soyad, baro sicil no, adres]"));
+  const ks = d.davali.trim() ? d.davali.trim().split(/\n+/).map(x => x.trim()).filter(Boolean) : ["[Ad soyad / kurum, adres]"];
+  lines.push(pad(fill(t.karsi)) + ks.join("\n" + " ".repeat(18)));
+  if (t.karar) lines.push(pad(t.karar) + [d.kmah.trim(), d.ktarih && d.ktarih + " tarihli", d.kesas && d.kesas + " E.", d.kkarar && d.kkarar + " K. sayılı karar"].filter(Boolean).join(", ") || "[ ]");
+  if (d.ttarih && (t.karar || t.doc)) { const [y, m, g] = d.ttarih.split("-"); lines.push(pad("TEBLİĞ TARİHİ") + `${g}.${m}.${y}`); }
+  return lines.join("\n") + "\n";
+}
+
 async function dlLoadMev(extra){
   const d = state.dl, kb = kbOf(d.tur);
-  if (!d.mev) d.mev = kb.kanun.map(([k, no, m, konu, kw]) => ({ key: mevKey(no, m), no, m, konu, kw, src: "kb", on: true, status: "yükleniyor" }));
+  if (!d.mev) d.mev = dlBaseKanun().map(([k, no, m, konu, kw]) => ({ key: mevKey(no, m), no, m, konu, kw, src: "kb", on: true, status: "yükleniyor" }));
   for (const e of extra || []) {
     const k = mevKey(e.no, e.m);
     if (!d.mev.some(x => x.key === k)) d.mev.push({ key: k, no: e.no, m: e.m, konu: "", kw: "", src: e.src || "ai", on: false, status: "yükleniyor" });
@@ -2071,6 +2363,7 @@ function dlMask(t){
   return s;
 }
 function dlCompose(forPetition, sorunlar){
+  if (state.dl.dtur !== "dava") return dlComposeTur(forPetition, sorunlar);
   const d = state.dl, kb = kbOf(d.tur);
   const ok = (d.facts ? d.facts.items : []).filter(x => x.ok);
   const per = forPetition ? (ok.length > 5 ? 1400 : 2200) : (ok.length > 5 ? 1600 : 2400);
@@ -2142,35 +2435,37 @@ function dlCleanBody(t){
 }
 // Tam dilekçe: başlık + taraflar (telefonda) + gövde (yapay zekâ) + tanıklar + tarih/imza + ekler
 function dlAssemble(){
-  const d = state.dl, kb = kbOf(d.tur);
+  const d = state.dl, kb = kbOf(d.tur), tt = dturOf(d.dtur);
   const pad = l => (l + " ".repeat(14)).slice(0, 14) + ": ";
   const davalilar = d.davali.trim() ? d.davali.trim().split(/\n+/).map(x => x.trim()).filter(Boolean) : ["[Davalı ad soyad / kurum, adres]"];
-  const head = [mahkemeBaslik(), "",
+  const head = d.dtur !== "dava" ? dlHeaderTur() : [mahkemeBaslik(), "",
     pad("DAVACI") + (d.davaci.trim() || "[Davacı ad soyad, T.C. kimlik no, adres]"),
     pad("VEKİLİ") + (d.vekil.trim() || "[Av. ad soyad, baro sicil no, adres]"),
     pad("DAVALI") + davalilar.join("\n" + " ".repeat(16)),
     ...(d.deger.trim() ? [pad("DAVA DEĞERİ") + d.deger.trim()] : []), ""].join("\n");
   let body = dlFill(dlCleanBody(d.dilekce));
-  const tan = d.taniklar.trim() ? d.taniklar.trim().split(/\n+/).map((x, i) => `${i + 1}- ${x.trim()}`).join("\n") : "";
+  const tan = d.dtur === "dava" && d.taniklar.trim() ? d.taniklar.trim().split(/\n+/).map((x, i) => `${i + 1}- ${x.trim()}`).join("\n") : "";
   if (tan) {
     const at = body.search(/^\s*HUKUK[İI] NEDENLER/m);
     body = at >= 0 ? body.slice(0, at).trimEnd() + `\n\nTANIKLAR :\n${tan}\n\n` + body.slice(at).trimStart() : body + `\n\nTANIKLAR :\n${tan}`;
   }
   const vekilAd = (d.vekil.split(",")[0] || "").trim() || "Av. [ ]";
   const ekler = (d.ekler || dlDefaultEkler()).split(/\n+/).map(x => x.replace(/^\s*\d+\s*[-.)]+\s*/, "").trim()).filter(Boolean);
-  return `${head}\n${body}\n\n${new Date().toLocaleDateString("tr-TR")}\nDavacı Vekili\n${vekilAd}\n(imza)` + (ekler.length ? `\n\nEKLER :\n${ekler.map((x, i) => `${i + 1}- ${x}`).join("\n")}` : "");
+  const imzaSifat = d.dtur === "dava" ? "Davacı" : (d.sifat || "Davacı");
+  return `${head}\n${body}\n\n${new Date().toLocaleDateString("tr-TR")}\n${imzaSifat} Vekili\n${vekilAd}\n(imza)` + (ekler.length ? `\n\nEKLER :\n${ekler.map((x, i) => `${i + 1}- ${x}`).join("\n")}` : "");
 }
-function dlDefaultEkler(){ const kb = kbOf(state.dl.tur); return kb.ekler.join("\n"); }
+function dlDefaultEkler(){ const d = state.dl; if (d.dtur !== "dava") return (dturOf(d.dtur).ekler || []).join("\n"); const kb = kbOf(d.tur); return kb.ekler.join("\n"); }
 
 // ---------- Otomatik kalite kontrolü ----------
 function dlQA(){
   const d = state.dl, kb = kbOf(d.tur), body = dlCleanBody(d.dilekce), full = dlAssemble();
   const out = [];   // [seviye, mesaj, yapay zekâya iletilecek mi]
-  const SECS = ["KONUSU", "AÇIKLAMALAR", "HUKUKİ NEDENLER", "HUKUKİ DELİLLER", "NETİCE VE TALEP"];
-  const missing = SECS.filter(s => !new RegExp("^\\s*" + s.replace("İ", "[İI]") + "\\s*:?", "mi").test(body));
-  out.push(missing.length ? ["err", `Eksik bölüm: ${missing.join(", ")}`, true] : ["ok", "Bütün bölümler var (Konusu, Açıklamalar, Hukuki Nedenler, Deliller, Netice ve Talep)"]);
+  const SECS = d.dtur === "dava" ? ["KONUSU", "AÇIKLAMALAR", "HUKUKİ NEDENLER", "HUKUKİ DELİLLER", "NETİCE VE TALEP"] : dturOf(d.dtur).bolum;
+  const missing = SECS.filter(s => !new RegExp("^\\s*" + s.replace(/İ/g, "[İI]") + "\\s*:?", "mi").test(body));
+  out.push(missing.length ? ["err", `Eksik bölüm: ${missing.join(", ")}`, true] : ["ok", `Bütün bölümler var (${SECS.map(x => x.charAt(0) + x.slice(1).toLocaleLowerCase("tr-TR")).join(", ")})`]);
   // künye kontrolü: yalnızca seçilen kararlar
-  const known = (d.facts ? d.facts.items : []).filter(x => x.ok).flatMap(x => [x.esas, x.karar, ...(String(x.kunye).match(/\d{4}\/\d+/g) || [])]).filter(Boolean);
+  const known = [...(d.facts ? d.facts.items : []).filter(x => x.ok).flatMap(x => [x.esas, x.karar, ...(String(x.kunye).match(/\d{4}\/\d+/g) || [])]),
+    d.kesas, d.kkarar, ...(String(d.evrak || "").match(/\d{4}\/\d+/g) || [])].filter(Boolean);
   const cited = [...new Set((body.match(/\b(?:E\.|Esas)\s*:?\s*(\d{4}\/\d+)/gi) || []).map(x => x.match(/\d{4}\/\d+/)[0]))];
   const bad = cited.filter(c => !known.includes(c));
   out.push(bad.length ? ["err", `Seçilen kararlar arasında olmayan künye: ${bad.join(", ")} — silin veya kontrol edin`, true]
@@ -2180,7 +2475,7 @@ function dlQA(){
   const abbr = Object.fromEntries(Object.entries(KANUN_KISA_C).map(([k, v]) => [k, v]));
   // "TMK m.688, 698 ve 699" gibi listeler de tek tek kontrol edilir
   const cites = [];
-  for (const m of body.matchAll(/(?<![A-Za-zÇĞİÖŞÜçğıöşü])(TMK|TBK|HMK|İİK|TTK|KTK|TKHK|HUAK|İYUK|İş K\.?|İş Kanunu)\s*(?:m\.|md\.|madde)?\s*((?:\d{1,4}(?:\/[A-ZÇĞİÖŞÜ])?(?:\/\d+(?:-[a-zçğıöşü])?)?(?:\s*(?:,|ve)\s*(?=\d))?)+)/g))
+  for (const m of body.matchAll(/(?<![A-Za-zÇĞİÖŞÜçğıöşü])(TMK|TBK|HMK|İİK|TTK|KTK|TKHK|HUAK|İYUK|CMK|TCK|İş K\.?|İş Kanunu)\s*(?:m\.|md\.|madde)?\s*((?:\d{1,4}(?:\/[A-ZÇĞİÖŞÜ])?(?:\/\d+(?:-[a-zçğıöşü])?)?(?:\s*(?:,|ve)\s*(?=\d))?)+)/g))
     for (const part of m[2].split(/\s*(?:,|ve)\s*/)) { const n = (/^\d{1,4}(?:\/[A-ZÇĞİÖŞÜ](?![a-zçğıöşü]))?/.exec(part.trim()) || [])[0]; if (n) cites.push([m[0], m[1], n]); }
   const unk = [...new Set(cites.filter(m => { const no = abbr[trLower(m[1]).replace(/ı/g, "i").replace(/ş/g, "s").replace(/[.\s]+/g, " ").trim()]; return no && !allowed.has(no + ":" + normMadde(m[2])); }).map(m => `${m[1]} m.${m[2]}`))];
   if (unk.length) out.push(["warn", `Mevzuat listesinde işaretli olmayan madde: ${unk.join(", ")} — doğruluğunu kontrol edin`, true]);
@@ -2193,14 +2488,18 @@ function dlQA(){
   if (/istemektedir|açmak istiyor/i.test(body)) out.push(["warn", "'… istemektedir' gibi niyet bildiren ifade var; dilekçe dili değil", true]);
   if (!/ibarettir/i.test((body.match(/^\s*KONUSU?\s*:.*$/m) || [""])[0] + body.slice(0, 600))) out.push(["info", "Konusu bölümü '… talebinden ibarettir' kalıbıyla bitmiyor"]);
   // arabuluculuk
-  if (kb.arab) {
+  if (kb.arab && d.dtur === "dava") {
     const inBody = /arabulucu/i.test(body), inEk = /arabulucu/i.test(d.ekler || dlDefaultEkler());
     out.push(inBody && inEk ? ["ok", "Arabuluculuk dava şartı açıklamalarda ve eklerde var"] : ["err", `Dava şartı arabuluculuk ${inBody ? "eklerde" : "açıklamalarda"} yok (${kb.arab.d})`, !inBody]);
     if (!String(d.ozel.arab || "").trim()) out.push(["warn", "Arabuluculuk son tutanağı bilgisi girilmedi (1. adım)"]);
   }
   // taraflar
-  if (!d.davaci.trim() || !d.davali.trim()) out.push(["warn", "Davacı veya davalı bilgisi eksik (1. adım)"]);
-  if (!d.mahkeme.trim()) out.push(["info", `Mahkeme yazılmadı; başlık "${mahkemeBaslik()}" olarak kuruldu`]);
+  if (!d.davaci.trim() || !d.davali.trim()) out.push(["warn", d.dtur === "dava" ? "Davacı veya davalı bilgisi eksik (1. adım)" : "Müvekkil veya karşı taraf bilgisi eksik (1. adım)"]);
+  if (d.dtur === "dava" && !d.mahkeme.trim()) out.push(["info", `Mahkeme yazılmadı; başlık "${mahkemeBaslik()}" olarak kuruldu`]);
+  if (d.dtur !== "dava") {
+    const sr = dlSure(d); if (sr.end) out.push(["info", `Son başvuru günü: ${trDate(sr.end)}`]);
+    if (/\{UST\}/.test(dturOf(d.dtur).ust) && !d.ust.trim()) out.push(["warn", "Başlıktaki üst mahkeme / yer bilgisi girilmedi (1. adım)"]);
+  }
   // doldurulacak yerler
   const blanks = (full.match(/\[ *\]|…|\[[^\]\n]{2,60}\]/g) || []).length;
   if (blanks) out.push(["info", `${blanks} yer doldurulmayı bekliyor ([ ] ve … ile işaretli)`]);
@@ -2933,7 +3232,9 @@ function pageGuide(){
   <b>Ne verir:</b> Taraflar ve konu, tarafların temel yükümlülükleri, <b>riskli veya tek taraflı maddeler</b> (madde metninden alıntıyla), eksik görünen hükümler (cezai şart, fesih, yetkili mahkeme vb.), müzakere önerileri ve genel risk seviyesi (Yüksek / Orta / Düşük).<br>
   <b>İpucu:</b> Sözleşmenin tamamını ekleyin; tek bir madde gönderildiğinde eksik hüküm değerlendirmesi yapılamaz.</p>
   <h3>✍️ Dilekçe Asistanı <span class="small muted">(Optimus: 5 karar, Maximus: 10 karar)</span></h3>
-  <p><b>Panelim → Dilekçe</b> sekmesinde 4 adımda çalışır:<br>
+  <p><b>Dilekçe türleri:</b> Dava dilekçesinin yanında istinaf, temyiz, cevap, cevaba cevap, ikinci cevap, istinafa cevap, bilirkişi raporuna itiraz, ıslah, ihtiyati tedbir, suç duyurusu/şikâyet, sulh ceza hâkimliği kararına itiraz, idari yargı istinaf ve Danıştay temyiz dilekçesi hazırlanabilir. 1. adımda <b>Dilekçe türü</b>nü seçin.<br>
+  <b>📎 Evrak ekleme:</b> Kanun yolu ve cevap dilekçelerinde ilgili evrakı (mahkeme kararı, karşı tarafın dilekçesi, bilirkişi raporu) UDF, EYP, PDF, Word veya fotoğraf olarak ekleyin ve <b>Evrakı analiz et</b>'e dokunun. Yapay zekâ evrakın türünü, mahkemesini, esas/karar numarasını, hükmünü, gerekçesini, aleyhe noktaları ve kanun yolu süresini çıkarır; boş alanlar kendiliğinden doldurulur, itiraz noktaları açıklamalara eklenir, uygun dilekçe türü önerilir. Tebliğ tarihini girince <b>son başvuru günü</b> adli tatil ve resmî tatiller hesaba katılarak gösterilir. Evraktaki taraf adları ve T.C. kimlik numaraları yapay zekâya gönderilmeden gizlenir.<br>
+  <b>Panelim → Dilekçe</b> sekmesinde 4 adımda çalışır:<br>
   <b>1. Olay ve taraflar:</b> Dava türünü seçin (20 tür: ortaklığın giderilmesi, nüfus/ad değişikliği, işçilik alacakları, işe iade, kira, boşanma, nafaka, mal rejimi, trafik kazası, itirazın iptali, menfi tespit, muris muvazaası, tüketici, ticari, idari, vergi…). Seçtiğiniz türün <b>görevli mahkemesi, dava şartı arabuluculuk uyarısı ve kontrol listesi</b> gösterilir; türe özel alanlar (ör. taşınmazın ada/parseli, arabuluculuk son tutanağı, işe giriş-çıkış tarihi) açılır, deliller hazır gelir. Mahkemeyi boş bırakırsanız başlık "NÖBETÇİ … MAHKEMESİ BAŞKANLIĞI'NA" olur. <b>Taraf, vekil, tanık bilgileri ve 🔒 işaretli alanlar yapay zekâya gönderilmez</b>; olay metninde geçen kişi adları da gönderilmeden önce gizlenir ve taslağa telefonunuzda geri yerleştirilir.<br>
   <b>2. Araştırma:</b> <b>Mevzuat:</b> dava türünün dayanak maddeleri ve yapay zekânın olaya göre önerdiği maddeler, güncel metinleriyle mevzuat.gov.tr'den alınır; metni doğrulanamayan veya yürürlükten kaldırılmış madde işaretlenmez. İstediğiniz maddeyi "TMK 642" gibi yazıp ekleyebilirsiniz. <b>Kararlar:</b> platform davanın hukuki adını belirler (ör. kardeşler arasında ortak malın paylaşılması için <i>ortaklığın giderilmesi</i>), Yargıtay, UYAP Emsal ve 11M arşivde tarar; yalnızca <b>davanın asıl konusu bu olan</b> kararlar (terimin tesadüfen geçtiği usul, ihya gibi kararlar değil) seçime girer. Yapay zekâ en ilgilileri seçer ve nedenini yazar; dilediğiniz kararı çıkarabilir, ekleyebilir veya <i>Aramayı düzelt</i> ile terimi değiştirebilirsiniz. Karar kaynakları yanıt vermezse yalnızca mevzuatla devam edebilirsiniz.<br>
   <b>📚 Öğrenen arama:</b> Sistem avukatların seçimlerinden öğrenir. Bir konuda sık tutulan kararlar sonraki aramalarda öne çıkar ("👍 Avukatlar bu konuda n kez seçti"), sık çıkarılanlar geriye düşer; yapay zekânın önerdiği terim avukatlarca sık düzeltilirse sistem doğru terimle başlar. Bu öğrenmede yalnızca hukuki konu ve karar künyesi anonim olarak tutulur.<br>
