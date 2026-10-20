@@ -1801,7 +1801,7 @@ function evrakAlan(txt, label){ const m = new RegExp("^\\s*\\**" + label + "\\**
 
 const DAVA_TURLERI = DAVA_KB.map(k => [k.ad, k.mahkeme ? "… " + k.mahkeme.split(" / ")[0] + " Mahkemesi" : "… Mahkemesi"]);
 const DL_STEPS = ["Olay ve taraflar", "Araştırma", "Analiz", "Dilekçe"];
-const DL_FIELDS = ["tur", "mahkeme", "davaci", "vekil", "davali", "konu", "deger", "olay", "talep", "deliller", "taniklar", "ekler", "dtur", "kmah", "kesas", "kkarar", "ktarih", "ttarih", "sifat", "ust", "evrak", "evrakAd", "evrakAnaliz"];
+const DL_FIELDS = ["tur", "mahkeme", "davaci", "vekil", "davali", "konu", "deger", "olay", "talep", "deliller", "taniklar", "ekler", "dtur", "kmah", "kesas", "kkarar", "ktarih", "ttarih", "sifat", "ust", "evrak", "evrakAd", "evrakAnaliz", "olayAuto", "talepAuto"];
 const dlKey = () => "hp_dl_" + ((state.user && state.user.id) || "x");
 const srcLabel = s => ({ arsiv: "Arşiv", emsal: "UYAP Emsal", yargitay: "Yargıtay", danistay: "Danıştay" })[s] || s;
 function dlState(){
@@ -1909,6 +1909,7 @@ function dlStep1(){
   box.innerHTML = `
     <p class="muted small" style="margin:6px 0 0">1. Dava türünü seçin ve bilgileri yazın. <b>Taraf, vekil, tanık bilgileri ve 🔒 işaretli alanlar yapay zekâya gönderilmez</b>; taslağa yalnızca telefonunuzda eklenir.</p>
     ${dturSelect(d)}
+    ${evrakBlock(d, { doc: "İlgili evrak (ihtarname, tapu kaydı, sözleşme, karar vb.)", docOpt: true })}
     <label for="dtur">Dava türü</label>
     <select id="dtur">${DAVA_KB.map(k => `<option ${k.ad === d.tur ? "selected" : ""}>${esc(k.ad)}</option>`).join("")}</select>
     ${kb.id !== "diger" ? `<div class="notice" style="margin-top:10px">
@@ -1951,7 +1952,7 @@ function dlStep1(){
   };
   Object.keys(map).forEach(id => $("#" + id).oninput = keep);
   document.querySelectorAll("[data-ozel]").forEach(el => el.oninput = keep);
-  dturBind();
+  dturBind(); evrakBind(d, { istem: kb.istem }, keep);
   $("#dtur").onchange = () => {
     keep(); const old = kbOf(d.tur);
     d.tur = $("#dtur").value;
@@ -2101,17 +2102,12 @@ function dlSure(d){
   try { const r = sureHesapla(d.ttarih, s.m, s.b, s.r); return { s, end: r.end, html: `⏰ <b>Son gün: ${trDate(r.end)}</b> <span class="muted">(${s.m} ${{ gun: "gün", hafta: "hafta", ay: "ay" }[s.b]}, ${s.src}; adli tatil ve resmî tatiller hesaba katıldı)</span>` }; }
   catch { return { s, html: "" }; }
 }
-function dlStep1Tur(){
-  const d = state.dl, box = $("#dlbody"), t = dturOf(d.dtur), kb = kbOf(d.tur);
+function evrakBlock(d, t){
   const an = d.evrakAnaliz || "";
   const row = (lb, key) => { const v = evrakAlan(an, key); return v ? `<div class="small" style="margin:3px 0"><b>${esc(lb)}:</b> ${esc(v)}</div>` : ""; };
   const oneri = (ONERI_MAP.find(([re]) => re.test(evrakAlan(an, "ÖNERİLEN DİLEKÇE"))) || [])[1];
-  const isYol = !!t.karar, needUst = /\{UST\}/.test(t.ust);
-  box.innerHTML = `
-    <p class="muted small" style="margin:6px 0 0">1. Dilekçe türünü seçin${t.doc ? ", ilgili evrakı ekleyin ve analiz ettirin" : ""}. <b>Taraf, vekil ve tanık bilgileri yapay zekâya gönderilmez</b>; evraktaki taraf adları ve T.C. kimlik numaraları da gönderilmeden gizlenir.</p>
-    ${dturSelect(d)}
-    ${t.kontrol && t.kontrol.length ? `<div class="notice" style="margin-top:10px"><b>Bu dilekçede dikkat:</b><ul class="small" style="margin:6px 0 0;padding-left:18px">${t.kontrol.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
-    ${t.doc ? `<div class="card" style="margin-top:12px">
+  if (!t.doc) t = { ...t, doc: "İlgili evrak (ihtarname, tapu kaydı, sözleşme, karar vb.)", docOpt: true };
+  return `<div class="card" style="margin-top:12px">
       <b>📎 ${esc(t.doc)}</b>${t.docOpt ? ` <span class="muted small">(isteğe bağlı)</span>` : ""}
       <div class="row" style="margin-top:8px;flex-wrap:wrap;gap:6px">
         <label class="btn btn-ghost" style="margin:0">📄 Dosya<input id="evf" type="file" accept=".udf,.eyp,.pdf,.docx,.txt,.zip" class="hidden"></label>
@@ -2122,7 +2118,52 @@ function dlStep1Tur(){
       <div id="evout" class="hidden card out" style="margin-top:10px"></div>
       ${an ? `<div style="margin-top:10px">${row("Belge", "BELGE TÜRÜ")}${row("Mahkeme", "MAHKEME")}${row("Esas / Karar", "ESAS NO")}${row("Karar no", "KARAR NO")}${row("Karar tarihi", "KARAR TARİHİ")}${row("Dava türü", "DAVA TÜRÜ")}${row("Hüküm", "HÜKÜM")}${row("Gerekçe", "GEREKÇE ÖZETİ")}${row("Davacı aleyhine", "DAVACI ALEYHİNE NOKTALAR")}${row("Davalı aleyhine", "DAVALI ALEYHİNE NOKTALAR")}${row("Olası itirazlar", "OLASI İTİRAZ NOKTALARI")}${row("Kanun yolu", "KANUN YOLU")}${row("Eksik bilgi", "EKSİK BİLGİ")}
         ${oneri && oneri !== d.dtur ? `<div class="notice" style="margin-top:8px">Bu evrak için önerilen: <b>${esc(dturOf(oneri).ad)}</b> <a href="#" id="evone">Bu türe geç</a></div>` : ""}</div>` : ""}
-    </div>` : ""}
+    </div>`;
+}
+function evrakFill(d){
+  const A = k => evrakAlan(d.evrakAnaliz, k), t = dturOf(d.dtur);
+  if (!d.evrakAnaliz) return;
+  if (d.dtur !== "dava") { if (!d.kmah) d.kmah = A("MAHKEME"); if (!d.kesas) d.kesas = A("ESAS NO"); if (!d.kkarar) d.kkarar = A("KARAR NO"); if (!d.ktarih) d.ktarih = A("KARAR TARİHİ"); }
+  const dt = trLower(A("DAVA TÜRÜ")); const k = dt && DAVA_KB.find(x => x.terim && (dt.includes(trLower(x.terim)) || trLower(x.ad).startsWith(dt.slice(0, 10))));
+  if (k && k.ad !== d.tur) { d.tur = k.ad; d.mev = null; }
+  const auto = !d.olay.trim() || d.olay === d.olayAuto;          // avukat değiştirmediyse yeniden doldurulabilir
+  if (auto) {
+    if (d.dtur === "dava") d.olay = [A("GEREKÇE ÖZETİ"), A("HÜKÜM")].filter(Boolean).join("\n");
+    else { const side = (d.sifat || "Davacı") === "Davalı" ? "DAVALI ALEYHİNE NOKTALAR" : "DAVACI ALEYHİNE NOKTALAR"; const pts = [A("OLASI İTİRAZ NOKTALARI"), A(side)].join("; ").split(/\s*;\s*/).map(x => x.trim()).filter(x => x.length > 3); d.olay = [...new Set(pts)].map((x, i) => `${i + 1}. ${x}`).join("\n"); }
+    d.olayAuto = d.olay;
+  }
+  if (d.dtur !== "dava" && (!d.talep.trim() || d.talep === d.talepAuto) && t.istem && t.istem[0]) { d.talep = t.istem[0]; d.talepAuto = d.talep; }
+}
+function evrakBind(d, t, keep){
+  const oneri = (ONERI_MAP.find(([re]) => re.test(evrakAlan(d.evrakAnaliz, "ÖNERİLEN DİLEKÇE"))) || [])[1];
+  const one = $("#evone"); if (one) one.onclick = e => { e.preventDefault(); keep(); d.dtur = oneri; d.ekler = ""; d.mev = null; evrakFill(d); dlSaveDraft(); dlStep1(); };
+  const setEvrak = (txt, ad) => { d.evrak = String(txt || "").slice(0, 120000); d.evrakAd = ad; d.evrakAnaliz = ""; dlSaveDraft(); dlStep1(); };
+  const st = m => { const e = $("#evst"); if (e) e.textContent = m; };
+  const ef = $("#evf"); if (ef) ef.onchange = async e => { const f = e.target.files[0]; e.target.value = ""; if (!f) return; st("Okunuyor…"); try { const tx = (await fileText(f.name, await f.arrayBuffer())).trim(); if (tx.length < 50) throw new Error("Belgeden yeterli metin çıkmadı; taranmış bir PDF ise sayfaların fotoğrafını yükleyin."); setEvrak(tx, f.name); } catch (err) { st(""); showMsg($("#m"), err.message); } };
+  const img = async e => { const fs = [...e.target.files]; e.target.value = ""; if (!fs.length) return; try { const tx = await ocrImages(fs, m => st(`${m.status}${m.progress ? " %" + Math.round(m.progress * 100) : ""}`)); setEvrak(tx, fs.length > 1 ? `${fs.length} sayfa fotoğraf` : "Fotoğraf"); } catch (err) { st(""); showMsg($("#m"), "Fotoğraf okunamadı: " + err.message); } };
+  ["#evc", "#evg"].forEach(id => { const x = $(id); if (x) x.onchange = img; });
+  const ea = $("#evan"); if (ea) ea.onclick = async () => {
+    keep(); busy(ea, true, "Evrak analiz ediliyor…");
+    const m = evrakMask(d.evrak), text = m.length > 22000 ? m.slice(0, 13000) + "\n[...]\n" + m.slice(-9000) : m;
+    try {
+      const out = $("#evout");
+      d.evrakAnaliz = await streamAI({ task: "evrak_analiz", text }, out);
+      evrakFill(d);
+      dlSaveDraft(); dlStep1();
+    } catch (err) { showMsg($("#m"), err.message); busy(ea, false); }
+  };
+}
+function dlStep1Tur(){
+  const d = state.dl, box = $("#dlbody"), t = dturOf(d.dtur), kb = kbOf(d.tur);
+  const an = d.evrakAnaliz || "";
+  const row = (lb, key) => { const v = evrakAlan(an, key); return v ? `<div class="small" style="margin:3px 0"><b>${esc(lb)}:</b> ${esc(v)}</div>` : ""; };
+  const oneri = (ONERI_MAP.find(([re]) => re.test(evrakAlan(an, "ÖNERİLEN DİLEKÇE"))) || [])[1];
+  const isYol = !!t.karar, needUst = /\{UST\}/.test(t.ust);
+  box.innerHTML = `
+    <p class="muted small" style="margin:6px 0 0">1. Dilekçe türünü seçin${t.doc ? ", ilgili evrakı ekleyin ve analiz ettirin" : ""}. <b>Taraf, vekil ve tanık bilgileri yapay zekâya gönderilmez</b>; evraktaki taraf adları ve T.C. kimlik numaraları da gönderilmeden gizlenir.</p>
+    ${dturSelect(d)}
+    ${t.kontrol && t.kontrol.length ? `<div class="notice" style="margin-top:10px"><b>Bu dilekçede dikkat:</b><ul class="small" style="margin:6px 0 0;padding-left:18px">${t.kontrol.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
+    ${evrakBlock(d, t)}
     <label for="dtur">Davanın türü <span class="muted small">— mevzuat ve emsal karar araması için</span></label>
     <select id="dtur">${DAVA_KB.map(k => `<option ${k.ad === d.tur ? "selected" : ""}>${esc(k.ad)}</option>`).join("")}</select>
     <label for="kmah">${isYol ? "Kararı veren mahkeme" : "Mahkeme / makam"}</label>
@@ -2153,28 +2194,7 @@ function dlStep1Tur(){
   Object.keys(map).forEach(id => { const el = $("#" + id); if (el) { el.oninput = keep; el.onchange = keep; } });
   dturBind();
   $("#dtur").onchange = () => { keep(); d.tur = $("#dtur").value; d.mev = null; dlSaveDraft(); };
-  const one = $("#evone"); if (one) one.onclick = e => { e.preventDefault(); keep(); d.dtur = oneri; d.ekler = ""; d.mev = null; dlSaveDraft(); dlStep1(); };
-  const setEvrak = (txt, ad) => { d.evrak = String(txt || "").slice(0, 120000); d.evrakAd = ad; d.evrakAnaliz = ""; dlSaveDraft(); dlStep1(); };
-  const st = m => { const e = $("#evst"); if (e) e.textContent = m; };
-  const ef = $("#evf"); if (ef) ef.onchange = async e => { const f = e.target.files[0]; e.target.value = ""; if (!f) return; st("Okunuyor…"); try { const tx = (await fileText(f.name, await f.arrayBuffer())).trim(); if (tx.length < 50) throw new Error("Belgeden yeterli metin çıkmadı; taranmış bir PDF ise sayfaların fotoğrafını yükleyin."); setEvrak(tx, f.name); } catch (err) { st(""); showMsg($("#m"), err.message); } };
-  const img = async e => { const fs = [...e.target.files]; e.target.value = ""; if (!fs.length) return; try { const tx = await ocrImages(fs, m => st(`${m.status}${m.progress ? " %" + Math.round(m.progress * 100) : ""}`)); setEvrak(tx, fs.length > 1 ? `${fs.length} sayfa fotoğraf` : "Fotoğraf"); } catch (err) { st(""); showMsg($("#m"), "Fotoğraf okunamadı: " + err.message); } };
-  ["#evc", "#evg"].forEach(id => { const x = $(id); if (x) x.onchange = img; });
-  const ea = $("#evan"); if (ea) ea.onclick = async () => {
-    keep(); busy(ea, true, "Evrak analiz ediliyor…");
-    const m = evrakMask(d.evrak), text = m.length > 22000 ? m.slice(0, 13000) + "\n[...]\n" + m.slice(-9000) : m;
-    try {
-      const out = $("#evout");
-      d.evrakAnaliz = await streamAI({ task: "evrak_analiz", text }, out);
-      // Boş alanları analizden doldur
-      const A = k => evrakAlan(d.evrakAnaliz, k);
-      if (!d.kmah) d.kmah = A("MAHKEME"); if (!d.kesas) d.kesas = A("ESAS NO"); if (!d.kkarar) d.kkarar = A("KARAR NO"); if (!d.ktarih) d.ktarih = A("KARAR TARİHİ");
-      const dt = trLower(A("DAVA TÜRÜ")); const k = dt && DAVA_KB.find(x => x.terim && (dt.includes(trLower(x.terim)) || trLower(x.ad).startsWith(dt.slice(0, 10))));
-      if (k) { d.tur = k.ad; d.mev = null; }
-      if (!d.olay.trim()) { const side = (d.sifat || "Davacı") === "Davalı" ? "DAVALI ALEYHİNE NOKTALAR" : "DAVACI ALEYHİNE NOKTALAR"; const pts = [A("OLASI İTİRAZ NOKTALARI"), A(side)].join("; ").split(/\s*;\s*/).map(x => x.trim()).filter(x => x.length > 3); d.olay = [...new Set(pts)].map((x, i) => `${i + 1}. ${x}`).join("\n"); }
-      if (!d.talep.trim() && t.istem[0]) d.talep = t.istem[0];
-      dlSaveDraft(); dlStep1();
-    } catch (err) { showMsg($("#m"), err.message); busy(ea, false); }
-  };
+  evrakBind(d, t, keep);
   $("#dgo1").onclick = () => {
     keep();
     if (t.doc && !t.docOpt && !d.evrak) return showMsg($("#m"), `Önce ${t.doc.toLocaleLowerCase("tr-TR")} ekleyin.`);
@@ -2376,6 +2396,7 @@ function dlCompose(forPetition, sorunlar){
     `DAVA KONUSU (avukatın yazdığı): ${dlMask(fixTypos(d.konu.trim())) || "-"}\n${kb.konu ? `KONU KALIBI (örnek): ${kb.konu}\n` : ""}` +
     `DAVA DEĞERİ: ${d.deger.trim() ? "belirtildi" : "belirtilmedi"}\nDAVALI SAYISI: ${d.davali.trim() ? d.davali.trim().split(/\n+/).filter(Boolean).length : "belirtilmedi"}\nTANIK: ${d.taniklar.trim() ? "var (telefonda eklenecek)" : "yok"}\n\n` +
     (ozel ? `TÜRE ÖZEL BİLGİLER:\n${ozel}\n\n` : "") +
+    (d.evrakAnaliz ? `EKLENEN EVRAĞIN ANALİZİ (${d.evrakAd || "evrak"}):\n${dlMask(d.evrakAnaliz)}\n\n` : "") +
     `OLAY:\n${dlMask(fixTypos(d.olay.trim()))}\n\nTALEP:\n${dlMask(fixTypos(d.talep.trim())) || "-"}\n\nDELİLLER:\n${d.deliller.trim() || kb.delil || "-"}\n\n` +
     (arab ? `ARABULUCULUK: ${kb.arab ? kb.arab.d + " uyarınca dava şartı. " : ""}Son tutanak bilgisi: ${(d.ozel.arab || "").trim() || "[verilmedi]"}\n\n` : "") +
     `MEVZUAT (yalnızca bunlara dayan):\n${mev || "- seçilmedi; madde numarası yazma, 'ilgili mevzuat' de"}\n\n` +
