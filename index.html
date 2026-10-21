@@ -253,7 +253,7 @@ function pageHome(){
     <div class="grid">
       ${feature("🔎","Resmî kaynakta karar arama","Yargıtay, UYAP Emsal ve Danıştay karar bankalarında tek ekrandan arama. Künye her zaman resmî kaynaktan gelir.")}
       ${feature("📝","Karar özeti","Uzun kararların uyuşmazlık, gerekçe ve hüküm kısımlarını tek tıkla çıkarın.")}
-      ${feature("📑","Sözleşme risk analizi","Tek taraflı ve riskli maddeleri, eksik hükümleri ve müzakere önerilerini görün.")}
+      ${feature("📑","Sözleşme analizi","Navlun, çarter, gemi kira-satış, uluslararası satım ve tahkim şartları dahil; ilgili kanun maddeleri resmî metinden okunarak riskli maddeler ve öneriler.")}
       ${feature("✍️","Dilekçe Asistanı","Dava türünü ve olayı yazın; mevzuat ve kararlar taransın, konuyla ilgili olanlar ayrılsın, analiz edilsin ve avukat dilekçesi düzeninde taslak hazırlansın.")}
       ${feature("🌐","Hukuki çeviri","Hukuki metinleri terim tutarlılığını koruyarak çevirin.")}
       ${feature("⚖️","Karar karşılaştırma","Benzer kararlar arasındaki farkı ve sonucu değiştiren olguyu görün.")}
@@ -588,7 +588,8 @@ async function openDecision(source, item){
 }
 // Canlı yapay zekâ yanıtı: metin üretildikçe ekrana akar.
 const fmtAI = t => esc(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/^#{1,4}\s*(.+)$/gm, "<b>$1</b>");
-async function streamAI(body, el){
+async function streamAI(body, el, opt){
+  opt = opt || {}; const um = t => opt.unmask ? opt.unmask(t) : t;
   el.classList.remove("hidden");
   el.innerHTML = `<span class="muted">Yapay zekâ yazıyor…</span>`;
   const headers = { "Content-Type": "application/json" };
@@ -610,11 +611,13 @@ async function streamAI(body, el){
     for (;;) {
       const { value, done } = await rd.read(); if (done) break;
       text += dec.decode(value, { stream: true });
-      el.innerHTML = fmtAI(text) + `<span class="muted"> ▍</span>`;
+      el.innerHTML = fmtAI(um(text)) + `<span class="muted"> ▍</span>`;
     }
   } else { text = await res.text(); }
-  showAI(el, { answer: text.trim(), note, quota });
-  return text.trim();
+  opt.onRaw && opt.onRaw(text.trim());
+  if (opt.bare) { el.innerHTML = fmtAI(um(text.trim())); opt.onMeta && opt.onMeta({ note, quota }); }
+  else showAI(el, { answer: um(text.trim()), note, quota });
+  return um(text.trim());
 }
 function showAI(el, r){
   el.classList.remove("hidden");
@@ -631,12 +634,12 @@ async function copy(text, btn){
 
 const TASKS = {
   ozet: ["Karar özeti", "Özetlenecek karar metnini yapıştırın veya dosya / fotoğraf yükleyin…"],
-  sozlesme: ["Sözleşme risk analizi", "İncelenecek sözleşme metnini yapıştırın veya dosya / fotoğraf yükleyin…"],
+  sozlesme: ["Sözleşme analizi (TBK, deniz ticareti, navlun, tahkim)", "İncelenecek sözleşme metnini yapıştırın veya dosya / fotoğraf yükleyin…"],
   ceviri: ["Hukuki çeviri", "Çevrilecek metni yapıştırın veya dosya / fotoğraf yükleyin…"],
   karsilastir: ["Karar karşılaştırma", "Karşılaştırılacak kararların metinlerini art arda yapıştırın…"],
 };
 const PLAN_RANK = { basic: 0, optimus: 1, maximus: 2 };
-const TASK_MIN = { ozet: "basic", sozlesme: "optimus", sozlesme_revize: "optimus", ceviri: "optimus", karsilastir: "maximus", degisiklik: "optimus", dava_analiz: "optimus", dilekce_yaz: "optimus", evrak_analiz: "optimus" };
+const TASK_MIN = { ozet: "basic", sozlesme: "optimus", sozlesme_revize: "optimus", ceviri: "optimus", ceviri_duzelt: "optimus", karsilastir: "maximus", degisiklik: "optimus", dava_analiz: "optimus", dilekce_yaz: "optimus", evrak_analiz: "optimus" };
 const PLAN_NAME = { basic: "Basic", optimus: "Optimus", maximus: "Maximus" };
 function myPlan(){ return (state.user && state.user.plan) || "basic"; }
 function allowed(min){ return PLAN_RANK[myPlan()] >= PLAN_RANK[min]; }
@@ -730,6 +733,379 @@ async function ocrImages(files, onProgress){
   } finally { await worker.terminate(); }
 }
 
+// ---------- Sözleşme analizi: tür bilgi tabanı (deniz ticareti, navlun, tahkim, uluslararası satım) ----------
+// m: madde listesi [kanun no, madde, (beklenen kelime)] — metin Mevzuat Bilgi Sistemi'nden alınır, kelime tutmazsa kullanılmaz.
+// r: aralık [kanun no, ilk, son, [kelimeler], en fazla] — sözleşmede geçen konulara göre aralıktan ek madde seçilir.
+const SOZ_KB = [
+  { id: "navlun_sefer", ad: "Navlun sözleşmesi — yolculuk (sefer) çarteri",
+    kw: [/voyage charter|gencon|laytime|lay ?days|demurrage|despatch|sefer çarter|yolculuk çarter|staliya|sürastarya|loading port|discharging port|freight (?:rate|payable)|cancelling date|laycan/gi, 3],
+    formlar: "GENCON 1994 / GENCON 2022 (BIMCO), ASBATANKVOY, AMWELSH vb.",
+    m: [["6102", "932"], ["6102", "1138"], ["6102", "1139"], ["6102", "1141"], ["6102", "1152"], ["6102", "1153"], ["6102", "1154"], ["6102", "1155"], ["6102", "1166"], ["6102", "1169"], ["6102", "1170"], ["6102", "1171"], ["6102", "1178"], ["6102", "1182"], ["6102", "1186"], ["6102", "1187"]],
+    r: [["6102", 1138, 1246, null, 5]],
+    kontrol: ["Gemi tarifi (ad, bayrak, IMO, DWT, klas) ve gemiyi değiştirme (substitute) hakkı", "Yükleme / boşaltma limanı ve rıhtımı; güvenli liman-rıhtım (safe port / safe berth) taahhüdü", "Laycan (yükleme penceresi) ve iptal tarihi (cancelling date)", "Hazır olma bildirimi (NOR) ve staliyanın başlama anı (WIBON, WIPON, WIFPON, WCCON)", "Staliya süresi ve hesap yöntemi (SHINC / SHEX, hava koşulları, tatiller), sürastarya ücreti ve erken bitirme primi (despatch)", "Navlun tutarı, ödeme zamanı ve 'navlun yükleme ile kazanılmış sayılır, iade edilmez' kaydı", "Yükleme, istif, boşaltma masrafları (FIO, FIOS, FIOST, liner terms)", "Yük ve navlun üzerinde hapis / rehin hakkı (lien)", "Konişmento düzenlenmesi, Clause Paramount (Lahey-Visby) ve konişmentonun çarterpartiye atfı", "Taşıyanın sorumluluğu ve muafiyetleri; sorumluluk sınırı", "Müşterek avarya (York-Anvers Kuralları) ve Both-to-Blame Collision kaydı", "Savaş, buz, salgın, yaptırım (sanctions) kayıtları (VOYWAR, BIMCO Sanctions Clause)", "Pişmanlık navlunu / ölü navlun (dead freight) ve kısmi yükleme", "Komisyon ve broker", "Uygulanacak hukuk ve tahkim (LMAA, İSTAC, ITOTAM vb.)", "Zamanaşımı ve hasar bildirim süreleri"] },
+  { id: "zaman_carteri", ad: "Zaman çarteri (time charter)",
+    kw: [/time charter|nype|off-?hire|on-?hire|redelivery|trading limits|hire (?:payment|shall be paid)|zaman çarter|tahsis ücreti|bunkers? on (?:delivery|redelivery)|speed and consumption/gi, 3],
+    formlar: "NYPE 2015 / NYPE 93, BALTIME, SHELLTIME vb.",
+    m: [["6102", "932"], ["6102", "1131"], ["6102", "1132"], ["6102", "1133"], ["6102", "1134"], ["6102", "1135"], ["6102", "1136"], ["6102", "1137"], ["6102", "1246", "zamanaşımı"]],
+    r: [],
+    kontrol: ["Teslim (delivery) ve iade (redelivery) yeri, zamanı ve durumu", "Süre, opsiyon dönemleri ve son sefer (last voyage) toleransı", "Kira (hire) tutarı, ödeme dönemi ve şekli", "Ödemede gecikmede geri çekme (withdrawal) hakkı ve önceden bildirim (anti-technicality) kaydı", "Off-hire halleri ve süresi; hız ve yakıt tüketimi garantisi (performance claims)", "Ticaret bölgesi (trading limits), yasak yük ve limanlar", "Kaptanın kiracının ticari talimatlarına uyması (employment clause) ve sorumluluk dağılımı", "Yakıt (bunker) miktarı, kalitesi ve teslim/iade bedeli", "Alt çarter (sublet) hakkı", "Yük ve alt navlunlar üzerinde hapis / rehin hakkı (lien)", "Yük taleplerinin paylaşımı (Inter-Club Agreement)", "Gövde kirlenmesi (hull fouling), denetimler, sigorta ve P&I", "Savaş, korsanlık, yaptırım, salgın kayıtları", "Uygulanacak hukuk, tahkim ve zamanaşımı"] },
+  { id: "gemi_kira", ad: "Gemi kira sözleşmesi (çıplak / bareboat)",
+    kw: [/bareboat|barecon|demise charter|çıplak gemi|gemi kira|hire ?purchase|bareboat registration/gi, 2],
+    formlar: "BARECON 2017 / BARECON 2001",
+    m: [["6102", "932"], ["6102", "1119"], ["6102", "1120"], ["6102", "1121"], ["6102", "1123"], ["6102", "1127"], ["6102", "1130"]],
+    r: [["6102", 1119, 1130, null, 3]],
+    kontrol: ["Teslim yeri, zamanı, iptal tarihi ve teslimde gemi durumu (on-hire survey)", "Klas, bakım ve onarım yükümlülüğü (kiracıda mı)", "Gövde-makine (H&M) ve P&I sigortası: sigortalı, lehdar, tutar", "İpotek alacaklısının hakları ve sessiz kullanım (quiet enjoyment) kaydı", "Bayrak değişikliği / kira siciline kayıt", "Mürettebat kiracıda mı; donatanla birlikte sorumluluk", "Kira bedeli, ödeme ve temerrüt; geri alma hakkı", "Tam ziya (total loss) ve el koyma (requisition) halinde kira", "İade durumu ve iade muayenesi", "Satın alma opsiyonu (hire-purchase) varsa koşulları", "Uygulanacak hukuk ve tahkim"] },
+  { id: "konismento", ad: "Konişmento / parça eşya taşıması",
+    kw: [/bill of lading|konişmento|\bB\/L\b|shipper|consignee|notify party|said to contain|kırkambar|parça eşya|sea ?waybill|clean on board/gi, 3],
+    formlar: "CONGENBILL, liner konişmentoları, deniz yolu irsaliyesi (sea waybill)",
+    m: [["6102", "1138"], ["6102", "1141"], ["6102", "1178"], ["6102", "1182"], ["6102", "1186"], ["6102", "1187"], ["6102", "1191"]],
+    r: [["6102", 1192, 1246, ["konişmento"], 5]],
+    kontrol: ["Konişmento türü (nama, emre, hamiline) ve nüsha sayısı", "Yüklendi (shipped) / tesellüm (received) konişmentosu", "Yükün tanımı, ağırlık ve 'said to contain' kayıtları; temiz / kayıtlı konişmento", "Clause Paramount ve uygulanacak sorumluluk rejimi", "Himalaya kaydı (taşıyanın yardımcılarına sınırların uygulanması)", "Güverte yükü ve aktarma (transshipment) hakları", "Teslim: konişmento ibrazı; konişmentosuz teslim ve tazmin mektubu (LOI)", "Sorumluluk sınırı ve sınırın aşılabileceği haller", "Hasar bildirimi ve zamanaşımı", "Yetki / tahkim kaydının konişmento hamiline karşı ileri sürülebilmesi"] },
+  { id: "gemi_satis", ad: "Gemi alım-satım sözleşmesi (MOA)",
+    kw: [/saleform|memorandum of agreement|\bMOA\b|bill of sale|deletion certificate|inspection of the vessel|gemi satış|gemi alım|deposit .{0,30}escrow/gi, 2],
+    formlar: "Norwegian Saleform (NSF 2012 ve sonraki sürümleri), NIPPONSALE",
+    m: [["6102", "931"]],
+    r: [["6102", 931, 1060, ["mülkiyet", "ipotek", "tescil"], 4]],
+    kontrol: ["Satış bedeli, depozito, escrow ve ödeme zamanı", "Geminin muayenesi (fiziki muayene, klas kayıtları) ve dalgıç muayenesi", "Teslim yeri, teslim süresi, NOR ve iptal tarihi", "'Olduğu gibi, bulunduğu yerde' (as is where is) kaydı ve klas tavsiyeleri", "Her türlü takyidattan ari teslim (ipotek, haciz, deniz alacakları) ve tazmin", "Belge listesi (Bill of Sale, sicil terkin belgesi, klas belgeleri)", "Yakıt, yağ ve kumanya bedelleri", "Alıcı ve satıcı temerrüdünde depozitonun akıbeti ve tazminat", "Bayrak, isim değişikliği ve mürettebatın geri dönüşü", "Uygulanacak hukuk ve tahkim"] },
+  { id: "gemi_insa", ad: "Gemi inşa sözleşmesi",
+    kw: [/shipbuilding|newbuild|newbuildcon|keel laying|sea trials?|builder'?s|refund guarantee|gemi inşa|tersane|denize indirme/gi, 2],
+    formlar: "NEWBUILDCON (BIMCO), SAJ formu",
+    m: [["6098", "470"]],
+    r: [["6098", 470, 486, ["ayıp", "teslim", "gecik", "fesih"], 4]],
+    kontrol: ["Teknik şartname, planlar ve tedarikçi listesi (makers list)", "Bedel, taksitler ve iade teminatı (refund guarantee)", "Gecikme, hız, yakıt tüketimi ve DWT eksikliği için cezalar ve fesih eşiği", "Deneme seferi (sea trials) ve kabul", "Değişiklik talepleri (modifications) ve bedele etkisi", "Mülkiyet ve hasarın geçişi", "İzin verilen gecikmeler ve mücbir sebep", "Garanti süresi ve garanti mühendisi", "İnşaat süresince sigorta", "Teknik uyuşmazlıklarda uzman, uygulanacak hukuk ve tahkim"] },
+  { id: "kurtarma", ad: "Kurtarma / römorkaj sözleşmesi",
+    kw: [/salvage|lloyd'?s open form|\bLOF\b|scopic|towage|towcon|towhire|kurtarma|römorkaj|yardım ücreti|no cure.{0,5}no pay/gi, 2],
+    formlar: "LOF 2020, TOWCON / TOWHIRE (BIMCO)",
+    m: [["6102", "1298"], ["6102", "1352"]],
+    r: [["6102", 1298, 1319, ["kurtarma", "ücret"], 4]],
+    kontrol: ["'Başarı yoksa ücret yok' (no cure – no pay) esası", "SCOPIC kaydı ve çevre zararını önleme masrafları", "Ücretin belirlenme ölçütleri ve teminat", "Kurtarılan değer ve paylaşımı", "Römorkajda sorumluluk dağılımı (knock-for-knock) ve sigorta", "Çeken geminin yeterliliği ve yolculuk planı", "Uygulanacak hukuk ve tahkim (LOF'ta Londra tahkimi)"] },
+  { id: "ulus_satis", ad: "Uluslararası satım sözleşmesi (CISG / Incoterms)",
+    kw: [/incoterms|\bFOB\b|\bCIF\b|\bCFR\b|\bDAP\b|\bEXW\b|\bFCA\b|\bDDP\b|letter of credit|akreditif|\bCISG\b|viyana satım|ucp ?600|export|ihracat|ithalat/gi, 2],
+    formlar: "Incoterms 2020, ICC model satış sözleşmesi, UCP 600 (akreditif)",
+    m: [["5718", "24", "hukuk"]],
+    r: [],
+    kontrol: ["Incoterms kuralı ve teslim yeri (ör. 'FOB Mersin Incoterms 2020')", "Hasarın ve mülkiyetin geçişi", "Ödeme şekli (akreditif, vesaik mukabili, peşin) ve ödeme zamanı", "Malın tanımı, miktar toleransı ve kalite / numune", "Muayene, ayıp bildirimi süresi ve yöntemi", "Gecikme cezası ve sorumluluk sınırı", "Mücbir sebep ve aşırı ifa güçlüğü", "CISG'nin uygulanması veya hariç tutulması", "Lisans, ihracat kontrolü ve yaptırım uyumu", "Uygulanacak hukuk ve tahkim"] },
+  { id: "genel", ad: "Genel ticari sözleşme",
+    kw: [/(?:)/g, 99],
+    formlar: "",
+    m: [["6098", "21", "genel işlem"], ["6098", "25"], ["6098", "115", "sorumsuzluk"], ["6098", "138", "aşırı"], ["6098", "182", "ceza"], ["6102", "22", "ceza"]],
+    r: [],
+    kontrol: ["Tarafların tam unvanı, yetkili temsilci ve imza yetkisi", "Sözleşmenin konusu ve edimlerin açık tanımı", "Bedel, ödeme, fiyat ayarlaması ve faiz", "Teslim / ifa süresi ve gecikme sonuçları", "Ayıp, garanti ve sorumluluk sınırı", "Ceza koşulu", "Fesih halleri, bildirim süreleri ve fesih sonrası yükümlülükler", "Mücbir sebep ve aşırı ifa güçlüğü", "Gizlilik ve kişisel veriler (KVKK)", "Devir ve temlik yasağı", "Tebligat adresleri", "Uygulanacak hukuk, yetkili mahkeme veya tahkim"] },
+];
+// Deniz ticareti sözleşmelerinin tümü için doğrulanmış kural notları
+const DENIZ_NOT = [
+  "TTK'nın deniz ticareti hükümleri (Beşinci Kitap, m.931 vd.) ticaret gemilerine uygulanır.",
+  "Türkiye 1924 Brüksel (Lahey) Sözleşmesi'ne taraftır; TTK'nın navlun sözleşmelerinde taşıyanın sorumluluğuna ilişkin hükümleri Lahey-Visby Kurallarıyla uyumludur. Türkiye Hamburg ve Rotterdam Kurallarına taraf değildir.",
+  "Taşıyanın sorumluluk sınırı: koli veya birim başına 666,67 SDR ya da brüt ağırlığın kilogramı başına 2 SDR, hangisi yüksekse (TTK m.1186); taraflar bu sınırları sözleşmeyle yükseltebilir. Zarar taşıyanın kastı veya pervasız davranışından doğmuşsa sınırdan yararlanılamaz (TTK m.1187).",
+  "Müşterek avarya, aksi kararlaştırılmadıkça en son tarihli York-Anvers Kurallarına tabidir (TTK m.1273); güncel sürüm 2016 kurallarıdır.",
+  "Gemi ancak TTK m.1352'de sayılan deniz alacakları için ihtiyaten haczedilebilir. Türkiye 1999 Cenevre Gemilerin İhtiyati Haczi Sözleşmesi'ne taraftır (Türkiye için 25.03.2017'den beri yürürlükte).",
+  "Konusu bir miktar paranın ödenmesi olan ticari davalarda dava açmadan önce arabulucuya başvurmak dava şartıdır (TTK m.5/A); geçerli bir tahkim şartı varsa uyuşmazlık tahkimde çözülür.",
+];
+const SOZ_NOT = {
+  ulus_satis: [
+    "CISG (Viyana Satım Sözleşmesi) Türkiye'de 01.08.2011'den beri yürürlüktedir; işyerleri farklı akit devletlerde bulunan taraflar arasındaki mal satımlarına, taraflar uygulanmasını açıkça hariç tutmadıkça (CISG m.6) uygulanır.",
+    "CISG'de alıcı malı koşulların elverdiği en kısa sürede muayene etmeli (m.38) ve ayıbı makul sürede, en geç teslimden itibaren iki yıl içinde bildirmelidir (m.39).",
+    "Incoterms 2020 kuralları ancak sözleşmede atıf yapılırsa uygulanır; teslimi, masrafları ve hasarın geçişini düzenler, mülkiyetin geçişini ve ödemeyi düzenlemez.",
+    "Akreditifli ödemelerde ICC UCP 600 kuralları atıfla uygulanır.",
+    "Sözleşmeden doğan borç ilişkilerinde taraflar uygulanacak hukuku seçebilir (MÖHUK m.24).",
+  ],
+  genel: [
+    "Karşı tarafa bilgi verilip kabul edilmeyen genel işlem koşulları ile sözleşmenin niteliğine ve işin özelliğine yabancı olanlar yazılmamış sayılır (TBK m.21).",
+    "Ağır kusur (kast veya ağır ihmal) halinde sorumsuzluk anlaşması kesin hükümsüzdür (TBK m.115).",
+    "Tacir sıfatındaki borçlu, ceza koşulunun fahiş olduğu iddiasıyla indirilmesini isteyemez (TTK m.22).",
+  ],
+  kurtarma: ["LOF (Lloyd's Open Form) 'başarı yoksa ücret yok' (no cure – no pay) esasına dayanır; SCOPIC kaydı, çevre zararını önleme masrafları için ayrı bir ücret mekanizması öngörür."],
+};
+const TAHKIM_NOT = [
+  "Yabancılık unsuru taşıyan ve tahkim yeri Türkiye olan uyuşmazlıklarda (veya taraflar 4686 sayılı Kanunu seçmişse) 4686 sayılı Milletlerarası Tahkim Kanunu, diğer tahkimlerde HMK m.407 vd. uygulanır.",
+  "Tahkim anlaşması yazılı şekilde yapılmalıdır (4686 m.4; HMK m.412).",
+  "Tahkim itirazı ilk itiraz olarak ileri sürülmelidir (HMK m.413; 4686 m.5).",
+  "Taşınmazlar üzerindeki ayni haklar ile tarafların iradesine tabi olmayan işlerden doğan uyuşmazlıklar tahkime elverişli değildir (HMK m.408).",
+  "Avukatın müvekkil adına tahkim sözleşmesi yapabilmesi için vekâletnamede özel yetki bulunmalıdır (HMK m.74).",
+  "Türkiye 1958 New York Sözleşmesi'ne 1991'de karşılıklılık ve ticari nitelik çekinceleriyle taraf olmuştur; yabancı hakem kararlarının tanınması ve tenfizi bu Sözleşme ile MÖHUK hükümlerine göre yapılır.",
+  "Tahkim şartında kurum ve kurallar, tahkim yeri, hakem sayısı, dil ve uygulanacak hukuk açıkça yazılmalıdır; çelişkili veya seçimlik ifadeler (ör. 'tahkim veya mahkeme') şartı işlemez (patolojik) hale getirebilir.",
+];
+const TAHKIM_M = [["4686", "1"], ["4686", "2", "yabancılık"], ["4686", "4", "tahkim anlaşması"], ["4686", "5"], ["4686", "6"], ["4686", "7"], ["4686", "15", "iptal"], ["6100", "408", "tahkim"], ["6100", "412", "tahkim"], ["6100", "413", "tahkim"]];
+const DENIZ_IDS = ["navlun_sefer", "zaman_carteri", "gemi_kira", "konismento", "gemi_satis", "gemi_insa", "kurtarma"];
+// Sözleşmede geçen konu → ek madde (aralıktan kelimeyle veya doğrudan)
+const SOZ_KONU = [
+  [/demurrage|sürastarya/i, { kw: ["sürastarya"] }],
+  [/laytime|lay ?days|staliya|notice of readiness/i, { kw: ["yükleme süresi", "boşaltma süresi"] }],
+  [/\blien\b|hapis hakk|rehin hakk/i, { kw: ["hapis", "rehin"] }],
+  [/dangerous|hazardous|tehlikeli/i, { kw: ["tehlikeli"] }],
+  [/deck cargo|on deck|güverte/i, { kw: ["güverte"] }],
+  [/dead ?freight|pişmanlık/i, { kw: ["pişmanlık"] }],
+  [/deviat|rota|sapma/i, { kw: ["rota"] }],
+  [/time ?bar|zamanaşımı|time limit for (?:suit|claims)|within (?:one|1|twelve|12) (?:year|months)/i, { kw: ["zamanaşımı"] }],
+  [/bill of lading|konişmento/i, { kw: ["konişmento"] }],
+  [/general average|müşterek avarya|york.{0,3}ant/i, { add: [["6102", "1273"]] }],
+  [/salvage|kurtarma/i, { add: [["6102", "1298"]] }],
+  [/arrest|ihtiyati haciz/i, { add: [["6102", "1352"]] }],
+  [/limitation of liability|limit of liability|\bSDR\b|special drawing|sorumluluk sınır/i, { add: [["6102", "1186"], ["6102", "1187"]] }],
+];
+const SOZ_TAHKIM_RE = /arbitrat|tahkim|hakem|\bICC\b|\bLCIA\b|\bLMAA\b|\bISTAC\b|\bİSTAC\b|ITOTAM|governing law|uygulanacak hukuk|jurisdiction|yetkili mahkeme/i;
+const sozOf = id => SOZ_KB.find(k => k.id === id) || SOZ_KB[SOZ_KB.length - 1];
+function sozDetect(text){
+  let best = "genel", sc = 0;
+  for (const k of SOZ_KB) {
+    if (k.id === "genel") continue;
+    const n = new Set((String(text).match(k.kw[0]) || []).map(x => x.toLowerCase())).size;   // farklı terim sayısı
+    if (n >= k.kw[1] && n > sc) { best = k.id; sc = n; }
+  }
+  return best;
+}
+const KANUN_AD_S = { "6102": "TTK", "6098": "TBK", "6100": "HMK", "4686": "MTK (4686)", "5718": "MÖHUK" };
+async function sozLoadMev(kb, text, tahkim, onInfo){
+  const want = [...kb.m], ranges = kb.r.map(r => ({ no: r[0], from: r[1], to: r[2], kw: r[3] ? [...r[3]] : [], max: r[4] }));
+  for (const [re, o] of SOZ_KONU) if (re.test(text)) {
+    (o.add || []).forEach(x => want.push(x));
+    if (o.kw) ranges.filter(r => r.no === "6102").forEach(r => r.kw.push(...o.kw));
+  }
+  if (DENIZ_IDS.includes(kb.id) || /charter|bill of lading|konişmento|navlun|freight/i.test(text)) want.push(["6102", "1273"]);
+  if (tahkim) want.push(...TAHKIM_M);
+  const nos = [...new Set([...want.map(x => x[0]), ...ranges.map(r => r.no)])];
+  const laws = {}, errs = [];
+  let done = 0;
+  onInfo && onInfo(`Mevzuat alınıyor: ${nos.map(n => KANUN_AD_S[n] || n).join(", ")}…`);
+  await Promise.allSettled(nos.map(async no => {
+    try { laws[no] = await fetchLaw({ no, tur: "1", tertip: 5 }); } catch (e) { errs.push(`${KANUN_AD_S[no] || no}: ${e.message}`); }
+    done++; onInfo && onInfo(`Mevzuat alınıyor… ${done}/${nos.length}`);
+  }));
+  const nrm = t => trLower(t || "").replace(/\s+/g, " ");
+  const out = [], seen = new Set();
+  const take = (no, a, why) => {
+    const key = no + ":" + a.key; if (seen.has(key)) return false;
+    const raw = a.text, clean = mevClean(raw);
+    if (/^\s*(?:ek\s+|geçici\s+)?madde\s+[\w\/]+\s*[-–—]\s*\(\s*(mülga|iptal)/i.test(raw) || clean.length < 40) return false;
+    seen.add(key);
+    out.push({ no, m: a.num, label: `${KANUN_AD_S[no] || no} m.${a.num}`, heading: a.heading || "", text: clean.slice(0, 950), url: laws[no].url || "", why });
+    return true;
+  };
+  for (const [no, m, kw] of want) {
+    const law = laws[no]; if (!law) continue;
+    const a = law.arts.find(x => !x.kind && x.key === normMadde(m));
+    if (!a) continue;
+    if (kw && !nrm(a.text + " " + a.heading).includes(nrm(kw))) continue;     // beklenen konu tutmuyorsa kullanılmaz
+    take(no, a, "temel");
+  }
+  for (const r of ranges) {
+    const law = laws[r.no]; if (!law || !r.kw.length) continue;
+    let n = 0;
+    for (const a of law.arts) {
+      const num = parseInt(a.num, 10);
+      if (a.kind || !(num >= r.from && num <= r.to)) continue;
+      const t = nrm(a.heading + " " + a.text);
+      if (r.kw.some(k => t.includes(nrm(k))) && take(r.no, a, "konu")) if (++n >= r.max) break;
+    }
+  }
+  const order = x => (x.no === "6102" ? 0 : x.no === "6098" ? 1 : x.no === "4686" ? 2 : 3) * 1e5 + (parseInt(x.m, 10) || 0);
+  out.sort((a, b) => order(a) - order(b));
+  return { items: out, errs };
+}
+function sozCtx(kb, sifat, tahkim, mev){
+  const notes = [...(DENIZ_IDS.includes(kb.id) ? DENIZ_NOT : []), ...(SOZ_NOT[kb.id] || []), ...(tahkim ? TAHKIM_NOT : [])];
+  let budget = 9500;
+  const mevTxt = mev.items.map(x => {
+    const s = `- ${x.label}${x.heading ? ` (${x.heading})` : ""}:\n${x.text}`;
+    if (budget - s.length < 0) return ""; budget -= s.length; return s;
+  }).filter(Boolean).join("\n");
+  return `SÖZLEŞME TÜRÜ: ${kb.ad}\n` + (kb.formlar ? `BİLİNEN STANDART FORMLAR: ${kb.formlar}\n` : "") +
+    `MÜVEKKİLİN SIFATI: ${sifat || "belirtilmedi (tarafsız değerlendir)"}\n` +
+    `TAHKİM / UYGULANACAK HUKUK İNCELEMESİ: ${tahkim ? "istendi" : "istenmedi"}\n\n` +
+    `KONTROL LİSTESİ:\n${kb.kontrol.map(x => "- " + x).join("\n")}\n\n` +
+    (notes.length ? `KURAL NOTLARI (doğrulanmış):\n${notes.map(x => "- " + x).join("\n")}\n\n` : "") +
+    `MEVZUAT (Mevzuat Bilgi Sistemi'nden alınan resmî metin):\n${mevTxt || "- alınamadı; yalnızca KURAL NOTLARINA dayan"}`;
+}
+
+// ---------- Kişisel veri gizleme (sözleşme ve çeviri) ----------
+// Kişi adları, T.C. kimlik no, IBAN, e-posta ve telefon [N1] gibi kodlarla değiştirilir; yanıt telefonda geri çevrilir.
+const SOZ_ROL = "KİRAYA VEREN|KİRACI|SATICI|ALICI|İŞVEREN|İŞÇİ|YÜKLENİCİ|İŞ SAHİBİ|TAŞIYAN|TAŞITAN|GÖNDEREN|KEFİL|MÜTESELSİL KEFİL|VEKİL EDEN|MÜVEKKİL|DONATAN|ARMATÖR|BORÇLU|ALACAKLI|TARAF|1\\. TARAF|2\\. TARAF|Adı Soyadı|Ad Soyad|Adı ve Soyadı|İsim|Name|Full Name|Owners?|Charterers?|Sellers?|Buyers?|Shippers?|Consignees?|Lessors?|Lessees?|Employer|Contractor|Guarantor|Landlord|Tenant|Signed by|Signature";
+const KURUM_RE = /a\.?ş\.?|ltd|şti|şirket|limited|inc\.?|corp|company|co\.|s\.a\.|gmbh|llc|plc|shipping|maritime|denizcilik|lines|holding|bankası|bank|müdürlüğü|bakanlığı|belediye|başkanlığı|kurumu|vakfı|derneği|üniversitesi/i;
+function sozMask(src){
+  let s = String(src || ""); const map = []; const tok = v => { let i = map.findIndex(x => x === v); if (i < 0) { map.push(v); i = map.length - 1; } return `[N${i + 1}]`; };
+  const esc2 = x => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const names = [];
+  const re = new RegExp("(?:^|\\n)[ \\t>*•\\-]*(?:" + SOZ_ROL + ")(?:\\s*\\([^)\\n]{0,30}\\))?\\s*[:：]\\s*([^\\n]{3,160})", "gi");
+  for (const m of s.matchAll(re)) {
+    const nm = m[1].split(/\s*(?:,|;|\s-\s|\/|\bT\.?\s?C\.?|\bTCKN|\bID\b|\(|\badres|\baddress)/i)[0].replace(/^(Sayın|Bay|Bayan|Mr\.?|Mrs\.?|Ms\.?|Av\.?|Kpt\.?|Capt\.?)\s+/i, "").trim();
+    const w = nm.split(/\s+/);
+    if (w.length >= 2 && w.length <= 4 && nm.length <= 50 && !KURUM_RE.test(nm) && w.every(x => /^[A-ZÇĞİÖŞÜ][\p{L}.'’-]*$/u.test(x))) names.push(nm);
+  }
+  names.sort((a, b) => b.length - a.length).forEach(nm => { s = s.replace(new RegExp("(^|[^\\p{L}])" + esc2(nm) + "(?![\\p{L}])", "gu"), (x, p) => p + tok(nm)); });
+  s = s.replace(/\bTR\d{2}(?:\s?\d{4}){5}\s?\d{2}\b/g, v => tok(v))
+       .replace(/\b[1-9]\d{10}\b/g, v => tok(v))
+       .replace(/[\w.+-]+@[\w-]+\.[\w.]+/g, v => tok(v))
+       .replace(/(?:\+90[\s-]?|\b0)5\d{2}[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}\b/g, v => tok(v));
+  return { text: s, map };
+}
+const sozUnmask = (t, map) => !map || !map.length ? String(t || "") : String(t || "").replace(/\[\s*N\s*(\d{1,3})\s*\]/g, (x, n) => map[+n - 1] != null ? map[+n - 1] : x);
+const sozRemask = (t, map) => { let s = String(t || ""); (map || []).map((v, i) => [v, i]).sort((a, b) => b[0].length - a[0].length).forEach(([v, i]) => { s = s.split(v).join(`[N${i + 1}]`); }); return s; };
+
+// ---------- Hukuki çeviri: terim sözlüğü ve parçalama ----------
+// [İngilizce, Türkçe] — metinde geçen terimler yapay zekâya sözlük olarak gönderilir (her iki yönde).
+const SOZLUK = `charter party|çarter partisi
+voyage charter|yolculuk çarteri
+time charter|zaman çarteri
+bareboat charter|çıplak gemi kira sözleşmesi
+demise charter|gemi kira sözleşmesi (mürettebatlı)
+shipowner|gemi maliki
+owners|donatan / gemi maliki
+charterers|kiracı (çarterer)
+carrier|taşıyan
+shipper|yükleten
+consignee|gönderilen
+notify party|ihbar edilecek taraf
+bill of lading|konişmento
+sea waybill|deniz yolu irsaliyesi
+freight|navlun
+dead freight|pişmanlık navlunu
+laytime|staliya
+laydays|staliya günleri
+demurrage|sürastarya
+despatch money|erken bitirme primi (despatch)
+notice of readiness|hazır olma bildirimi
+safe port|emin liman
+safe berth|emin rıhtım
+seaworthiness|denize elverişlilik
+seaworthy|denize elverişli
+cargoworthy|yüke elverişli
+master|kaptan
+crew|gemi adamları
+hire|kira (tahsis ücreti)
+off-hire|kira dışı süre (off-hire)
+withdrawal|geminin geri çekilmesi
+redelivery|iade
+delivery|teslim
+bunkers|yakıt (bunker)
+lien|hapis hakkı
+general average|müşterek avarya
+particular average|hususi avarya
+salvage|kurtarma
+towage|römorkaj
+collision|çatma
+both-to-blame collision clause|her iki tarafın kusurlu olduğu çatma kaydı
+cargo|yük
+stowage|istif
+transshipment|aktarma
+deck cargo|güverte yükü
+perils of the sea|deniz tehlikeleri
+act of god|doğal afet
+force majeure|mücbir sebep
+hull and machinery insurance|tekne ve makine sigortası
+protection and indemnity|P&I (koruma ve tazmin) sigortası
+marine insurance|deniz sigortası
+limitation of liability|sorumluluğun sınırlandırılması
+ship arrest|gemi ihtiyati haczi
+maritime lien|gemi alacaklısı hakkı
+ship mortgage|gemi ipoteği
+memorandum of agreement|gemi satış sözleşmesi (MOA)
+bill of sale|satış senedi (bill of sale)
+classification society|klas kuruluşu
+flag state|bayrak devleti
+arbitration|tahkim
+arbitration clause|tahkim şartı
+arbitration agreement|tahkim anlaşması
+arbitrator|hakem
+arbitral tribunal|hakem heyeti
+sole arbitrator|tek hakem
+arbitral award|hakem kararı
+seat of arbitration|tahkim yeri
+place of arbitration|tahkim yeri
+governing law|uygulanacak hukuk
+applicable law|uygulanacak hukuk
+jurisdiction|yargı yetkisi
+exclusive jurisdiction|münhasır yetki
+recognition and enforcement|tanıma ve tenfiz
+enforcement|tenfiz / icra
+interim measures|geçici hukuki koruma tedbirleri
+injunction|ihtiyati tedbir
+claimant|davacı (talep eden)
+respondent|davalı (karşı taraf)
+plaintiff|davacı
+defendant|davalı
+counterclaim|karşı dava
+statement of claim|dava dilekçesi
+statement of defence|cevap dilekçesi
+witness statement|tanık beyanı
+expert witness|bilirkişi
+hearing|duruşma
+court of appeal|istinaf mahkemesi
+supreme court|yüksek mahkeme
+judgment|karar / hüküm
+ruling|karar
+damages|tazminat
+liquidated damages|götürü tazminat
+penalty clause|ceza koşulu
+indemnify|tazmin etmek
+indemnity|tazminat / tazmin yükümlülüğü
+hold harmless|zarardan ari tutmak
+warranty|garanti
+representations and warranties|beyan ve taahhütler
+breach of contract|sözleşmenin ihlali
+material breach|esaslı ihlal
+termination|fesih
+rescission|sözleşmeden dönme
+notice|bildirim
+default|temerrüt
+interest|faiz
+consideration|karşı edim (bedel)
+liability|sorumluluk
+negligence|ihmal
+gross negligence|ağır ihmal
+wilful misconduct|kasıtlı kusur
+assignment|devir / temlik
+confidentiality|gizlilik
+severability|bölünebilirlik
+entire agreement|sözleşmenin bütünlüğü
+waiver|feragat
+amendment|değişiklik
+power of attorney|vekâletname
+letter of credit|akreditif
+letter of indemnity|tazmin mektubu
+bank guarantee|banka teminat mektubu
+performance bond|kesin teminat
+escrow|yediemin (escrow)
+deposit|depozito / kapora
+statute of limitations|zamanaşımı
+time bar|hak düşürücü süre / zamanaşımı
+in witness whereof|işbu sözleşme … tarihinde imzalanmıştır
+hereinafter|bundan sonra
+whereas|… olduğundan / dikkate alınarak
+the parties|taraflar
+shall|-ecektir / yükümlüdür
+null and void|hükümsüz
+without prejudice|haklar saklı kalmak kaydıyla
+on behalf of|adına
+authorized signatory|yetkili imza sahibi`.split("\n").map(l => l.split("|"));
+const SOZLUK_TEK = new Set(["sürastarya", "staliya", "konişmento", "navlun", "tahkim", "hakem", "kurtarma", "römorkaj", "çatma", "akreditif", "vekâletname", "zamanaşımı", "tenfiz", "fesih", "temerrüt", "kaptan", "istif", "aktarma", "ihmal", "feragat", "hükümsüz", "yükleten", "gönderilen", "taşıyan"]);
+function glossFor(src, lang){
+  const t = String(src || ""), low = t.toLowerCase(), tl = trLower(t);
+  const toTr = lang === "Türkçe";
+  const rows = [];
+  for (const [en, tr] of SOZLUK) {
+    if (toTr) { if (new RegExp("\\b" + en.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/ /g, "[\\s-]+") + "\\b", "i").test(low)) rows.push(`${en} = ${tr}`); }
+    else if (lang === "İngilizce") {   // Türkçeden: yalnızca çok kelimeli veya tek anlamlı terimler (ör. "kiracı" her sözleşmede charterer değildir)
+      const k = trLower(tr.split(/[(/]/)[0].trim());
+      if ((/\s/.test(k) || SOZLUK_TEK.has(k)) && tl.includes(k) && !rows.some(r => r.startsWith(k + " ="))) rows.push(`${k} = ${en}`);
+    }
+    if (rows.length >= 45) break;
+  }
+  return rows.length ? rows.join("\n") : "";
+}
+// Uzun metin paragraf sınırlarından parçalara bölünür (her parça ayrı istek; yanıt kesilmesin diye)
+function splitChunks(text, size){
+  const paras = String(text || "").split(/(\n\s*\n|\n)/); const out = []; let cur = "";
+  const push = () => { if (cur.trim()) out.push(cur.trim()); cur = ""; };
+  for (const p of paras) {
+    if ((cur + p).length > size && cur.trim()) push();
+    if (p.length > size) {
+      for (const sn of p.split(/(?<=[.;:!?])\s+/)) { if ((cur + " " + sn).length > size && cur.trim()) push(); cur += (cur ? " " : "") + sn; }
+    } else cur += p;
+  }
+  push();
+  return out.length ? out : [String(text || "")];
+}
+
 function tabAnalyze(){
   const b = $("#tabbody");
   const canFiles = allowed("optimus");
@@ -738,7 +1114,17 @@ function tabAnalyze(){
     <label for="task">İşlem</label>
     <select id="task">${Object.entries(TASKS).map(([k,v]) => { const ok = allowed(TASK_MIN[k]); return `<option value="${k}" ${ok ? "" : "disabled"}>${v[0]}${ok ? "" : " — " + PLAN_NAME[TASK_MIN[k]] + " paketinde"}</option>`; }).join("")}</select>
     <div id="langBox" class="hidden"><label for="lang">Hedef dil</label>
-      <select id="lang"><option>İngilizce</option><option>Almanca</option><option>Fransızca</option><option>Arapça</option><option>Rusça</option><option>Türkçe</option></select></div>
+      <select id="lang"><option>Türkçe</option><option>İngilizce</option><option>Almanca</option><option>Fransızca</option><option>Arapça</option><option>Rusça</option><option>İtalyanca</option><option>İspanyolca</option><option>Yunanca</option></select>
+      <p class="muted small" style="margin:6px 0 0">Hukuki terimler sözlükle tutarlı çevrilir; uzun metinler parçalara bölünür, hiçbir bölüm atlanmaz (her parça bir işlem hakkı). Çeviriden sonra <b>redaksiyon</b> ile Türkçesini (veya hedef dili) ayrıca düzelttirebilirsiniz.</p></div>
+    <div id="szBox" class="hidden">
+      <label for="sztur">Sözleşme türü</label>
+      <select id="sztur"><option value="auto">Otomatik algıla</option>${SOZ_KB.map(k => `<option value="${k.id}">${esc(k.ad)}</option>`).join("")}</select>
+      <label for="szsif">Müvekkilinizin sözleşmedeki sıfatı <span class="muted small">(isteğe bağlı — öneriler onun lehine yazılır)</span></label>
+      <input id="szsif" type="text" maxlength="80" placeholder="ör. kiracı (charterer), donatan, alıcı, taşıtan">
+      <label style="display:flex;gap:8px;align-items:flex-start;margin-top:12px;font-weight:400"><input type="checkbox" id="sztah" style="width:auto;margin-top:3px"> <span class="small">Tahkim ve uygulanacak hukuk incelemesi (4686 s. Milletlerarası Tahkim K., HMK, MÖHUK, New York Sözleşmesi) <span class="muted">— sözleşmede tahkim / yetki maddesi varsa kendiliğinden açılır</span></span></label>
+      <p class="muted small" style="margin:6px 0 0">İlgili kanun maddeleri (TTK deniz ticareti, TBK, 4686 vb.) Mevzuat Bilgi Sistemi'nden <b>resmî metniyle</b> alınır; analiz yalnızca bu maddelere ve doğrulanmış kural notlarına atıf yapar.</p>
+      <div id="szInfo" class="small" style="margin-top:6px"></div>
+    </div>
     <label>Belge ekle</label>
     <div class="row" style="margin-top:0">
       <label class="btn btn-ghost ${canFiles ? "" : "locked"}" style="margin:0">📄 Dosya yükle<input id="file" type="file" accept=".udf,.eyp,.pdf,.docx,.txt,.zip" class="hidden" ${canFiles ? "" : "disabled"}></label>
@@ -749,7 +1135,7 @@ function tabAnalyze(){
     <div id="fileInfo" class="hidden notice"></div>
     <label for="txt">Metin</label>
     <textarea id="txt"></textarea>
-    <div class="notice">Gizlilik için müvekkil adları, T.C. kimlik numarası, sağlık ve ceza kaydı gibi bilgileri göndermeden önce maskeleyin (ör. "A.B."). Gönderilen metinler saklanmaz.</div>
+    <div class="notice">Sözleşme ve çeviride taraf bölümlerindeki kişi adları, T.C. kimlik no, IBAN, e-posta ve telefon numaraları telefonunuzda <b>[N1]</b> gibi kodlarla gizlenip öyle gönderilir; sonuçta yine gerçek hâliyle görünür. Metin içindeki diğer hassas bilgileri (sağlık, ceza kaydı vb.) kendiniz maskeleyin. Gönderilen metinler saklanmaz.</div>
     <div id="m" class="hidden"></div>
     <button class="btn btn-primary btn-block" id="go">Çalıştır</button>
     <div id="out" class="hidden card out" style="margin-top:14px"></div>
@@ -758,12 +1144,24 @@ function tabAnalyze(){
   <div class="card" style="margin-top:12px"><b>✍️ Dilekçe mi hazırlayacaksınız?</b> <span class="muted small">Dilekçe artık kendi sekmesinde: olayınıza uygun kararları bulur ve yalnızca gerçek kararlara atıf yapar.</span>
     <div class="row"><button class="btn btn-ghost" id="toDl">Dilekçe Asistanı'na git →</button></div></div>`;
   $("#toDl").onclick = () => { state.tab = "dilekce"; renderTab(); window.scrollTo(0, 0); };
-  const setPh = () => { const t = $("#task").value; $("#txt").placeholder = TASKS[t][1]; $("#langBox").classList.toggle("hidden", t !== "ceviri"); };
+  const setPh = () => { const t = $("#task").value; $("#txt").placeholder = TASKS[t][1]; $("#langBox").classList.toggle("hidden", t !== "ceviri"); $("#szBox").classList.toggle("hidden", t !== "sozlesme"); szAuto(); };
+  // Sözleşme metni değiştikçe tür ve tahkim maddesi kendiliğinden algılanır
+  let tahTouched = false;
+  const szAuto = () => {
+    if ($("#task").value !== "sozlesme") return;
+    const t = $("#txt").value, info = $("#szInfo");
+    if (!tahTouched) $("#sztah").checked = SOZ_TAHKIM_RE.test(t);
+    if (t.trim().length < 200) { info.innerHTML = ""; return; }
+    const id = $("#sztur").value === "auto" ? sozDetect(t) : $("#sztur").value;
+    info.innerHTML = `${$("#sztur").value === "auto" ? "Algılanan tür" : "Seçilen tür"}: <b>${esc(sozOf(id).ad)}</b>`;
+  };
+  $("#sztah").onchange = () => { tahTouched = true; };
+  $("#sztur").onchange = szAuto; $("#txt").addEventListener("input", szAuto);
   $("#task").onchange = setPh; setPh();
   const info = (t, ok) => { const el = $("#fileInfo"); el.textContent = t; el.classList.remove("hidden"); el.style.borderLeftColor = ok === false ? "var(--err)" : ""; };
   const addText = (t, label) => {
     const box = $("#txt"); const cur = box.value.trim();
-    box.value = (cur ? cur + "\n\n" : "") + t.trim();
+    box.value = (cur ? cur + "\n\n" : "") + t.trim(); szAuto();
     info(`${label}: ${t.trim().length.toLocaleString("tr-TR")} karakter metne eklendi. Göndermeden önce okuyup gerekirse düzeltin.`);
   };
   $("#file").onchange = async e => {
@@ -788,15 +1186,68 @@ function tabAnalyze(){
     const task = $("#task").value, src = $("#txt").value;
     $("#rev").classList.add("hidden"); $("#rev").innerHTML = "";
     try {
-      const answer = await streamAI({ task, text: src, extra: $("#lang").value }, $("#out"));
-      if (task === "sozlesme" && answer) offerRevision(src, answer);
+      if (task === "sozlesme") await runSozlesme(src);
+      else if (task === "ceviri") await runCeviri(src, $("#lang").value);
+      else await streamAI({ task, text: src, extra: $("#lang").value }, $("#out"));
     }
     catch (err) { showMsg($("#m"), err.message); }
     finally { busy(btn, false); }
   };
 }
 // Sözleşme risk analizinden sonra: önerileri uygulayan yeni versiyon + değişikliklerin kırmızı/yeşil gösterimi
-function offerRevision(original, analysis){
+async function runSozlesme(src){
+  if (src.trim().length < 30) throw new Error("Lütfen analiz edilecek metni girin (en az 30 karakter).");
+  const id = $("#sztur").value === "auto" ? sozDetect(src) : $("#sztur").value, kb = sozOf(id);
+  const tahkim = $("#sztah").checked, sifat = $("#szsif").value.trim(), info = $("#szInfo");
+  const mk = sozMask(src);
+  const mev = await sozLoadMev(kb, src, tahkim, t => info.innerHTML = `Tür: <b>${esc(kb.ad)}</b> · ${esc(t)}`);
+  info.innerHTML = `Tür: <b>${esc(kb.ad)}</b> · ${mev.items.length} madde resmî metinden alındı${mk.map.length ? ` · ${mk.map.length} kişisel bilgi gizlendi` : ""}` +
+    (mev.errs.length ? `<br><span style="color:var(--err)">Alınamayan: ${esc(mev.errs.join("; "))} — analiz kural notlarıyla sürer.</span>` : "");
+  const answer = await streamAI({ task: "sozlesme", text: mk.text, ctx: sozCtx(kb, sozRemask(sifat, mk.map), tahkim, mev) }, $("#out"), { unmask: t => sozUnmask(t, mk.map) });
+  if (mev.items.length) $("#out").insertAdjacentHTML("beforeend", `<details style="margin-top:10px"><summary class="small"><b>📚 Analizde kullanılan mevzuat (${mev.items.length} madde)</b></summary>
+    ${mev.items.map(x => `<div class="small" style="margin-top:8px"><b>${esc(x.label)}</b>${x.heading ? ` — ${esc(x.heading)}` : ""}<div class="doc" style="margin-top:4px;max-height:160px;overflow:auto">${esc(x.text)}</div></div>`).join("")}
+    ${mev.items[0].url ? `<p class="small"><a href="${esc(mev.items[0].url)}" target="_blank" rel="noopener">Mevzuat Bilgi Sistemi'nde aç ↗</a></p>` : ""}</details>`);
+  if (answer) offerRevision(src, answer, mk.map);
+}
+// Çeviri: kişisel bilgiler gizlenir, terim sözlüğü eklenir, uzun metin parçalanır; ardından isteğe bağlı redaksiyon
+async function runCeviri(src, lang){
+  if (src.trim().length < 30) throw new Error("Lütfen çevrilecek metni girin (en az 30 karakter).");
+  const mk = sozMask(src), gloss = glossFor(src, lang);
+  const parts = splitChunks(mk.text, 4500), raw = [], out = $("#out");
+  out.classList.remove("hidden");
+  out.innerHTML = (parts.length > 1 ? `<p class="muted small">Metin uzun: ${parts.length} parça hâlinde çevriliyor (${parts.length} işlem hakkı).</p>` : "") +
+    parts.map((_, i) => `<div id="cvp${i}" class="hidden" style="margin-bottom:10px"></div>`).join("") + `<div id="cvf"></div>`;
+  let meta = null;
+  for (let i = 0; i < parts.length; i++) {
+    await streamAI({ task: "ceviri", text: parts[i], extra: lang, ctx: gloss }, $("#cvp" + i), { bare: true, unmask: t => sozUnmask(t, mk.map), onRaw: t => raw[i] = t, onMeta: m => meta = m });
+  }
+  const full = () => raw.map(t => sozUnmask(t, mk.map)).join("\n\n");
+  const foot = (extra) => {
+    $("#cvf").innerHTML = (meta && meta.note ? `<p class="muted small">${esc(meta.note)}</p>` : "") +
+      (meta ? `<p class="muted small">Bugünkü yapay zekâ kullanımı: ${meta.quota.used}/${meta.quota.limit}</p>` : "") + (extra || "") +
+      `<div class="row"><button class="btn btn-ghost" id="cvCopy">Çeviriyi kopyala</button><button class="btn btn-ghost" id="cvDocx">Word (.docx) indir</button></div>
+       <button class="btn btn-gold btn-block" id="cvRed">✍️ Redaksiyon: ${lang === "Türkçe" ? "Türkçesini" : "çeviriyi"} düzelt ve eksikleri tamamla</button>
+       <p class="muted small" style="margin:4px 0 0">Kaynak metinle cümle cümle karşılaştırır, dil bilgisini ve terimleri düzeltir (${parts.length} işlem hakkı).</p><div id="cvM" class="hidden"></div>`;
+    $("#cvCopy").onclick = e => copy(full(), e.target);
+    $("#cvDocx").onclick = () => downloadDocx(full(), "ceviri.docx").catch(err => showMsg($("#cvM"), err.message));
+    $("#cvRed").onclick = redak;
+  };
+  const redak = async () => {
+    const btn = $("#cvRed"); busy(btn, true, "Redaksiyon yapılıyor…"); const notes = [];
+    try {
+      for (let i = 0; i < parts.length; i++) {
+        const el = $("#cvp" + i);
+        await streamAI({ task: "ceviri_duzelt", text: `KAYNAK METİN:\n${parts[i]}\n\nTASLAK ÇEVİRİ:\n${raw[i]}`, extra: lang, ctx: gloss }, el,
+          { bare: true, unmask: t => sozUnmask(t, mk.map), onMeta: m => meta = m,
+            onRaw: t => { const sp = t.split(/-{2,}\s*DÜZELTİLEN NOKTALAR\s*-{2,}/i); raw[i] = sp[0].trim(); if (sp[1]) notes.push(sp[1].trim()); } });
+        el.innerHTML = fmtAI(sozUnmask(raw[i], mk.map));
+      }
+      foot(notes.length ? `<details class="small" style="margin:6px 0"><summary><b>Redaksiyonda düzeltilen noktalar</b></summary><div class="doc">${fmtAI(sozUnmask(notes.join("\n"), mk.map))}</div></details>` : "");
+    } catch (err) { busy(btn, false); showMsg($("#cvM"), err.message); }
+  };
+  foot("");
+}
+function offerRevision(original, analysis, map){
   const box = $("#rev");
   const can = allowed(TASK_MIN.sozlesme_revize);
   box.classList.remove("hidden");
@@ -806,7 +1257,7 @@ function offerRevision(original, analysis){
   $("#revGo").onclick = async () => {
     const btn = $("#revGo"); busy(btn, true, "Yeni versiyon yazılıyor…"); $("#revM").classList.add("hidden"); $("#revDiff").innerHTML = "";
     try {
-      const out = await streamAI({ task: "sozlesme_revize", text: `SÖZLEŞME:\n${original}\n\nRİSK ANALİZİ:\n${analysis}` }, $("#revOut"));
+      const out = await streamAI({ task: "sozlesme_revize", text: `SÖZLEŞME:\n${sozRemask(original, map)}\n\nRİSK ANALİZİ:\n${sozRemask(analysis.split(/📚/)[0], map)}` }, $("#revOut"), { unmask: t => sozUnmask(t, map) });
       const parts = out.split(/-{2,}\s*YAPILAN DEĞİŞİKLİKLER\s*-{2,}/i);
       const revised = parts[0].trim();
       const g = wordDiff(original, revised);
@@ -2737,15 +3188,147 @@ function faizHesapla(ana, bas, bit, tablo){
 function tabAraclar(){
   const b = $("#tabbody");
   state.arac = state.arac || "sure";
-  const T = [["sure", "📅 Süre"], ["kidem", "💼 Kıdem / İhbar"], ["faiz", "📈 Faiz"], ["nafaka", "👪 Nafaka artışı"]];
+  const T = [["sure", "📅 Süre"], ["infaz", "⚖️ İnfaz (yatar)"], ["kidem", "💼 Kıdem / İhbar"], ["faiz", "📈 Faiz"], ["nafaka", "👪 Nafaka artışı"]];
   b.innerHTML = `<div class="card"><h2>Hesaplama araçları</h2>
     <div class="chips" id="arc">${T.map(([k, v]) => `<button data-a="${k}" class="${k === state.arac ? "on" : ""}">${v}</button>`).join("")}</div>
     <div id="arbody"></div>
     <p class="muted small" style="margin-top:16px">Hesaplar telefonunuzda yapılır, girdiğiniz bilgiler sunucuya gönderilmez. Resmî oran ve tutarlar ${DATA_DATE} tarihinde kontrol edilmiştir. Sonuçlar bilgi amaçlıdır; dilekçe ve hesap raporlarında mutlaka kontrol edin.</p></div>`;
   $("#arc").onclick = e => { const a = e.target.dataset.a; if (a) { state.arac = a; tabAraclar(); } };
-  ({ sure: arSure, kidem: arKidem, faiz: arFaiz, nafaka: arNafaka })[state.arac]();
+  ({ sure: arSure, infaz: arInfaz, kidem: arKidem, faiz: arFaiz, nafaka: arNafaka })[state.arac]();
 }
 const todayIso = () => new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10);
+// ---- 5) İnfaz (yatar) hesabı — 5275 s.K. (iyi hâl varsayımıyla tahmini hesap) ----
+const INF_KAT = [
+  ["genel", "Genel suçlar", "1/2", "5275 m.107/2"],
+  ["k23", "Kasten öldürme (TCK 81-83), 87/2-d, işkence ve eziyet (94-96), cinsel saldırı (102/1), reşit olmayanla cinsel ilişki (104/1), cinsel taciz (105), özel hayata karşı suçlar (132-138), devlet sırları ve casusluk (326-339), 2937 s.K.", "2/3", "5275 m.107/2"],
+  ["orgut", "Örgüt faaliyeti çerçevesinde işlenen suç", "2/3", "5275 m.107/4"],
+  ["k34", "Nitelikli cinsel saldırı (102/2), çocuğun cinsel istismarı (103), 104/2-3, uyuşturucu imal ve ticareti (188)", "3/4", "5275 m.108/9 ve m.107"],
+  ["teror", "Terör suçu (3713 s. TMK)", "3/4", "3713 s.K. m.17"],
+];
+const fr = s => { const [a, b] = s.split("/").map(Number); return a / b; };
+const yilGun = (y, a, g) => (y || 0) * 365 + (a || 0) * 30 + (g || 0);           // infaz hesabında yıl 365, ay 30 gün
+const gunMetin = n => { n = Math.max(0, Math.round(n)); const y = Math.floor(n / 365), a = Math.floor((n % 365) / 30), g = n % 365 % 30; return [y && y + " yıl", a && a + " ay", (g || (!y && !a)) && g + " gün"].filter(Boolean).join(" "); };
+function infazHesapla(p){
+  const notes = [], warn = [], start = D(p.baslangic), suc = D(p.sucTarihi);
+  const dogum = p.dogum ? D(p.dogum) : null;
+  const yasAt = d => dogum ? (d.getUTCFullYear() - dogum.getUTCFullYear() - ((d.getUTCMonth() < dogum.getUTCMonth() || (d.getUTCMonth() === dogum.getUTCMonth() && d.getUTCDate() < dogum.getUTCDate())) ? 1 : 0)) : null;
+  const yasSuc = yasAt(suc);
+  const cocukFail = yasSuc !== null && yasSuc < 18;
+  const g6 = p.sucTarihi <= "2020-03-30";                              // geçici 6 (7242): 30.03.2020 ve öncesi
+  const kat = INF_KAT.find(k => k[0] === p.kat);
+  // 1) Koşullu salıverilme süresi
+  let oranS = kat[2], dayanak = kat[3], ksGun, toplam = 0, muebbet = p.tur !== "sureli";
+  if (cocukFail && oranS === "3/4") { oranS = "2/3"; notes.push("Suç tarihinde 18 yaşından küçük olduğu için 3/4 yerine 2/3 oranı uygulandı."); }
+  if (p.tekerrur === "1" && fr(oranS) < fr("2/3")) { oranS = "2/3"; dayanak += " · tekerrür: 5275 m.108/1"; }
+  if (p.tekerrur === "2" && fr(oranS) < fr("3/4")) { oranS = "3/4"; dayanak += " · ikinci tekerrür: 5275 m.108/3"; }
+  if (!muebbet) {
+    toplam = yilGun(p.yil, p.ay, p.gun);
+    ksGun = Math.ceil(toplam * fr(oranS));
+    notes.push(`Toplam ceza ${gunMetin(toplam)} (${toplam} gün). Koşullu salıverilme oranı <b>${oranS}</b> (${dayanak}) → ${gunMetin(ksGun)} (${ksGun} gün).`);
+  } else {
+    const og = ["orgut", "teror"].includes(p.kat);
+    let yil = p.tur === "agir" ? (og ? 36 : 30) : (og ? 30 : 24);
+    if (p.tekerrur !== "0" && !og) yil = p.tur === "agir" ? 39 : 33;
+    ksGun = yil * 365;
+    notes.push(`${p.tur === "agir" ? "Ağırlaştırılmış müebbet" : "Müebbet"} hapis: koşullu salıverilme için ${yil} yıl (${og ? "5275 m.107/4" : p.tekerrur !== "0" ? "5275 m.108/1" : "5275 m.107/2"}).`);
+    if (p.tur === "agir" && p.kat === "teror") warn.push("Terör ve devletin güvenliğine karşı bazı suçlarda ağırlaştırılmış müebbette koşullu salıverilme uygulanmaz (5275 m.107/16). Bu durumda koşullu salıverilme tarihi oluşmaz.");
+    if (p.tur === "agir" && p.kat === "teror") return { yok: true, notes, warn };
+  }
+  // 2) Mahsup ve çocukluk dönemi gün sayımı
+  const mahsup = (p.mahsup || 0) + Math.floor((p.konut || 0) / 2);
+  if (p.mahsup) notes.push(`Gözaltı ve tutuklulukta geçen ${p.mahsup} gün mahsup edildi (TCK m.63).`);
+  if (p.konut) notes.push(`Konutu terk etmeme adli kontrolünde geçen ${p.konut} günün yarısı (${Math.floor(p.konut / 2)} gün) mahsup edildi (CMK m.109/6).`);
+  let kalan = ksGun - mahsup, bonus = 0, gun = start;
+  if (dogum && kalan > 0) {
+    const y15 = new Date(Date.UTC(dogum.getUTCFullYear() + 15, dogum.getUTCMonth(), dogum.getUTCDate(), 12));
+    const y18 = new Date(Date.UTC(dogum.getUTCFullYear() + 18, dogum.getUTCMonth(), dogum.getUTCDate(), 12));
+    // her gerçek gün, yaşa göre 3 / 2 / 1 gün sayılır
+    let real = 0, sayilan = 0;
+    while (sayilan < kalan && real < 40 * 365) {
+      const d = addDays(start, real);
+      const k = g6 ? (d < y15 ? 3 : d < y18 ? 2 : 1) : (d < y15 ? 2 : 1);
+      sayilan += k; real++; if (k > 1) bonus += k - 1;
+    }
+    if (bonus) { notes.push(`Çocukluk döneminde infaz kurumunda geçen günler ${g6 ? "15 yaşına kadar 3, 18 yaşına kadar 2 gün" : "15 yaşına kadar 2 gün"} sayıldı (${g6 ? "5275 geçici m.6/4" : "5275 m.107/5"}): ${bonus} gün kazanç.`); kalan -= bonus; }
+  }
+  const ks = addDays(start, Math.max(0, kalan));
+  // 3) Denetimli serbestlik
+  const g6Haric = ["k23", "k34", "teror", "orgut"].includes(p.kat);
+  let ds = 365, dsDay = "5275 m.105/A-1 (1 yıl)";
+  const yasBugun = yasAt(D(todayIso()));
+  if (p.kadin06) { ds = 730; dsDay = "5275 m.105/A-3-a (0-6 yaş çocuğu olan kadın: 2 yıl)"; }
+  if (p.hasta) { ds = 1095; dsDay = "5275 m.105/A-3-b (ağır hastalık, engellilik veya yaşlılık: 3 yıl, rapor gerekir)"; }
+  if (g6 && !g6Haric) {
+    if (ds === 365) { ds = 1095; dsDay = "5275 geçici m.6/1 (30.03.2020 ve öncesi suç: 3 yıl)"; }
+    if (p.kadin06 || (yasBugun !== null && yasBugun >= 70)) { ds = Math.max(ds, 1460); dsDay = "5275 geçici m.6/2-a (0-6 yaş çocuklu kadın veya 70 yaşını bitirmiş: 4 yıl)"; }
+    if (p.hasta && yasBugun !== null && yasBugun >= 65) { ds = Infinity; dsDay = "5275 geçici m.6/2-b (65 yaşını bitirmiş, ağır hastalık/engellilik: süre sınırı yok)"; }
+  } else if (g6 && g6Haric) notes.push("Suç geçici m.6'nın istisna listesinde olduğu için 30.03.2020 öncesi uzatılmış denetimli serbestlik uygulanmadı.");
+  let dsTarih = ds === Infinity ? start : addDays(ks, -ds);
+  if (dsTarih < start) dsTarih = start;
+  if (p.sucTarihi >= "2025-06-04") {           // 7550: koşullu salıverilmeye kadar sürenin en az 1/10'u, en az 5 gün kurumda
+    const min = Math.max(5, Math.ceil(Math.max(0, daysBetween(start, ks)) / 10));
+    const enErken = addDays(start, min);
+    if (dsTarih < enErken) { dsTarih = enErken; }
+    notes.push(`04.06.2025 ve sonrası suç: denetimli serbestliğe çıkmadan önce koşullu salıverilmeye kadarki sürenin en az onda biri (en az 5 gün, burada ${min} gün) kurumda geçirilmeli (5275 m.105/A, 7550 s.K.).`);
+  }
+  if (p.tur === "agir") warn.push("Ağırlaştırılmış müebbette açık kuruma ayrılma ve denetimli serbestlik imkânı sınırlıdır; infaz savcılığından teyit edin.");
+  // 4) Açık cezaevi (Yönetmelik m.6)
+  let acik = null, acikNot = "";
+  if (p.tur !== "agir") {
+    const kapali = muebbet ? 365 * 1 : toplam >= 3650 ? Math.ceil(toplam / 10) : 30;
+    const limit = muebbet ? 5 * 365 : p.kat === "k34" ? 3 * 365 : 7 * 365;   // TCK 102-103 için 3 yıl; 188 için 5 yıl (temkinli olarak 3 yıl alındı)
+    acik = addDays(start, kapali); const b2 = addDays(ks, -limit); if (b2 > acik) acik = b2;
+    acikNot = `Kapalı kurumda en az ${muebbet ? "1 yıl (müebbet; teyit edin)" : toplam >= 3650 ? "cezanın 1/10'u" : "1 ay"} ve koşullu salıverilmeye ${limit / 365} yıl veya daha az kalmış olması (Hükümlülerin Açık Ceza İnfaz Kurumlarına Ayrılmalarına İlişkin Yönetmelik m.6; suç türüne göre farklı süreler olabilir).`;
+  }
+  // Denetimli serbestlik için açık kurumda bulunma şartı (5275 m.105/A-1): açık kuruma ayrılmadan önceye düşmez
+  if (acik && ds !== Infinity && dsTarih < acik) { dsTarih = acik; notes.push("Denetimli serbestlik için açık kurumda bulunma şartı nedeniyle tarih, açık kuruma en erken ayrılma tarihine çekildi (5275 m.105/A-1; iradesi dışında ayrılamayanlar için m.105/A-2)."); }
+  const bihakkin = !muebbet ? addDays(start, Math.max(0, toplam - mahsup - bonus)) : null;
+  if (p.sucTarihi <= "2023-07-31" && !["k34", "teror", "orgut"].includes(p.kat)) warn.push("31.07.2023 ve öncesi suçlarda 5275 geçici m.10 (7571 s.K. ile değişik) uyarınca açık kuruma daha erken ayrılma ve ek denetimli serbestlik imkânı olabilir; şartlarını infaz savcılığından teyit edin.");
+  if (yasBugun !== null && yasBugun >= 65 && !muebbet && toplam <= 6 * 365) warn.push("65 yaş üstü hükümlülerde, ceza miktarına ve yaşa göre konutta infaz (5275 m.110) mümkün olabilir; terör, örgüt ve cinsel suçlar hariçtir.");
+  if (p.kadin06 && !muebbet && toplam <= 3 * 365) warn.push("0-6 yaş çocuğu olan kadın hükümlüde toplam ceza 3 yılı geçmiyorsa konutta infaz (5275 m.110/2) mümkün olabilir.");
+  return { oran: oranS, dayanak, ksGun, mahsup, bonus, ks, ds, dsDay, dsTarih, acik, acikNot, bihakkin, notes, warn, muebbet, toplam };
+}
+function arInfaz(){
+  $("#arbody").innerHTML = `
+    <p class="muted small" style="margin:8px 0 0">5275 sayılı Kanun'a göre koşullu salıverilme, denetimli serbestlik, açık cezaevi ve tahliye tarihlerinin <b>tahmini</b> hesabı. İyi hâl varsayılır; kesin tarihler infaz savcılığının müddetnamesindedir.</p>
+    <div class="row" style="gap:8px"><div style="flex:1"><label for="ist">Suç tarihi</label><input id="ist" type="date"></div>
+      <div style="flex:1"><label for="isb">İnfaz başlangıcı</label><input id="isb" type="date" value="${todayIso()}"></div></div>
+    <p class="muted small" style="margin:4px 0 0">İnfaz başlangıcı: yakalama / tutuklama ya da cezaevine giriş tarihi.</p>
+    <label for="itr">Ceza türü</label><select id="itr"><option value="sureli">Süreli hapis</option><option value="muebbet">Müebbet hapis</option><option value="agir">Ağırlaştırılmış müebbet hapis</option></select>
+    <div id="isu" class="row" style="gap:8px"><div style="flex:1"><label for="iy">Yıl</label><input id="iy" type="number" min="0" max="99" value="0"></div>
+      <div style="flex:1"><label for="ia">Ay</label><input id="ia" type="number" min="0" max="11" value="0"></div>
+      <div style="flex:1"><label for="ig">Gün</label><input id="ig" type="number" min="0" max="29" value="0"></div></div>
+    <p class="muted small" style="margin:4px 0 0">Birden fazla ceza varsa toplamını girin (cezaların toplanmasına infaz hâkimliği karar verir).</p>
+    <label for="ika">Suç türü</label><select id="ika">${INF_KAT.map(k => `<option value="${k[0]}">${esc(k[1])} — ${k[2]}</option>`).join("")}</select>
+    <label for="ite">Tekerrür</label><select id="ite"><option value="0">Yok</option><option value="1">Birinci defa tekerrür</option><option value="2">İkinci defa tekerrür</option></select>
+    <label for="ido">Doğum tarihi <span class="muted small">(yaşa bağlı kurallar için)</span></label><input id="ido" type="date">
+    <div class="row" style="gap:8px"><div style="flex:1"><label for="ima">Gözaltı / tutukluluk (gün)</label><input id="ima" type="number" min="0" value="0"></div>
+      <div style="flex:1"><label for="iko">Konutu terk etmeme (gün)</label><input id="iko" type="number" min="0" value="0"></div></div>
+    <p class="muted small" style="margin:4px 0 0">İnfaz başlangıcından önceki, mahsup edilecek süreler.</p>
+    <label class="chk2" style="display:flex;gap:8px;align-items:center;margin-top:10px"><input id="ik6" type="checkbox"> Kadın hükümlü ve 0-6 yaş arası çocuğu var</label>
+    <label class="chk2" style="display:flex;gap:8px;align-items:center;margin-top:6px"><input id="ihs" type="checkbox"> Ağır hastalık, engellilik veya yaşlılık nedeniyle hayatını yalnız idame ettiremiyor (rapor var)</label>
+    <button class="btn btn-primary btn-block" id="igo">Hesapla</button><div id="iout"></div>`;
+  const sync = () => { $("#isu").style.display = $("#itr").value === "sureli" ? "" : "none"; };
+  $("#itr").onchange = sync; sync();
+  $("#igo").onclick = () => {
+    const v = id => $("#" + id).value, n = id => Math.max(0, parseInt(v(id), 10) || 0);
+    const p = { sucTarihi: v("ist"), baslangic: v("isb"), tur: v("itr"), yil: n("iy"), ay: n("ia"), gun: n("ig"), kat: v("ika"), tekerrur: v("ite"), dogum: v("ido"), mahsup: n("ima"), konut: n("iko"), kadin06: $("#ik6").checked, hasta: $("#ihs").checked };
+    if (!p.sucTarihi || !p.baslangic) return $("#iout").innerHTML = `<div class="msg err">Suç tarihini ve infaz başlangıcını girin.</div>`;
+    if (p.tur === "sureli" && !yilGun(p.yil, p.ay, p.gun)) return $("#iout").innerHTML = `<div class="msg err">Ceza süresini girin.</div>`;
+    if (p.dogum && p.dogum >= p.sucTarihi) return $("#iout").innerHTML = `<div class="msg err">Doğum tarihi suç tarihinden önce olmalı.</div>`;
+    const r = infazHesapla(p);
+    const box = (lb, d, sub) => `<div class="card" style="margin-top:10px;padding:12px"><p class="small muted" style="margin:0">${lb}</p><div style="font-family:var(--serif);font-size:1.25rem;font-weight:700;margin:3px 0">${d}</div>${sub ? `<p class="small muted" style="margin:0">${sub}</p>` : ""}</div>`;
+    const kalanTxt = d => { const k = daysBetween(D(todayIso()), d); return k > 0 ? `Bugünden ${gunMetin(k)} sonra` : k === 0 ? "Bugün" : "Geçmiş tarih"; };
+    $("#iout").innerHTML = r.yok ? `<div class="msg err" style="margin-top:12px">${r.warn.map(esc).join("<br>")}</div>` : `
+      ${box("Denetimli serbestliğe en erken çıkış", r.ds === Infinity ? "Hemen (süre sınırı yok)" : trDate(r.dsTarih), `${esc(r.dsDay)} · ${r.ds === Infinity ? "" : kalanTxt(r.dsTarih)}`)}
+      ${r.acik ? box("Açık cezaevine en erken ayrılma", trDate(r.acik), kalanTxt(r.acik)) : ""}
+      ${box("Koşullu salıverilme (şartlı tahliye)", trDate(r.ks), `Yatar: ${gunMetin(r.ksGun - r.mahsup - r.bonus)} · ${kalanTxt(r.ks)}`)}
+      ${r.bihakkin ? box("Cezanın tamamen bitimi (hak ederek tahliye)", trDate(r.bihakkin), kalanTxt(r.bihakkin)) : ""}
+      <div class="card" style="margin-top:10px"><b class="small">Hesap adımları</b><ol class="hist">${r.notes.map(x => `<li>${x}</li>`).join("")}${r.acikNot ? `<li>${esc(r.acikNot)}</li>` : ""}</ol>
+      ${r.warn.length ? `<div class="notice">${r.warn.map(esc).join("<br>")}</div>` : ""}
+      <p class="muted small" style="margin:6px 0 0">Bu hesap iyi hâl varsayımıyla yapılmış tahmindir; disiplin cezası, cezaların toplanması (5275 m.99), ilgili suçun istisna hükümleri ve mevzuat değişiklikleri sonucu değiştirebilir. Kesin tarih için infaz savcılığının müddetnamesine bakın.</p></div>`;
+  };
+}
 function arSure(){
   $("#arbody").innerHTML = `
     <label for="sh">Hazır süre</label><select id="sh">${SURE_HAZIR.map(x => `<option value="${x[0]}">${esc(x[1])}</option>`).join("")}</select>
@@ -3238,7 +3821,7 @@ function pageGuide(){
   <li>Bir karara dokunun: tam metin açılır. <b>Künyeyi kopyala</b>, <b>Metni kopyala</b>, <b>Resmî kaynakta aç</b> ve <b>Yapay zekâ ile özetle</b> düğmeleri kullanılabilir.</li></ol>
   <p class="small muted">Yargıtay'ın kendi sitesine ulaşılamadığında sonuçlar otomatik olarak UYAP Emsal'den getirilir; ekranda bununla ilgili not görürsünüz.</p>
   <h2>2. Belge analizi</h2>
-  <ol><li><b>Panelim → Belge analizi</b> sekmesini açın ve işlemi seçin: karar özeti, sözleşme risk analizi, hukuki çeviri veya karar karşılaştırma. (Dilekçe için <b>Dilekçe</b> sekmesini kullanın.)</li>
+  <ol><li><b>Panelim → Belge analizi</b> sekmesini açın ve işlemi seçin: karar özeti, sözleşme analizi, hukuki çeviri veya karar karşılaştırma. (Dilekçe için <b>Dilekçe</b> sekmesini kullanın.)</li>
   <li>Metni yapıştırın ya da belge ekleyin:
     <ul><li><b>📄 Dosya yükle:</b> UYAP belgeleri (UDF), imzalı UYAP paketleri (EYP), PDF, Word (.docx) ve .txt.</li>
     <li><b>📷 Fotoğraf çek:</b> Kâğıt belgenin fotoğrafını çekin; yazı otomatik okunur. Çok sayfalı belgede her sayfa için tekrarlayın.</li>
@@ -3248,9 +3831,13 @@ function pageGuide(){
   <h3>📝 Karar özeti <span class="small muted">(tüm paketler)</span></h3>
   <p><b>Ne girilir:</b> Bir mahkeme kararının tam metni. Karar arama ekranındaki <b>Yapay zekâ ile özetle</b> düğmesi bunu kendiliğinden yapar; elinizdeki bir kararı da yapıştırabilir veya yükleyebilirsiniz.<br>
   <b>Ne verir:</b> Künye, taraflar, olay ve talep, yargılama süreci, mahkemenin gerekçesi (en önemli cümle karardan aynen alıntılanır), hüküm, dayanılan mevzuat ve kararın içtihat değeri.</p>
-  <h3>📑 Sözleşme risk analizi <span class="small muted">(Optimus ve Maximus)</span></h3>
-  <p><b>Ne girilir:</b> İncelenecek sözleşmenin tamamı: kira, iş, satış, hizmet, gizlilik sözleşmesi vb. Word, PDF, UDF dosyası veya fotoğraf olarak eklenebilir.<br>
-  <b>Ne verir:</b> Taraflar ve konu, tarafların temel yükümlülükleri, <b>riskli veya tek taraflı maddeler</b> (madde metninden alıntıyla), eksik görünen hükümler (cezai şart, fesih, yetkili mahkeme vb.), müzakere önerileri ve genel risk seviyesi (Yüksek / Orta / Düşük).<br>
+  <h3>📑 Sözleşme analizi <span class="small muted">(Optimus ve Maximus)</span></h3>
+  <p><b>Ne girilir:</b> İncelenecek sözleşmenin tamamı (Türkçe veya İngilizce): kira, iş, satış, hizmet gibi genel sözleşmeler ile <b>navlun sözleşmeleri</b> (yolculuk çarteri, zaman çarteri, konişmento), gemi kira (bareboat), gemi alım-satım, gemi inşa, kurtarma/römorkaj ve <b>uluslararası satım</b> (Incoterms, akreditif). Word, PDF, UDF veya fotoğraf olarak eklenebilir.<br>
+  <b>Tür ve mevzuat:</b> Sözleşme türü kendiliğinden algılanır (isterseniz seçin). İlgili kanun maddeleri — TTK deniz ticareti hükümleri, TBK, 4686 sayılı Milletlerarası Tahkim Kanunu, HMK tahkim hükümleri, MÖHUK — Mevzuat Bilgi Sistemi'nden <b>resmî metniyle</b> alınır; analiz yalnızca bu maddelere ve doğrulanmış kural notlarına (Lahey-Visby sınırları, York-Anvers, New York Sözleşmesi, CISG vb.) atıf yapar. Kullanılan maddeler sonucun altında listelenir.<br>
+  <b>Tahkim:</b> Sözleşmede tahkim veya yetki maddesi varsa <i>Tahkim ve uygulanacak hukuk incelemesi</i> kendiliğinden açılır: şartın yazılı olması, kapsamı, tahkim yeri, kurum ve kurallar, hakem sayısı, dil, tenfiz edilebilirlik ve patolojik ifadeler incelenir.<br>
+  <b>Müvekkilin sıfatı:</b> "kiracı (charterer)", "alıcı" gibi yazarsanız müzakere önerileri ve önerilen madde metinleri onun lehine hazırlanır.<br>
+  <b>Ne verir:</b> Nitelendirme ve standart form, temel edimler, <b>riskli maddeler</b> (alıntı, risk seviyesi, dayanak, öneri), kontrol listesine göre eksik hükümler (ör. çarterde laycan, staliya-sürastarya, off-hire, lien, savaş/yaptırım kayıtları), emredici hükümlere aykırılık, uyuşmazlık çözümü, önerilen madde metinleri ve genel risk seviyesi.<br>
+  <b>Gizlilik:</b> Taraf bölümlerindeki kişi adları, T.C. kimlik no, IBAN, e-posta ve telefon telefonunuzda gizlenip öyle gönderilir; sonuçta gerçek hâliyle görünür.<br>
   <b>İpucu:</b> Sözleşmenin tamamını ekleyin; tek bir madde gönderildiğinde eksik hüküm değerlendirmesi yapılamaz.</p>
   <h3>✍️ Dilekçe Asistanı <span class="small muted">(Optimus: 5 karar, Maximus: 10 karar)</span></h3>
   <p><b>Dilekçe türleri:</b> Dava dilekçesinin yanında istinaf, temyiz, cevap, cevaba cevap, ikinci cevap, istinafa cevap, bilirkişi raporuna itiraz, ıslah, ihtiyati tedbir, suç duyurusu/şikâyet, sulh ceza hâkimliği kararına itiraz, idari yargı istinaf ve Danıştay temyiz dilekçesi hazırlanabilir. 1. adımda <b>Dilekçe türü</b>nü seçin.<br>
@@ -3266,8 +3853,9 @@ function pageGuide(){
   <h3>📑 Sözleşme: yeni versiyon <span class="small muted">(Optimus ve Maximus)</span></h3>
   <p>Sözleşme risk analizi bittikten sonra <b>Önerileri uygula — yeni versiyon oluştur</b> düğmesine dokunun. Yapay zekâ sözleşmenin düzeltilmiş tam metnini yazar; değişiklikler <del>kırmızı</del> / <ins>yeşil</ins> gösterilir. Yeni metni kopyalayabilir veya Word dosyası olarak indirebilirsiniz.</p>
   <h3>🌐 Hukuki çeviri <span class="small muted">(Optimus ve Maximus)</span></h3>
-  <p><b>Ne girilir:</b> Çevrilecek metin. Açılan <b>Hedef dil</b> kutusundan dili seçin: İngilizce, Almanca, Fransızca, Arapça, Rusça veya Türkçe (yabancı dildeki bir belgeyi Türkçeye çevirmek için).<br>
-  <b>Ne verir:</b> Hukuki terimleri karşılıklarıyla kullanan çeviri. Karşılığından emin olunmayan terimlerin yanına parantez içinde Türkçe aslı yazılır.<br>
+  <p><b>Ne girilir:</b> Çevrilecek metin. <b>Hedef dil</b> kutusundan dili seçin (Türkçe, İngilizce, Almanca, Fransızca, Arapça, Rusça, İtalyanca, İspanyolca, Yunanca).<br>
+  <b>Ne verir:</b> Kelime kelime değil, hedef dilin hukuk diline uygun cümlelerle tam çeviri. Sözleşme, deniz ticareti ve tahkim terimleri yerleşik bir <b>terim sözlüğüyle</b> tutarlı çevrilir (ör. demurrage → sürastarya, laytime → staliya, bill of lading → konişmento, seat of arbitration → tahkim yeri). Uzun metinler parçalara bölünür, hiçbir bölüm atlanmaz (her parça bir işlem hakkı). Sonucu kopyalayabilir veya Word dosyası olarak indirebilirsiniz.<br>
+  <b>✍️ Redaksiyon:</b> Çeviriden sonra bu düğmeye dokunursanız çeviri kaynak metinle cümle cümle karşılaştırılır; atlanan yer tamamlanır, yanlış terim ve dil bilgisi hataları düzeltilir, düzeltilen noktalar listelenir.<br>
   <b>İpucu:</b> Resmî işlemlerde kullanılacak çevirilerde yeminli tercüman onayı gerekir; bu çeviri taslak niteliğindedir.</p>
   <h3>⚖️ Karar karşılaştırma <span class="small muted">(Maximus)</span></h3>
   <p><b>Ne girilir:</b> Karşılaştırmak istediğiniz iki veya daha fazla kararın metni, art arda. Karar arama ekranındaki <b>Metni kopyala</b> düğmesiyle kararları buraya taşıyabilirsiniz.<br>
@@ -3282,7 +3870,8 @@ function pageGuide(){
   <p><b>Ne girilir:</b> Eski ve yeni metin: kanun maddesinin iki hâli, sözleşmenin iki versiyonu veya iki dilekçe.<br>
   <b>Ne verir:</b> Kelime kelime fark: <del>çıkarılan</del> kırmızı, <ins>eklenen</ins> yeşil. Farkları bilgisayar hesaplar, bu yüzden atlanan değişiklik olmaz. İsterseniz <b>Değişikliği yapay zekâ ile açıkla</b> düğmesi değişikliğin hukuki anlamını, kimi etkilediğini ve dikkat edilecek noktaları yazar.</p>
   <h2>4/A. Hesaplama araçları <span class="small muted">(tüm paketler)</span></h2>
-  <p><b>Panelim → Hesapla</b> sekmesinde dört araç vardır. Hesaplar telefonunuzda yapılır, bilgileriniz sunucuya gitmez.</p>
+  <p><b>Panelim → Hesapla</b> sekmesinde beş araç vardır. Hesaplar telefonunuzda yapılır, bilgileriniz sunucuya gitmez.</p>
+  <p><b>⚖️ İnfaz (yatar):</b> Suç tarihi, infaz başlangıcı, ceza türü ve süresi, suç türü, tekerrür, doğum tarihi, gözaltı/tutukluluk ve konutu terk etmeme süreleri ile 0-6 yaş çocuklu kadın ve ağır hastalık durumuna göre denetimli serbestliğe çıkış, açık cezaevine ayrılma, koşullu salıverilme ve cezanın bitim tarihlerini tahmini olarak hesaplar (5275 s.K. m.105/A, 107, 108, geçici 6; 7550 s.K. ile gelen 1/10 şartı; çocuklarda gün sayımı). Her adım dayanağıyla gösterilir. İyi hâl varsayılır; kesin tarih için müddetnameye bakın.</p>
   <ul><li><b>📅 Süre:</b> Tebliğ tarihini ve süreyi girin (veya istinaf, temyiz, itiraz gibi hazır sürelerden seçin). Son gün; hafta sonu, resmî tatil ve usule göre adli tatil (HMK 1 hafta, CMK 3 gün, İYUK 7 gün uzama) dikkate alınarak bulunur. Sonucu tek dokunuşla Google Takvim'e ekleyebilirsiniz. Son gün arifeye rastlarsa uyarı verilir.</li>
   <li><b>💼 Kıdem / İhbar:</b> Giriş-çıkış tarihi ve giydirilmiş brüt ücretle kıdem tazminatı (dönemin tavanı otomatik uygulanır) ve ihbar tazminatı brüt/net hesaplanır.</li>
   <li><b>📈 Faiz:</b> Yasal faiz dönem dönem (oran değişikliklerine göre bölünerek) veya girdiğiniz oranla (ticari avans, sözleşme faizi) basit faiz hesaplanır.</li>
