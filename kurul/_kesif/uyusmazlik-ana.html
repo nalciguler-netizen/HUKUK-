@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta name="description" content="T.C. UYUŞMAZLIK MAHKEMESİ BAŞKANLIĞI">
+    <title>T.C. UYUŞMAZLIK MAHKEMESİ BAŞKANLIĞI</title>
+    <meta name="author" content="Adalet Bakanlığı">
+    
+    <link href="/Assets/erisilebilirlik/accessibility.min.css" rel="stylesheet" />
+    <link href="/Assets/front/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="/Assets/front/css/style.css?V=3" rel="stylesheet" />
+    <link rel="stylesheet" href="/Assets/front/css/all.css" />
+    <link rel="stylesheet" href="/Assets/front/css/lightgallery.css">
+    <link rel="shortcut icon" href="/Assets/front/images/favicon.png" type="image/x-icon" />
+    <style>
+        :root {
+     --koyu: #d9bb5f;
+     --yazi: #ffffff;
+     --ararenk:#d3d3d3;
+     --ararenk2:#514c77;
+     --ararenk3:#d5b568;
+ }
+    </style>
+    <script type="text/javascript" src="/Assets/front/js/jquery.min.js"></script>
+
+</head>
+
+
+
+<body>
+
+    <!--start:: ERİŞİLEBİLİRLİK MENÜSÜ-->
+
+
+    <button class="accessibility-toggle-button" id="accessibilityToggle" aria-label="Erişilebilirlik Menüsünü Aç">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 122.88 122.88" role="img">
+            <title>Erişilebilirlik Menüsü İkonu</title>
+            <path d="M61.44,0A61.46,61.46,0,1,1,18,18,61.21,61.21,0,0,1,61.44,0Zm-.39,74.18L52.1,98.91a4.94,4.94,0,0,1-2.58,2.83A5,5,0,0,1,42.7,95.5l6.24-17.28a26.3,26.3,0,0,0,1.17-4,40.64,40.64,0,0,0,.54-4.18c.24-2.53.41-5.27.54-7.9s.22-5.18.29-7.29c.09-2.63-.62-2.8-2.73-3.3l-.44-.1-18-3.39A5,5,0,0,1,27.08,46a5,5,0,0,1,5.05-7.74l19.34,3.63c.77.07,1.52.16,2.31.25a57.64,57.64,0,0,0,7.18.53A81.13,81.13,0,0,0,69.9,42c.9-.1,1.75-.21,2.6-.29l18.25-3.42A5,5,0,0,1,94.5,39a5,5,0,0,1,1.3,7,5,5,0,0,1-3.21,2.09L75.15,51.37c-.58.13-1.1.22-1.56.29-1.82.31-2.72.47-2.61,3.06.08,1.89.31,4.15.61,6.51.35,2.77.81,5.71,1.29,8.4.31,1.77.6,3.19,1,4.55s.79,2.75,1.39,4.42l6.11,16.9a5,5,0,0,1-6.82,6.24,4.94,4.94,0,0,1-2.58-2.83L63,74.23,62,72.4l-1,1.78Zm.39-53.52a8.83,8.83,0,1,1-6.24,2.59,8.79,8.79,0,0,1,6.24-2.59Zm36.35,4.43a51.42,51.42,0,1,0,15,36.35,51.27,51.27,0,0,0-15-36.35Z"></path>
+        </svg>
+    </button>
+    <div id="accessibilityPanel" class="ac-panel">
+        <div class="ac-panel--header">
+            <h5 class="ac-panel--header__title" id="acPanel">Eri&#x15F;ilebilirlik Men&#xFC;s&#xFC;</h5>
+            <button id="accessibilityCloseButton" type="button" class="ac-panel--close-button" aria-label="Kapat"></button>
+        </div>
+        <div class="ac-panel--body d-flex flex-column">
+            <div class="ac-panel--wrapper">
+                <div class="ac-box-wrapper">
+                    <div class="ac-box" id="speakButton" data-acc-option="screen-reader">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v3"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <path d="m7 10-3 2H2v4h2l3 2v-8Z"></path>
+                            <path d="M11 11c.64.8 1 1.87 1 3s-.36 2.2-1 3"></path>
+                        </svg>
+                        <p class="m-0">Ekran Okuyucu</p>
+                    </div>
+                </div>
+                <div class="ac-box-wrapper">
+                    <div class="ac-box" id="selectSpeakButton" data-acc-option="select-reader">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v3"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <path d="m7 10-3 2H2v4h2l3 2v-8Z"></path>
+                            <path d="M11 11c.64.8 1 1.87 1 3s-.36 2.2-1 3"></path>
+                        </svg>
+                        <p class="m-0">Se&#xE7;ili Alan Okuyucu</p>
+                    </div>
+                </div>
+                <div class="ac-box-wrapper">
+                    <div class="ac-box" data-acc-option="highlight-links">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <title>Bağlantı Vurgula İkonu</title>
+                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                        </svg>
+                        <p class="m-0">Ba&#x11F;lant&#x131; Vurgula</p>
+                    </div>
+                </div>
+                <div class="ac-box-wrapper">
+                    <div class="ac-box" data-acc-option="bigger-text">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <title>Metni Büyüt İkonu</title>
+                            <polyline points="4 7 4 4 20 4 20 7"></polyline>
+                            <line x1="9" y1="20" x2="15" y2="20"></line>
+                            <line x1="12" y1="4" x2="12" y2="20"></line>
+                        </svg>
+                        <p class="m-0">B&#xFC;y&#xFC;k Metin</p>
+                    </div>
+                </div>
+                <div class="ac-box-wrapper">
+                    <div class="ac-box" data-acc-option="align-text-left">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="21" y1="6" x2="3" y2="6"></line>
+                            <line x1="15" y1="12" x2="3" y2="12"></line>
+                            <line x1="17" y1="18" x2="3" y2="18"></line>
+                        </svg>
+                        <p class="m-0">Metni Sola Hizala</p>
+                    </div>
+                </div>
+                <div class="ac-box-wrapper hide-on-sm">
+                    <div class="ac-box" data-acc-option="bigger-cursor">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="m9 9 5 12 1.774-5.226L21 14 9 9z"></path>
+                            <path d="m16.071 16.071 4.243 4.243"></path>
+                            <path d="m7.188 2.239.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656-2.12 2.122"></path>
+                        </svg>
+                        <p class="m-0">&#x130;mle&#xE7;</p>
+                    </div>
+                </div>
+                <div class="ac-box-wrapper hide-on-sm">
+                    <div class="ac-box" data-acc-option="reading-guide">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M8 3H2v15h7c1.7 0 3 1.3 3 3V7c0-2.2-1.8-4-4-4Z"></path>
+                            <path d="m16 12 2 2 4-4"></path>
+                            <path d="M22 6V3h-6c-2.2 0-4 1.8-4 4v14c0-1.7 1.3-3 3-3h7v-2.3"></path>
+                        </svg>
+                        <p class="m-0">Okuma K&#x131;lavuzu</p>
+                    </div>
+                </div>
+                <div class="ac-box-wrapper hide-on-sm">
+                    <div class="ac-box" data-acc-option="reading-mask">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <path d="M8 13h2"></path>
+                            <path d="M8 17h2"></path>
+                            <path d="M14 13h2"></path>
+                            <path d="M14 17h2"></path>
+                        </svg>
+                        <p class="m-0">Okuma Maskesi</p>
+                    </div>
+                </div>
+                <div class="ac-box-wrapper">
+                    <div class="ac-box" data-acc-option="dyslexic-friendly">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 20h16"></path>
+                            <path d="m6 16 6-12 6 12"></path>
+                            <path d="M8 12h8"></path>
+                        </svg>
+                        <p class="m-0">Disleksi Dostu</p>
+                    </div>
+                </div>
+                <div class="ac-box-wrapper">
+                    <div class="ac-box" data-acc-option="contrast">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M12 18a6 6 0 0 0 0-12v12z"></path>
+                        </svg>
+                        <p class="m-0">Kontrast</p>
+                    </div>
+                </div>
+                <div class="ac-box-wrapper">
+                    <div class="ac-box" data-acc-option="desaturate">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 10V2"></path>
+                            <path d="m4.93 10.93 1.41 1.41"></path>
+                            <path d="M2 18h2"></path>
+                            <path d="M20 18h2"></path>
+                            <path d="m19.07 10.93-1.41 1.41"></path>
+                            <path d="M22 22H2"></path>
+                            <path d="m16 6-4 4-4-4"></path>
+                            <path d="M16 18a4 4 0 0 0-8 0"></path>
+                        </svg>
+                        <p class="m-0">Solgunla&#x15F;t&#x131;rma</p>
+                    </div>
+                </div>
+                <div class="ac-box-wrapper">
+                    <div class="ac-box" data-acc-option="low-saturation">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"></path>
+                            <path d="M12 8a2.828 2.828 0 1 0 4 4"></path>
+                            <path d="M12 2v2"></path>
+                            <path d="M12 20v2"></path>
+                            <path d="m4.93 4.93 1.41 1.41"></path>
+                            <path d="m17.66 17.66 1.41 1.41"></path>
+                            <path d="M2 12h2"></path>
+                            <path d="M20 12h2"></path>
+                            <path d="m6.34 17.66-1.41 1.41"></path>
+                            <path d="m19.07 4.93-1.41 1.41"></path>
+                        </svg>
+                        <p class="m-0">D&#xFC;&#x15F;&#xFC;k Doygunluk</p>
+                    </div>
+                </div>
+                <div class="ac-box-wrapper">
+                    <div class="ac-box" data-acc-option="high-saturation">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="4"></circle>
+                            <path d="M12 2v2"></path>
+                            <path d="M12 20v2"></path>
+                            <path d="m4.93 4.93 1.41 1.41"></path>
+                            <path d="m17.66 17.66 1.41 1.41"></path>
+                            <path d="M2 12h2"></path>
+                            <path d="M20 12h2"></path>
+                            <path d="m6.34 17.66-1.41 1.41"></path>
+                            <path d="m19.07 4.93-1.41 1.41"></path>
+                        </svg>
+                        <p class="m-0">Y&#xFC;ksek Doygunluk</p>
+                    </div>
+                </div>
+            </div>
+            <button id="clearSettings" class="ac-clear-button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v6h6"></path><path d="M21 12A9 9 0 0 0 6 5.3L3 8"></path><path d="M21 22v-6h-6"></path><path d="M3 12a9 9 0 0 0 15 6.7l3-2.7"></path></svg>
+                Eri&#x15F;ilebilirlik Ayarlar&#x131;n&#x131; Temizle
+            </button>
+        </div>
+    </div>
+    <div id="readingFocusTop" class="reading-focus-overlay-top"></div>
+    <div id="readingFocusBottom" class="reading-focus-overlay-bottom"></div>
+    <div id="readingGuideLine" class="reading-guide-line"></div>
+
+    <!--end:: ERİŞİLEBİLİRLİK MENÜSÜ-->
+
+
+
+    <script src="/Assets/erisilebilirlik/accessibility.min.js"></script>
+    <script src="/Assets/erisilebilirlik/articulate.min.js"></script>
+
+
+    <div class="context">
+        <div class="header">
+            <div class="container p-0">
+                <div class="header-kapsa">
+                    <div class="logo"> <a href="/Home/Index"><img src="/Assets/front/images/logo.png" alt="Bakanlık Logosu" style="width: 350px;"/></a></div>
+                    <div class="logo-m ">
+                        <a href="/Home/Index">
+                            <img src="/Assets/front/images/uyusmazlik.png" alt="Bakanlık Logosu" style="width: 80px; height: 80px;"/>
+                        </a>
+                    </div>
+                    
+
+                    <div class="sag">
+                        <div class="sag-ust">
+                            <div class="sag-ust-elemanlar">
+                                <a style="background-color: #d5b568;" href="https://www.adalet.gov.tr/" target="_blank">  <div class="sag-ust-eleman"> <p> ADALET BAKANLIĞI </p> <i class="far fa-hand-point-up"></i>  </div> </a>
+                                <a href="https://www.facebook.com/abbilgiislem " target=" _blank">  <div class="sag-ust-eleman">  <i class="fab fa-facebook"></i>  </div></a>
+                                <a href="https://twitter.com/abbilgiislem " target=" _blank"> <div class="sag-ust-eleman"> <i class="fab fa-twitter"></i>  </div></a>
+                                <a href="https://www.youtube.com/TCAdaletBakanligiresmisayfa/ " target=" _blank"> <div class="sag-ust-eleman"> <i class="fab fa-youtube"></i>  </div></a>
+
+
+
+                            </div>
+                            <div class="mobil-ara">
+                                <ul>
+                                    <li>
+                                        <button id="bul" class="ara"><i class="fas fa-search"></i></button>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="sag-alt" id="sag-resim">
+                            <img src="/Assets/front/images/bayrak.png" alt="Atatürk Resmi" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <header class="red">
+            <nav role="navigation">
+                <div class="container p-0">
+                    <a href="javascript:void(0);" class="ic close"></a>
+                    <div class="container p-0">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="navbar">
+                                    <nav class="menu">
+                                        <div class="nav-layer"></div>
+                                        <div id="MainMenu">
+                                            <div class="list-group panel">
+
+
+                                                            <a href='/Home/' class="list-group-item-success"> &nbsp;&nbsp; Anasayfa </a>
+                                                        <a href='#menuana2' class="list-group-item-success" data-toggle="collapse" data-parent="#MainMenu"> <i class="fa fa-caret-down"></i> Hakkımızda  </a>
+                                                        <div class="collapse" id='menuana2'>
+
+                                                                    <div class="list-group-item birimmenu" data-toggle="collapse" data-parent="#MainMenu">
+                                                                            <a href='https://www.uyusmazlik.gov.tr/Home/SayfaDetay/baskan02062025022039' class="list-group-item " data-parent="#MainMenu">Başkan </a>
+
+                                                                    </div>
+                                                                    <div class="list-group-item birimmenu" data-toggle="collapse" data-parent="#MainMenu">
+                                                                            <a href='https://www.uyusmazlik.gov.tr/Home/SayfaDetay/baskan-vekili02062025022737' class="list-group-item " data-parent="#MainMenu">Başkanvekili </a>
+
+                                                                    </div>
+                                                                    <div class="list-group-item birimmenu" data-toggle="collapse" data-parent="#MainMenu">
+                                                                            <a href='https://www.uyusmazlik.gov.tr/Home/SayfaDetay/uyusmazlik-mahkemesi-uyeleri04062025111923' class="list-group-item " data-parent="#MainMenu">&#220;yeler </a>
+
+                                                                    </div>
+                                                                    <div class="list-group-item birimmenu" data-toggle="collapse" data-parent="#MainMenu">
+                                                                            <a href='https://www.uyusmazlik.gov.tr/Home/SayfaDetay/genel-sekreter02062025024133' class="list-group-item " data-parent="#MainMenu">Genel Sekreter </a>
+
+                                                                    </div>
+                                                                    <div class="list-group-item birimmenu" data-toggle="collapse" data-parent="#MainMenu">
+                                                                            <a href='https://www.uyusmazlik.gov.tr/Home/SayfaDetay/basraportor02062025023817' class="list-group-item " data-parent="#MainMenu">Başraport&#246;r </a>
+
+                                                                    </div>
+                                                                    <div class="list-group-item birimmenu" data-toggle="collapse" data-parent="#MainMenu">
+                                                                            <a href='https://www.uyusmazlik.gov.tr/Home/SayfaDetay/raportorler-ve-savcilar16062025103154' class="list-group-item " data-parent="#MainMenu">Raport&#246;rler </a>
+
+                                                                    </div>
+                                                                    <div class="list-group-item birimmenu" data-toggle="collapse" data-parent="#MainMenu">
+                                                                            <a href='https://www.uyusmazlik.gov.tr/Home/SayfaDetay/uyusmazlik-mahkemesinin-anayasal-konumu-ve-islevi23052025020940' class="list-group-item " data-parent="#MainMenu">Anayasal Konumu ve İşlevi </a>
+
+                                                                    </div>
+                                                                    <div class="list-group-item birimmenu" data-toggle="collapse" data-parent="#MainMenu">
+                                                                            <a href='https://www.uyusmazlik.gov.tr/Home/SayfaDetay/uyusmazlik-mahkemesinin-kurulusu02062025021617' class="list-group-item " data-parent="#MainMenu">Kuruluşu </a>
+
+                                                                    </div>
+                                                                    <div class="list-group-item birimmenu" data-toggle="collapse" data-parent="#MainMenu">
+                                                                            <a href='https://www.mevzuat.gov.tr/MevzuatMetin/1.5.2247.pdf' class="list-group-item " data-parent="#MainMenu">Kanun </a>
+
+                                                                    </div>
+                                                        </div>
+                                                            <a href='/Home//SayfaDetay/uyusmazlik-mahkemesi-dergisi04062025115659' class="list-group-item-success"> &nbsp;&nbsp; Uyuşmazlık Mahkemesi Dergisi </a>
+                                                            <a href='/Home/SayfaDetay/karar-arama-sayfasi-yonlendirme21102026022550' class="list-group-item-success"> &nbsp;&nbsp; Uyuşmazlık Mahkemesi Kararları </a>
+                                                        <a href='#menuana5' class="list-group-item-success" data-toggle="collapse" data-parent="#MainMenu"> <i class="fa fa-caret-down"></i> İstatistikler  </a>
+                                                        <div class="collapse" id='menuana5'>
+
+                                                        </div>
+                                                            <a href='https://www.uyusmazlik.gov.tr/Home/SayfaDetay/iletisim02062025112508' class="list-group-item-success"> &nbsp;&nbsp; İletişim </a>
+
+                                            </div>
+                                        </div>
+                                    </nav>
+                                    <div class="navbar">
+                                        <a class="nav-toggle">
+                                            <span></span>
+                                            <span></span>
+                                            <span></span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <ul class="main-nav">
+                                <li class="top-level-link">
+                                        <a href='/Home/'><span>Anasayfa</span></a>
+                                </li>
+                                <li class="top-level-link">
+                                        <a href="#" class="mega-menu"><span>Hakkımızda</span></a>
+                                    <div class="sub-menu-block">
+                                        <div class="row">
+                                                <div class="col-md-4 col-lg-4 col-sm-4">
+
+                                                        <div class="birimmenu">
+
+                                                                <a href='https://www.uyusmazlik.gov.tr/Home/SayfaDetay/baskan02062025022039' target="_blank">  Başkan</a>
+                                                        </div>
+
+
+                                                </div>
+                                                <div class="col-md-4 col-lg-4 col-sm-4">
+
+                                                        <div class="birimmenu">
+
+                                                                <a href='https://www.uyusmazlik.gov.tr/Home/SayfaDetay/baskan-vekili02062025022737' target="_blank">  Başkanvekili</a>
+                                                        </div>
+
+
+                                                </div>
+                                                <div class="col-md-4 col-lg-4 col-sm-4">
+
+                                                        <div class="birimmenu">
+
+                                                                <a href='https://www.uyusmazlik.gov.tr/Home/SayfaDetay/uyusmazlik-mahkemesi-uyeleri04062025111923' target="_blank">  &#220;yeler</a>
+                                                        </div>
+
+
+                                                </div>
+                                                <div class="col-md-4 col-lg-4 col-sm-4">
+
+                                                        <div class="birimmenu">
+
+                                                                <a href='https://www.uyusmazlik.gov.tr/Home/SayfaDetay/genel-sekreter02062025024133' target="_blank">  Genel Sekreter</a>
+                                                        </div>
+
+
+                                                </div>
+                                                <div class="col-md-4 col-lg-4 col-sm-4">
+
+                                                        <div class="birimmenu">
+
+                                                                <a href='https://www.uyusmazlik.gov.tr/Home/SayfaDetay/basraportor02062025023817' target="_blank">  Başraport&#246;r</a>
+                                                        </div>
+
+
+                                                </div>
+                                                <div class="col-md-4 col-lg-4 col-sm-4">
+
+                                                        <div class="birimmenu">
+
+                                                                <a href='https://www.uyusmazlik.gov.tr/Home/SayfaDetay/raportorler-ve-savcilar16062025103154' target="_blank">  Raport&#246;rler</a>
+                                                        </div>
+
+
+                                                </div>
+                                                <div class="col-md-4 col-lg-4 col-sm-4">
+
+                                                        <div class="birimmenu">
+
+                                                                <a href='https://www.uyusmazlik.gov.tr/Home/SayfaDetay/uyusmazlik-mahkemesinin-anayasal-konumu-ve-islevi23052025020940' target="_blank">  Anayasal Konumu ve İşlevi</a>
+                                                        </div>
+
+
+                                                </div>
+                                                <div class="col-md-4 col-lg-4 col-sm-4">
+
+                                                        <div class="birimmenu">
+
+                                                                <a href='https://www.uyusmazlik.gov.tr/Home/SayfaDetay/uyusmazlik-mahkemesinin-kurulusu02062025021617' target="_blank">  Kuruluşu</a>
+                                                        </div>
+
+
+                                                </div>
+                                                <div class="col-md-4 col-lg-4 col-sm-4">
+
+                                                        <div class="birimmenu">
+
+                                                                <a href='https://www.mevzuat.gov.tr/MevzuatMetin/1.5.2247.pdf' target="_blank">  Kanun</a>
+                                                        </div>
+
+
+                                                </div>
+                                        </div>
+                                    </div>
+                                </li>
+                                <li class="top-level-link">
+                                        <a href='/Home//SayfaDetay/uyusmazlik-mahkemesi-dergisi04062025115659'><span>Uyuşmazlık Mahkemesi Dergisi</span></a>
+                                </li>
+                                <li class="top-level-link">
+                                        <a href='/Home/SayfaDetay/karar-arama-sayfasi-yonlendirme21102026022550'><span>Uyuşmazlık Mahkemesi Kararları</span></a>
+                                </li>
+                                <li class="top-level-link">
+                                        <a href='https://www.uyusmazlik.gov.tr/Home/SayfaDetay/uyusmazlik-mahkemesi-karar-istatistikleri' target="_blank" class="mega-menu"><span>İstatistikler</span></a>
+                                    <div class="sub-menu-block">
+                                        <div class="row">
+                                        </div>
+                                    </div>
+                                </li>
+                                <li class="top-level-link">
+                                        <a href='https://www.uyusmazlik.gov.tr/Home/SayfaDetay/iletisim02062025112508' target="_blank"><span>İletişim</span></a>
+                                </li>
+                        <li class="top-level-link">
+                            <button class="ara"> <i class="fas fa-search"></i> </button>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+        </header>
+        <div id="arama-kutu2">
+            <div class="arama">
+<form action="/Home/Arama" id="arama" method="post"><input name="__RequestVerificationToken" type="hidden" value="bZ-rLWiE3uyY7SvJw-STSYrgIzNHAFbfeSgXsWZRQvQo9hXS294n-q6sUqZBVaiU2X4dUI_z_RLJW37CdM6a_yML74d6Ik02T6F0PLz4wPg1" />                    <div class="ara-kapsa">
+                        <div> <input type="search" name="aramakelime" class="ara form-control" id="ara" placeholder="Aranan Kelimeler.." autocomplete="off"></div>
+                        <div> <button class="bul"> <i class="fas fa-search"></i> </button> </div>
+                    </div>
+</form>            </div>
+        </div>
+        <main role="main">
+            
+
+
+
+
+
+
+<div class="container p-0">
+    <div class="kutu-dis p-0 speak-area">
+        <div class="manset">
+            <div id="carouselExampleIndicators" class="carousel slide" data-ride="carousel">
+                <ol class="carousel-indicators">
+
+                        <li data-target="#carouselExampleIndicators" data-slide-to="0" class="active"></li>
+                        <li data-target="#carouselExampleIndicators" data-slide-to="1" class=""></li>
+                        <li data-target="#carouselExampleIndicators" data-slide-to="2" class=""></li>
+                        <li data-target="#carouselExampleIndicators" data-slide-to="3" class=""></li>
+                        <li data-target="#carouselExampleIndicators" data-slide-to="4" class=""></li>
+                        <li data-target="#carouselExampleIndicators" data-slide-to="5" class=""></li>
+                        <li data-target="#carouselExampleIndicators" data-slide-to="6" class=""></li>
+                        <li data-target="#carouselExampleIndicators" data-slide-to="7" class=""></li>
+                        <li data-target="#carouselExampleIndicators" data-slide-to="8" class=""></li>
+                        <li data-target="#carouselExampleIndicators" data-slide-to="9" class=""></li>
+                </ol>
+                <div class="carousel-inner">
+
+                        <div class="carousel-item active">
+                                <a href='/Home/SayfaDetay/uyusmazlik-mahkemesi-baskanimiz-sayin-ridvan-gulecin-29-ekim-cumhuriyet-bayrami-kutlama-mesaji28102026010603'>
+                                    <img class="d-block w-100" src="/Resimler/Galeri/2810202613060329-ekim-kapak.jpg" alt="Uyuşmazlık Mahkemesi Başkanımız Sayın Rıdvan G&#220;LE&#199;&#39;in 29 Ekim Cumhuriyet Bayramı Kutlama Mesajı">
+                                    <div class="carousel-caption   d-md-block">
+                                        <span class="manset-baslik">
+Uyuşmazlık Mahkemesi Başkanımız Sayın Rıdvan G&#220;LE&#199;&#39;in 29 Ekim Cumhuriyet Bayramı Kutlama Mesajı
+                                        </span>
+                                    </div>
+                                </a>
+
+
+                        </div>
+                        <div class="carousel-item ">
+                                <a href='/Home/SayfaDetay/baskanimiz-sayin-ridvan-gulec-havelsan-genel-muduru-sayin-dr-mehmet-akif-acari-ziyaret-etti20102026025932'>
+                                    <img class="d-block w-100" src="/Resimler/Galeri/20102026150940kpk.jpg" alt="Başkanımız Sayın Rıdvan G&#220;LE&#199;, HAVELSAN Genel M&#252;d&#252;r&#252; Sayın Dr. Mehmet Akif NACAR&#39;ı Ziyaret Etti">
+                                    <div class="carousel-caption   d-md-block">
+                                        <span class="manset-baslik">
+Başkanımız Sayın Rıdvan G&#220;LE&#199;, HAVELSAN Genel M&#252;d&#252;r&#252; Sayın Dr. Mehmet Akif NACAR&#39;ı Ziyaret Etti
+                                        </span>
+                                    </div>
+                                </a>
+
+
+                        </div>
+                        <div class="carousel-item ">
+                                <a href='/Home/SayfaDetay/havelsan-ust-duzey-yetkililerinden-mehmet-ali-aydin-baskanimiz-sayin-ridvan-gulec-i-ziyaret-etti16102026113127'>
+                                    <img class="d-block w-100" src="/Resimler/Galeri/16102026113127kpk.jpg" alt="HAVELSAN &#220;st D&#252;zey Yetkililerinden Mehmet Ali AYDIN, Başkanımız Sayın Rıdvan G&#220;LE&#199;’i Ziyaret Etti">
+                                    <div class="carousel-caption   d-md-block">
+                                        <span class="manset-baslik">
+HAVELSAN &#220;st D&#252;zey Yetkililerinden Mehmet Ali AYDIN, Başkanımız Sayın Rıdvan G&#220;LE&#199;’i Ziyaret Etti
+                                        </span>
+                                    </div>
+                                </a>
+
+
+                        </div>
+                        <div class="carousel-item ">
+                                <a href='/Home/SayfaDetay/baskanimiz-sayin-ridvan-gulec-cumhurbaskanligi-kulliyesinde-duzenlenen-yemege-katildi15102026125815'>
+                                    <img class="d-block w-100" src="/Resimler/Galeri/15102026125815kp.jpg" alt="Başkanımız Sayın Rıdvan G&#220;LE&#199;, Cumhurbaşkanlığı K&#252;lliyesinde D&#252;zenlenen Yemeğe Katıldı">
+                                    <div class="carousel-caption   d-md-block">
+                                        <span class="manset-baslik">
+Başkanımız Sayın Rıdvan G&#220;LE&#199;, Cumhurbaşkanlığı K&#252;lliyesinde D&#252;zenlenen Yemeğe Katıldı
+                                        </span>
+                                    </div>
+                                </a>
+
+
+                        </div>
+                        <div class="carousel-item ">
+                                <a href='/Home/SayfaDetay/istanbul-universitesi-siyasal-bilgiler-fakultesi-ogrencileri-mahkememizi-ziyaret-etti08102026095759'>
+                                    <img class="d-block w-100" src="/Resimler/Galeri/8102026215759kpk.jpg" alt="İstanbul &#220;niversitesi Siyasal Bilgiler Fak&#252;ltesi &#214;ğrencileri Mahkememizi Ziyaret Etti">
+                                    <div class="carousel-caption   d-md-block">
+                                        <span class="manset-baslik">
+İstanbul &#220;niversitesi Siyasal Bilgiler Fak&#252;ltesi &#214;ğrencileri Mahkememizi Ziyaret Etti
+                                        </span>
+                                    </div>
+                                </a>
+
+
+                        </div>
+                        <div class="carousel-item ">
+                                <a href='/Home/SayfaDetay/uyusmazlik-mahkemesinden-ispanya-yuksek-mahkemesine-calisma-ziyareti08102026040453'>
+                                    <img class="d-block w-100" src="/Resimler/Galeri/8102026160741kpk.jpg" alt="Uyuşmazlık Mahkemesinden İspanya Y&#252;ksek Mahkemesine &#199;alışma Ziyareti">
+                                    <div class="carousel-caption   d-md-block">
+                                        <span class="manset-baslik">
+Uyuşmazlık Mahkemesinden İspanya Y&#252;ksek Mahkemesine &#199;alışma Ziyareti
+                                        </span>
+                                    </div>
+                                </a>
+
+
+                        </div>
+                        <div class="carousel-item ">
+                                <a href='/Home/SayfaDetay/uyusmazlik-mahkemesi-heyetinden-madrid-buyukelcisi-sayin-nuket-kucukel-ezberci-ye-ziyaret08102026054541'>
+                                    <img class="d-block w-100" src="/Resimler/Galeri/8102026174540kpk3.jpg" alt="Uyuşmazlık Mahkemesi Heyetinden Madrid B&#252;y&#252;kel&#231;isi Sayın N&#252;ket K&#220;&#199;&#220;KEL EZBERCİ’ye Ziyaret">
+                                    <div class="carousel-caption   d-md-block">
+                                        <span class="manset-baslik">
+Uyuşmazlık Mahkemesi Heyetinden Madrid B&#252;y&#252;kel&#231;isi Sayın N&#252;ket K&#220;&#199;&#220;KEL EZBERCİ’ye Ziyaret
+                                        </span>
+                                    </div>
+                                </a>
+
+
+                        </div>
+                        <div class="carousel-item ">
+                                <a href='/Home/SayfaDetay/baskanimiz-ridvan-gulec-ve-genel-sekreterimiz-sercan-kocabey-polatli-adliyesini-ziyaret-etti28092026110420'>
+                                    <img class="d-block w-100" src="/Resimler/Galeri/28092026230420kpk.jpg" alt="Başkanımız Rıdvan G&#220;LE&#199; ve Genel Sekreterimiz Sercan KOCABEY, Polatlı Adliyesini Ziyaret Etti">
+                                    <div class="carousel-caption   d-md-block">
+                                        <span class="manset-baslik">
+Başkanımız Rıdvan G&#220;LE&#199; ve Genel Sekreterimiz Sercan KOCABEY, Polatlı Adliyesini Ziyaret Etti
+                                        </span>
+                                    </div>
+                                </a>
+
+
+                        </div>
+                        <div class="carousel-item ">
+                                <a href='/Home/SayfaDetay/baskanimiz-sayin-ridvan-gulec-hsk-1-daire-baskani-sayin-turan-kuloglunu-makaminda-ziyaret-etti28092026084219'>
+                                    <img class="d-block w-100" src="/Resimler/Galeri/28092026204219kpk.jpg" alt="Başkanımız Sayın Rıdvan G&#220;LE&#199;, HSK 1. Daire Başkanı Sayın Turan KULOĞLU&#39;nu Makamında Ziyaret Etti">
+                                    <div class="carousel-caption   d-md-block">
+                                        <span class="manset-baslik">
+Başkanımız Sayın Rıdvan G&#220;LE&#199;, HSK 1. Daire Başkanı Sayın Turan KULOĞLU&#39;nu Makamında Ziyaret Etti
+                                        </span>
+                                    </div>
+                                </a>
+
+
+                        </div>
+                        <div class="carousel-item ">
+                                <a href='/Home/SayfaDetay/uyusmazlik-mahkemesinin-2026-yili-yillik-degerlendirme-toplantisi-gerceklesti28092026091430'>
+                                    <img class="d-block w-100" src="/Resimler/Galeri/28092026214836kpks (&#214;zel).jpg" alt="Uyuşmazlık Mahkemesi&#39;nin 2026 Yılı Yıllık Değerlendirme ve İ&#231;tihadı Birleştirme Toplantısı Ger&#231;ekleşti">
+                                    <div class="carousel-caption   d-md-block">
+                                        <span class="manset-baslik">
+Uyuşmazlık Mahkemesi&#39;nin 2026 Yılı Yıllık Değerlendirme ve İ&#231;tihadı Birleştirme Toplantısı Ger&#231;ekleşti
+                                        </span>
+                                    </div>
+                                </a>
+
+
+                        </div>
+                </div>
+
+
+                <a class="carousel-control-prev" href="#carouselExampleIndicators" role="button" data-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="sr-only">Previous</span>
+                </a>
+                <a class="carousel-control-next" href="#carouselExampleIndicators" role="button" data-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="sr-only">Next</span>
+                </a>
+            </div>
+
+        </div>
+        <div class="beyaz-kutu2">
+            <div class="dis-alan">
+
+                <div class="alan-satir2">
+                    <a href="SayfaDetay/baskan02062025022039" target="_blank" style="text-decoration: none; color: #000; color: #000; ">
+                        <div style=" width: 100%;" margin-bottom: 10px;>
+                            <img src="/Assets/front/images/R%c4%b1dvanGulec.png" alt="" width="250" height="359"/>
+                        </div>
+                        <div style="font-size: 16px; text-align: center; padding: 5px; color: #333; ">
+                            <b>Rıdvan GÜLEÇ</b>
+                            <br>
+                            Uyuşmazlık Mahkemesi Başkanı
+                            <br>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="kutu-dis p-0 speak-area">
+        <div class="tab_container" style="width:100%;">
+            <input id="tab1" type="radio" name="tabs" checked>
+            <label for="tab1"><span> Duyurular</span></label>
+
+            <input id="tab2" type="radio" name="tabs">
+            <label for="tab2"> <span>Eğitim Haberleri</span></label>
+
+            <section id="content1" class="tab-content">
+                    <div class="duyuru-kutu-icerik">
+                        <span class="duyuru-tarih"><span class="d">28 </span><br /><span class="m"> Eki</span></span>
+
+                        <div class="duyuru-ozet">
+                                <a href='/Home/SayfaDetay/uyusmazlik-mahkemesi-baskanimiz-sayin-ridvan-gulecin-29-ekim-cumhuriyet-bayrami-kutlama-mesaji28102026010603'>
+                                    Uyuşmazlık Mahkemesi Başkanımız Sayın Rıdvan G&#220;LE&#199;&#39;in 29 Ekim Cumhuriyet Bayramı Kutlama Mesajı
+                                </a>
+                        </div>
+                    </div>
+                    <div class="duyuru-kutu-icerik">
+                        <span class="duyuru-tarih"><span class="d">19 </span><br /><span class="m"> Eki</span></span>
+
+                        <div class="duyuru-ozet">
+                                <a href='/Home/SayfaDetay/baskanimiz-sayin-ridvan-gulec-havelsan-genel-muduru-sayin-dr-mehmet-akif-acari-ziyaret-etti20102026025932'>
+                                    Başkanımız Sayın Rıdvan G&#220;LE&#199;, HAVELSAN Genel M&#252;d&#252;r&#252; Sayın Dr. Mehmet Akif NACAR&#39;ı Ziyaret Etti
+                                </a>
+                        </div>
+                    </div>
+                    <div class="duyuru-kutu-icerik">
+                        <span class="duyuru-tarih"><span class="d">15 </span><br /><span class="m"> Eki</span></span>
+
+                        <div class="duyuru-ozet">
+                                <a href='/Home/SayfaDetay/havelsan-ust-duzey-yetkililerinden-mehmet-ali-aydin-baskanimiz-sayin-ridvan-gulec-i-ziyaret-etti16102026113127'>
+                                    HAVELSAN &#220;st D&#252;zey Yetkililerinden Mehmet Ali AYDIN, Başkanımız Sayın Rıdvan G&#220;LE&#199;’i Ziyaret Etti
+                                </a>
+                        </div>
+                    </div>
+                    <div class="duyuru-kutu-icerik">
+                        <span class="duyuru-tarih"><span class="d">14 </span><br /><span class="m"> Eki</span></span>
+
+                        <div class="duyuru-ozet">
+                                <a href='/Home/SayfaDetay/baskanimiz-sayin-ridvan-gulec-cumhurbaskanligi-kulliyesinde-duzenlenen-yemege-katildi15102026125815'>
+                                    Başkanımız Sayın Rıdvan G&#220;LE&#199;, Cumhurbaşkanlığı K&#252;lliyesinde D&#252;zenlenen Yemeğe Katıldı
+                                </a>
+                        </div>
+                    </div>
+                    <div class="duyuru-kutu-icerik">
+                        <span class="duyuru-tarih"><span class="d">7 </span><br /><span class="m"> Eki</span></span>
+
+                        <div class="duyuru-ozet">
+                                <a href='/Home/SayfaDetay/istanbul-universitesi-siyasal-bilgiler-fakultesi-ogrencileri-mahkememizi-ziyaret-etti08102026095759'>
+                                    İstanbul &#220;niversitesi Siyasal Bilgiler Fak&#252;ltesi &#214;ğrencileri Mahkememizi Ziyaret Etti
+                                </a>
+                        </div>
+                    </div>
+                    <div class="duyuru-kutu-icerik">
+                        <span class="duyuru-tarih"><span class="d">5 </span><br /><span class="m"> Eki</span></span>
+
+                        <div class="duyuru-ozet">
+                                <a href='/Home/SayfaDetay/uyusmazlik-mahkemesinden-ispanya-yuksek-mahkemesine-calisma-ziyareti08102026040453'>
+                                    Uyuşmazlık Mahkemesinden İspanya Y&#252;ksek Mahkemesine &#199;alışma Ziyareti
+                                </a>
+                        </div>
+                    </div>
+				
+                <div class="duyuru-arsiv-kutu"><a href='/Home/TumHaberler/1'>Duyuru Arşivi</a> </div>
+            </section>
+            <section id="content2" class="tab-content">
+                    <div class="duyuru-kutu-icerik">
+                        <span class="duyuru-tarih"><span class="d">19 </span><br /><span class="m"> Eyl</span></span>
+                        <div class="duyuru-ozet">
+                            <a href='/Home/SayfaDetay/uyusmazlik-mahkemesinin-2026-yili-yillik-degerlendirme-toplantisi-gerceklesti28092026091430'>
+                                Uyuşmazlık Mahkemesi&#39;nin 2026 Yılı Yıllık Değerlendirme ve İ&#231;tihadı Birleştirme Toplantısı Ger&#231;ekleşti
+                            </a>
+                        </div>
+                    </div>
+                    <div class="duyuru-kutu-icerik">
+                        <span class="duyuru-tarih"><span class="d">6 </span><br /><span class="m"> Nis</span></span>
+                        <div class="duyuru-ozet">
+                            <a href='/Home/SayfaDetay/mahkememiz-personeli-yozgatta-duzenlenen-hizmet-ici-egitim-programina-katildi07042026021447'>
+                                Mahkememiz Personeli Yozgat&#39;ta D&#252;zenlenen Hizmet İ&#231;i Eğitim Programına Katıldı
+                            </a>
+                        </div>
+                    </div>
+                    <div class="duyuru-kutu-icerik">
+                        <span class="duyuru-tarih"><span class="d">8 </span><br /><span class="m"> Ara</span></span>
+                        <div class="duyuru-ozet">
+                            <a href='/Home/SayfaDetay/uyusmazlik-mahkemesinin-2025-yili-yillik-degerlendirme-toplantisi-sapancada-gerceklesti08122025042005'>
+                                Uyuşmazlık Mahkemesi&#39;nin 2025 Yılı Yıllık Değerlendirme Toplantısı Sapanca&#39;da ger&#231;ekleşti
+                            </a>
+                        </div>
+                    </div>
+                    <div class="duyuru-kutu-icerik">
+                        <span class="duyuru-tarih"><span class="d">26 </span><br /><span class="m"> Haz</span></span>
+                        <div class="duyuru-ozet">
+                            <a href='/Home/SayfaDetay/prof-dr-acar-baltas-tan-uyusmazlik-mahkemesi-ne-anlamli-ziyaret27062025112257'>
+                                Prof. Dr. Acar Baltaş’tan Uyuşmazlık Mahkemesi’ne Ziyaret
+                            </a>
+                        </div>
+                    </div>
+                    <div class="duyuru-kutu-icerik">
+                        <span class="duyuru-tarih"><span class="d">8 </span><br /><span class="m"> Şub</span></span>
+                        <div class="duyuru-ozet">
+                            <a href='/Home/SayfaDetay/uyusmazlik-mahkemesi-nin-2024-yili-yillik-degerlendirme-ve-ictihadi-birlestirme-toplantisi-ile-kuzey-kibris-turk-cumhuriyeti-ziyaretleri14042025034351'>
+                                Uyuşmazlık Mahkemesi’nin 2024 Yılı Yıllık Değerlendirme ve İ&#231;tihadı Birleştirme Toplantısı ile Kuzey Kıbrıs T&#252;rk Cumhuriyeti Ziyaretleri 
+                            </a>
+                        </div>
+                    </div>
+                <div class="duyuru-arsiv-kutu"><a href="/Home/TumHaberler/3">Haber Arşivi</a> </div>
+
+            </section>
+        </div>
+
+    </div>
+
+    <div class="kutu-dis">
+        <div class="renksiz-kutu">
+
+                <div class="kutu-ikon">
+                        <a href='https://vatandas.uyap.gov.tr/' target="_blank">
+                            <span class="ikon"><img src="/Resimler/icon/a1.png" alt="" /></span>
+                            <span class="ikon-ad">Vatandaş Portal</span>
+                        </a>
+
+                </div>
+                <div class="kutu-ikon">
+                        <a href='https://avukat.uyap.gov.tr/	' target="_blank">
+                            <span class="ikon"><img src="/Resimler/icon/a2.png" alt="" /></span>
+                            <span class="ikon-ad">Avukat Portal</span>
+                        </a>
+
+                </div>
+                <div class="kutu-ikon">
+                        <a href='https://kurum.uyap.gov.tr/main/kurum/index.jsp?v=3869' target="_blank">
+                            <span class="ikon"><img src="/Resimler/icon/a3.png" alt="" /></span>
+                            <span class="ikon-ad">Kurum Portal</span>
+                        </a>
+
+                </div>
+                <div class="kutu-ikon">
+                        <a href='https://esatis.uyap.gov.tr/esatis/?v=3869' target="_blank">
+                            <span class="ikon"><img src="/Resimler/icon/5052025154728Başlıksız.png" alt="" /></span>
+                            <span class="ikon-ad">e-Satış Portal</span>
+                        </a>
+
+                </div>
+                <div class="kutu-ikon">
+                        <a href='https://bilirkisi.uyap.gov.tr/' target="_blank">
+                            <span class="ikon"><img src="/Resimler/icon/a4.png" alt="" /></span>
+                            <span class="ikon-ad">Bilirkişi Portal</span>
+                        </a>
+
+                </div>
+                <div class="kutu-ikon">
+                        <a href='http://arabulucu.uyap.gov.tr/' target="_blank">
+                            <span class="ikon"><img src="/Resimler/icon/a5.png" alt="" /></span>
+                            <span class="ikon-ad">Arabulucu Portal</span>
+                        </a>
+
+                </div>
+                <div class="kutu-ikon">
+                        <a href='https://uzlastirmaci.uyap.gov.tr/' target="_blank">
+                            <span class="ikon"><img src="/Resimler/icon/a6.png" alt="" /></span>
+                            <span class="ikon-ad">Uzlaştırmacı Portal</span>
+                        </a>
+
+                </div>
+        </div>
+    </div>
+
+    
+
+</div>
+
+
+
+
+
+
+
+        </main>
+        <footer>
+            <div class="footer-dis container">
+                <div class="footer-sol">
+                    <div class="alt-logo"><img src="/Assets/front/images/uyusmazlik.png" alt=" " style="width: 100px; height: 100px;" /></div>
+                </div>
+                <div class="footer-kutularkapsa">
+
+                        <div class="footer-kutu1">
+                            <a href="#" class="scroll_To_Top"> <span><i class="fas fa-chevron-circle-up fa-3x"></i></span></a>
+                                    <a href="#"> <div class="footer-baslik"> UYAP </div></a>
+                                <div class="footer-linkler">
+                                    <ul>
+                                                <li><a href='https://www.uyap.gov.tr/Arsiv/yazi' target="_blank"> UYAP&#39;tan Haberler</a></li>
+                                                <li><a href='https://www.uyap.gov.tr/UYAP-Odulleri' target="_blank"> UYAP &#214;d&#252;lleri</a></li>
+                                                <li><a href='https://www.uyap.gov.tr/UYAP-Editor' target="_blank"> UYAP Edit&#246;r</a></li>
+                                                <li><a href='https://uyapakademi.adalet.gov.tr/' target="_blank"> UYAP Akademi</a></li>
+                                    </ul>
+                                </div>
+                        </div>
+                        <div class="footer-kutu1">
+                            <a href="#" class="scroll_To_Top"> <span><i class="fas fa-chevron-circle-up fa-3x"></i></span></a>
+                                    <a href="#"> <div class="footer-baslik"> Bakanlık Birimleri </div></a>
+                                <div class="footer-linkler">
+                                    <ul>
+                                                <li><a href='https://www.adalet.gov.tr/birimler' target="_blank"> Merkez Birimler</a></li>
+                                                <li><a href='https://www.adalet.gov.tr/Birimler/BAM' target="_blank"> B&#246;lge Adliye Birimleri</a></li>
+                                                <li><a href='https://www.adalet.gov.tr/Birimler/ACM' target="_blank"> Adli Yargı Birimleri</a></li>
+                                                <li><a href='https://www.adalet.gov.tr/Birimler/B%C4%B0M' target="_blank"> İdari Yargı Birimleri</a></li>
+                                                <li><a href='https://www.adalet.gov.tr/Birimler/C%C4%B0K' target="_blank"> Ceza İnfaz Kurumları</a></li>
+                                                <li><a href='https://www.adalet.gov.tr/Birimler/E%C4%9Fitim%20Merkezi' target="_blank"> Eğitim Merkezleri</a></li>
+                                    </ul>
+                                </div>
+                        </div>
+                        <div class="footer-kutu1">
+                            <a href="#" class="scroll_To_Top"> <span><i class="fas fa-chevron-circle-up fa-3x"></i></span></a>
+                                    <a href="#"> <div class="footer-baslik"> Hızlı Erişim </div></a>
+                                <div class="footer-linkler">
+                                    <ul>
+                                                <li><a href='http://uym-portal/' target="_blank"> Uyuşmazlık Portal 🌐</a></li>
+                                                <li><a href='http://uym-portal/KararAramaMotoru' target="_blank"> Hızlı Karar Arama 🔍</a></li>
+                                                <li><a href='https://www.uyusmazlik.gov.tr/Resimler/Video/14052025100111Uyusmazlik-Mahkemesi-tanitim-filmi.mp4' target="_blank"> Tanıtım Filmi ▶️</a></li>
+                                                <li><a href='https://sozluk.adalet.gov.tr/' target="_blank"> Hukuk S&#246;zl&#252;ğ&#252; 📖</a></li>
+                                                <li><a href='http://uym-portal/rehber/index' target="_blank"> Telefon Rehberi 📞</a></li>
+                                    </ul>
+                                </div>
+                        </div>
+                </div>
+                <div class="adresalan">
+                    <div class="adres-kutu">   <span> <i class="fas fa-phone-volume"></i> </span>   <span>      (312) 489 82 04 </span> </div>
+                    <div class="adres-kutu">    <span> <i class="far fa-envelope-open"></i> </span>  <span>    bilgi@uyusmazlik.gov.tr </span> </div>
+                    <div class="adres-kutu"> <span> <i class="fas fa-map-marker-alt"></i> </span>  <span>       Ahlatlıbel Mahallesi İncek Şehit Savcı Mehmet Selim Kiraz Bulvarı No:4 06805 Çankaya Ankara/Türkiye </span> </div>
+
+                </div>
+            </div>
+            <div class="alt-bilgi container">
+                <div class="telif-yazi"> <b>T.C. UYUŞMAZLIK MAHKEMESİ BAŞKANLIĞI </b> © Tüm Hakları Saklıdır.</div>
+                <div class="sayac">
+                    Tasarım ve Kodlaması <b> Bilgi İşlem Genel Müdürlüğü</b> tarafından yapılmıştır.  2019
+                </div>
+            </div>
+
+        </footer>
+        <div class="overlay"></div>
+
+    </div>
+    <script src="/Assets/front/js/fill.js"></script>
+    <script async src="/Assets/front/js/widgets.js" charset="utf-8"></script>
+    <script src="/Assets/front/js/all.js"></script>
+    <script src="/Assets/front/js/picturefill.min.js"></script>
+    <script src="/Assets/front/js/lightgallery-all.min.js"></script>
+    <script src="/Assets/front/js/jquery.mousewheel.min.js"></script>
+    <script src="/Assets/front/js/bootstrap.bundle.min.js"></script>
+    <script src="/Assets/front/js/jquery.dataTables.min.js"></script>
+    <script src="/Assets/front/js/dataTables.bootstrap4.min.js"></script>
+    <script src="/Assets/front/js/app.js"></script>
+
+</body>
+</html>

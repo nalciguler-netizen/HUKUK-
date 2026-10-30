@@ -1,0 +1,54 @@
+{
+ "kaynak": "Rekabet Kurulu kararları (rekabet.gov.tr)",
+ "sayilar": {
+  "1": {
+   "adet": 7,
+   "dosya": "0001.json"
+  },
+  "2": {
+   "adet": 6,
+   "dosya": "0002.json"
+  },
+  "3": {
+   "adet": 5,
+   "dosya": "0003.json"
+  },
+  "4": {
+   "adet": 12,
+   "dosya": "0004.json"
+  },
+  "5": {
+   "adet": 8,
+   "dosya": "0005.json"
+  },
+  "6": {
+   "adet": 7,
+   "dosya": "0006.json"
+  },
+  "7": {
+   "adet": 6,
+   "dosya": "0007.json"
+  },
+  "8": {
+   "adet": 3,
+   "dosya": "0008.json"
+  },
+  "9": {
+   "adet": 10,
+   "dosya": "0009.json"
+  },
+  "10": {
+   "adet": 7,
+   "dosya": "0010.json"
+  },
+  "11": {
+   "adet": 1,
+   "dosya": "0011.json"
+  }
+ },
+ "geri_sayfa": 1,
+ "arsiv_tamam": false,
+ "guncelleme": "2026-10-30 15:02",
+ "toplam": 72,
+ "son_sayfa": 1047
+}

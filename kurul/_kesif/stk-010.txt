@@ -81,4 +81,183 @@ yerinde sürücü olarak H.T.'nin olduğu, alkol tespit raporunun alındığı�
 yapıldığı, yine 09.01.2011 tarihli şoför H.T.'ye ait “Müşteki İfade Tutanağı”na göre
 09.01.2011 günü Adıyaman ilinden getirdiği beton kumunu boşalttığı esnada, 63 KC plakalı
 çekicinin arkasında bulunan 63 DY plakalı römorkun yan yattığı, bundan dolayı römork ve
-çekicinin zarar gördüğü, hemen jand
+çekicinin zarar gördüğü, hemen jandarmaya haber verdiği” ifadesinin yazılı olduğu
+görülmektedir.
+
+TTK.1282. maddesi uyarınca sigortacı geçerli bir sigorta ilişkisi kurulduktan sonra oluşan
+rizikolardan sorumlu bulunmaktadır. TTK.1281/2 maddesine göre de kural olarak rizikonun
+teminat dışında kaldığına ilişkin iddianın sigortacı tarafından kanıtlanması gerekmektedir.
+Olayın sigortalının ihbar ettiği şekilde değil de sigortacının iddia ettiği şekilde gerçekleşmesi
+halinde ise bu oluş şeklinin aynı zamanda sigorta genel şartlarında sayılan teminat dışında
+kalan hallerden olması gerekmektedir. Poliçe Genel Şartları ve TTK’nun 1292. maddesi
+uyarınca rizikonun gerçekleştiğine dair doğru ihbar mükellefiyetini kasten yerine getirmez
+veya iyiniyet kurallarına açıkça aykırı şekilde sigorta teminatı dışında kalan bir hususu sanki
+bu oluşan riziko teminat içinde imiş gibi ihbar ederse ispat külfeti yer değiştirip,
+oluşan rizikonun teminat içinde kaldığını ispat külfeti sigortalıya geçer.
+
+Ancak rizikonun ihbar edilenden farklı şekilde gerçekleştiğini ispat külfeti sigortacıda
+bulunmakta olup, sigortacı bunu soyut iddialarla değil, somut delillerle kanıtlamalıdır (Emsal;
+Yargıtay Hukuk Genel Kurulu 22.12.2010 tarih 17-655 E. 688 K.sayılı kararı, Yargıtay
+17.Hukuk Dairesi 31.05.2010 Tarih 2009/10681 E. 2010/4958 K. sayılı kararı, Yargıtay
+11.Hukuk Dairesi 23.01.2007 tarih 2005/13829 E. 2007/700 K. Sayılı kararı).
+
+
+Kara Taşıtları Kasko Sigortası Genel Şartları'nın A.5.10 maddesinde yazılı "Taşıtın ruhsatında
+belirtilen taşıma haddinden fazla yük ve yolcu taşınması sırasında meydana gelen zararların
+teminat dışında olduğuna" ilişkin istisna hükmünün uygulanabilmesi için, riziko ile istiap
+haddinden fazla yük ve yolcu taşıma arasında uygun illiyet bağının bulunması ve kazanın sırf
+bu nedenle meydana gelmesi gerekmektedir (Hukuk Genel Kurulu 2001/11-1-1109 E.
+2001/1108 K. 05.12.2001). Yargıtay uygulamasında bu husus yerleşmiş olup “Taşıtın
+ruhsatında belirtilen taşıma haddinden fazla yük ve yolcu taşınması sırasında meydana gelen
+zararların teminat dışı kabul edilebilmesi için, riziko ile istiap haddinden fazla yük yada yolcu
+taşıma arasında uygun “nedensellik bağı”nın bulunması ve kazanın salt bu nedenle meydana
+gelmesi gerekir. Başka bir anlatımla, sadece istiap haddinin aşılmış olması, rizikonun teminat
+dışı olduğu sonucunu doğurmaz. Ayrıca, bu hususun davacı sigorta şirketince kesin bir
+şekilde kanıtlanması gerekir” (11.HD. 02.11.2004, 1608-10733). Olayın münhasıran “istiap
+haddi”nin aşılması suretiyle meydana gelip gelmediğinin ve gelmiş olması ihtimalinde somut
+olaydaki hukuksal durumun açıklığa kavuşturulmasında yarar bulunmaktadır.
+
+Sigorta Kuruluşu tarafından sunulan ekspertiz raporuna göre “yapılan ölçümlerde aracın
+damper boyunun 800 cm, genişliğinin (ortalama) 225 cm, yüksekliğinin ise 170 cm olduğunun
+anlaşıldığı, buna göre olay esansında araçtaki yük miktarının 8.00x2.25*1.70 = 30.6 m3
+olduğu, ıslak kum, çakıl vs özgül ağırlığının 2.250 ton/m3 olduğu, buna göre 30.6 m3 x 2.252
+m3 ton = 68.850 kg” biçimindeki tespitin reel bir ağırlık ölçümü değil, azami kapsam
+varsayımlı ihtimal hesabı olduğu görülmektedir. O halde araçtaki yüke ilişkin tek belge
+başvuru evrakı içinde dosyaya ibraz edilen 63 KL plakalı araç için düzenlenen “A. A. A.Ş…”
+başlıklı taşınan yükün 0.5 numara kum olduğu ve 09.01.2012 tarihi 04:46 itibariyle yapılan
+
+                                                2
+tartım sonucunun 38.350 kg olduğunu gösteren kantar fişidir. 38.350 kg.’dan çekicinin ve yarı
+römorkun ruhsatlarında yazılı net ağırlıkları (7.550 + 7.500) düşüldüğünde 23.300 kg.
+kalmakta olup bu tutar çekicinin ruhsatnamede yazılı azami yüklü ağırlık bareminin (33.500
+kg) altındadır. Taraflar, sigortalı yarı römorkun azami ağırlığını 23.500 olarak belirtmekte
+iseler de hem ruhsatnamede hem römorka ait çekilen fotoğraflarda römorkun şasisi üzerine
+yapıştırılmış, aracın tanıtım bilgilerini içeren “Monovela” amblemli levhada azami yük
+kütlesinin 33.500 Kg. olduğu açıkça yazılı bulunmaktadır. Bu durumda aracın istiap haddinin
+aşıldığının kabulü mümkün olmayıp eksper tarafından yapılan römorkun ebatlarını esas alan
+azami kapasite hesabı üzerinden ihtimal düzeyli değerlendirme ile sonuca varılması mümkün
+değildir.
+
+Diğer yandan istiap haddinin aşıldığı kabul edilse dahi yükün boşaltılması sırasında aracın
+boşaltma işlemi/fonksiyonunun devreye girmesi üzerine meydana gelen yan yatma/devrilme
+olayında münhasır nedenin yük olamayacağı açık olup, zeminin durumu/kayganlığı, açık kasa
+pozisyonunda bekleme süresi, fazla yük olmasa dahi ince kumun boşaltma esnasında dorse üst
+sol ya da sağ yana yapışıp zorlayarak yana ağırlık vermesi gibi herkesçe kabulü mümkün
+nedenlerle aracın yan yatması olayında araçta “fazla yük” bulunması nedenlerden biri olarak
+kabul edilse bile zorunlu olarak başka nedenlerle birlikte düşünülmesi gereği ortaya
+çıkmaktadır. Bu durumda devrilme olayının liftin kırılmasından değil, liftin zorlanması ya da
+devrilme sonucu kırılmış olacağı, fotoğraflarda görülen devrilme şekline göre dorsenin
+içerisindeki ince kum malzemenin yapışması, dengesiz boşalma ve zeminin bozuk/kaygan
+gibi sebepler olabileceği -yani münhasır nedenin araçtaki yük olamayacağı- anlaşılmaktadır.
+Birden fazla olasılık aynı anda mevcut olduğuna göre “fazla yük” unsuru devrilmenin
+münhasır nedenini teşkil etmemektedir.
+
+Yukarıda yer alan açıklamalar ve emsal kararlar doğrultusunda, sigortalının beyanının aksini
+gösterir şekilde araçta fazla yük bulunduğu hususu ve miktarının ispat edilemediği,
+Yargıtay’ın yerleşik görüşüne göre istiap haddinin aşılması halinin tek başına hasarı sigorta
+teminatı kapsamı dışında bırakmayacağı, teminat dışında kalma halinin sigorta şirketi
+tarafından somut delillerle ispat edilmesinin gerektiği kanaatine varılmıştır. İstiap haddinin
+aşıldığını gösterir kayıt bulunmadığı gibi istiap haddi aşımı tek başına sigorta teminatını
+kaldıran bir unsur olarak kabul edilmemesi, yani kaza ile münhasır illiyet bağı aranması
+karşısında istiap haddi aşımı varsayımında kazaya “münhasır” etkili olma hususu ispat
+edilemediğinden mevcut bilgi ve belgeler dahilinde sigorta şirketinin hasarın teminat
+haricinde bulunduğu yönündeki savunması kapsamında ispat külfetinin yerine getiremediği
+kanaatine varılmıştır.
+
+TTK.1264 ve 1283.madde hükümlerine göre, “Sigortacı, sigorta ettiren veya sigortadan
+faydalanan kimsenin ancak hakikaten uğradığı zararı tazmine mecburdur” Bu hüküm, sigorta
+hukukunda geçerli olan zenginleşme yasağı prensibinin bir gereği bulunmaktadır. Mevcut
+hükümler karşısında, davacının “GERÇEK ZARAR” tutarının tespiti gerekmektedir. Zarara
+uğrayan, zararın varlığını ve kapsamını kanıtlamakla yükümlüdür.
+
+Başvuru evrakları içerisinde yer alan ve talebe dayanak olarak gönderilen K. Damper Treyler
+Otomotiv Nak. Gıda Tic. Ltd.Şti. tarafından 63 DY plakalı dorse için düzenlenen “Yedek
+Parça ve Tamir Formu” incelendiğinde, “yeni şase, damper düzeltimi ve tadilatı, dingil
+bakımı, lift braket, çamurluklar, su tankı, king pimi, yangın dolabı, yağ tankı, hidrolik
+hortumlar, hidrolik yağ, elektrik tesisatı, boya ve kumlama, işçilik bedelleri toplamının
+20.000 TL ve KDV ilavesi ile (hasarlı parça ve işçilik tutarının) toplam KDV dahil 23.600
+TL olarak belirlenmiş olduğu görülmektedir.
+
+                                              3
+Sigorta şirketi savunmasında ise eksper raporuna göre aracın hasar bedelinin 7.050,00 TL
+olarak belirlendiğini, talep miktarının da fahiş bulunduğunu iddia etmekte ise de taraflarınca
+ibraz edilmiş bulunan ekspertiz raporunda “servis yetkililerine liftin kendi ayıbından dolayı
+hasarlandığı, bu konudaki hasarın tamirat dışı olduğunun anlatıldığı, diğer hasarlar ile ilgili
+gerekli çalışma ve pazarlıklar yapılarak hasar durumunun çıkarıldığının belirtildiği, eksper
+raporunun “Hesap Özeti” başlıklı bölümünde sadece işçilik ile ilgili tutar belirlendiği, hasar
+gören parçalar karşılığı kısmının boş olduğu, tespit edilen hasar miktarının da işçilik için
+KDV hariç 7.050,00 TL hesaplandığı, hasar yönetim sisteminde bu markaya ait yedek parça
+fiyat bilgisi bulunmadığından dolayı yedek parça fiyat kontrolü oto analiz sisteminden
+yapılamadığı” görülmekte olup hasarlı parçalara ilişkin ayrıntı ve hasar toplam tutarına ilişkin
+Sigorta Kuruluşu tarafından sunulmuş herhangi bir bilgi bulunmamaktadır.
+
+Hasar miktarı hususunda da taraflar arasında ihtilaf bulunması nedeniyle hakem heyetimizce
+alınan 02.05.2012 tarihli ara karar doğrultusunda mahkeme bilirkişi listesinden ismi temin
+edilen Ç.Ü. Makine Mühendisliği, Otomotiv Bölümünde öğretim görevlisi bilirkişi Prof. Dr.
+K. A.’dan rapor alınmasına karar verilmiştir. Bilirkişi Prof. Dr. K. A. tarafından heyetimize
+sunulan 21.05.2012 tarihli bilirkişi raporuna göre; söz konusu hasar nedeniyle değişmesi
+gereken parça ve tutarları (KDV hariç) (hidrolik silindir ve bağlantıları 2.250, sol çamurluk
+300, su tankı 50, yangın dolabı, 75, king pimi 175, yağ tankı 150, hidrolik hortumlar 400,
+hidrolik yağ 440 olmak üzere) %1 hurda tenzili (38,40) ile ulaşılan 3.801,60 TL net parça
+bedeline işçilik tutarları eklendiğinde (şase, damper, kaporta ve boya işçiliği 4.600, dingil
+bakımı ve hidrolik aksam mekanik işçiliği 2.250, elektrik işçiliği 200 olmak üzere) 10.851,60
+TL rakamına ulaşılarak %18 KDV (1.953,29) ilavesi ile 12.804,89 TL hasar bedeli tespit
+edilmiştir.
+
+Bilirkişi raporu taraflara tebliğ edilmiş, sigorta kuruluşu vekili bilirkişi raporuna karşı vermiş
+olduğu 28.05.2012 tahkim havale tarihli beyanında “raporun sonuç bölümünde de ifade edildiği
+üzere yüklü bulunan kumu boşaltmak için hidrolik silindir vasıtası ile römork kasasını kaldırırken
+aracın istiap haddinden fazla yüklü olması sebebi ile hidrolik silindirin koparak römork kasasının
+sol yana devrilmesi sonucu söz konusu hasar meydana geldiğini, bir an için istiap haddinin
+aşılmasının kazaya sebebiyet vermediği belirlenmiş olsaydı dahi bilirkişi tarafından tespit edilen
+hasar miktarı yerinde olmadığını zira lifte meydana gelen hasarın kendi ayıbından kaynaklandığı
+ve bunu da teminat haricinde kaldığının tespit edildiğini, gerçek zarar miktarının eksper
+tarafından 7.050 TL olarak tespit edilmiş olup bunun üzerinde kalan hasar miktarı gerçeği
+yansıtmadığı” ifade edilmiştir. Ara kararımız ile bilirkişi incelemesi yapılması istenen husus zarar
+hesabı yapılması ile sınırlı olup raporda istiap haddine yönelik açıklamalar, dosyadaki
+evraklarında yer alan hususların tekrarı ve açıklanmasından ibarettir. Sigorta şirketi vekilinin,
+bilirkişi raporu sonuç kısmını dayanak göstermek suretiyle “istiap haddinden fazla yüklü olması
+nedeniyle hidrolik silindirin koparak römork kasasının yol yanına devrilmesi” yönündeki
+açıklamayı dayanak gösteren itirazına ise hakem heyetimizce yukarıdaki değerlendirme (araçtaki
+yük miktarına ya da ne kadar fazla olduğuna ilişkin somut delil bulunmaması, zeminin kumdan
+dolayı kayganlık durumu, boşaltma sırasında kumun kasaya devrildiği yöne doğru ağırlık verecek
+şekilde yapışması ve diğer etkenler) kapsamında itibar edilmemiştir. Hasar miktarına ilişkin itiraza
+gelince, dayanak gösterilen ekspertiz raporunda parça tutarına ilişkin inceleme yapılamadığı zaten
+ifade edilmiş, öngörülen işçilik ücretinin bilirkişi raporundaki tespiti aşmadığı görülmüştür. Kasko
+sigortalı yarı römorkun ruhsatnamesinde yazılı araç muayene geçerlilik süresinin 15.02.2012,
+çekicisinin ise 02.07.2012 olduğu görülmekte olup aracın/araçların 09.01.2012 tarihi itibariyle
+teknik aksamı yönünden sigortalıya kusur yüklenmesini gerektiren bir neden mevcut olmadığı
+gibi sigorta kuruluşunun ekspertiz raporuna atıfla “liftin kendi ayıbından dolayı hasarlandığı”
+savunması da ispat edilememiş olup bilirkişi raporunda “hidrolik silindirde herhangi bir üretim
+
+                                                 4
+hatası tespit edilemediği” belirtilmiş, liftin ayıplı bulunduğu yönünde bir kanaat bildirilmemiş
+olup anlatılan nedenlerle sigorta kuruluşu vekilinin hasar tutarına ilişkin itirazları da yerinde
+görülmemiştir.
+
+Yine başvuru sahibi tarafından gönderilen 30.05.2012 tarihli (bilirkişi raporuna beyan)
+dilekçesinde “raporun aleyhlerine düzenlendiği, araçlarının yasal limiti aşmadan toplamda
+42 tondan fazla yükleme yapmadığını, kaza esnasında artça bulunan yükün kantar fişini
+gönderdiklerini, hiçbir araca 70,2 ton yüklemelerinin mümkün olmadığı” beyanları yer almış
+olup, heyetimizce yapılan değerlendirme sonucu, istiap haddi konusunda yukarıdaki
+gerekçeler karşısında ayrı bir incelemeye gerek bulunmadığı, hasar tutarına gelince, başvuru
+sahibi tarafından dosyaya sunulan “Koneksan” tarafından düzenlenmiş tek taraflı belgenin
+hükme esas kanıt gücüne sahip bir belge olamayacağı, kaza nedeniyle değişmesi gerekli
+parçalar ve işçilik değerlendirmesinin uzman bilirkişi incelemesini gerektirdiği, heyetimizce
+alınan 21.05.2012 tarihli bilirkişi raporundaki hasar tespit ve hesabının somut olaya uyarlı ve
+denetime elverişli bulunduğu, başkaca inceleme yapılmasına gerek olmadığı kanaatine
+varılmış olup rapora karşı itiraz kapsamında yeniden incelemeye gidilmesine gerek
+görülmemiştir.
+
+Poliçe Özel Şartları arasında yer alan “Amortisman Özel Şartı”na göre kısmi hasar halinde,
+onarım sonucu araçta meydana gelen kıymet artışı (eskime payı) düşülmeden hasar ödenir.
+Ancak lastik, akü ve katalitik konvertör gibi kullanım süresi sınırlı olan parçalarda azami %50
+oranında kıymet artışı indirimi uygulanır” denilmekte olup değişmesi gerekli parçalar listesi
+itibariyle bilirkişi raporunda amortisman indirimi yoluna gidilmemesi yerinde görülmüştür.
+
+3065 sayılı Katma Değer Vergisi Kanununun 1 inci maddesine göre Türkiye´de yapılan ticari,
+sınai, zirai faaliyet ve serbest meslek faaliyet çerçevesinde yapılan teslim ve hizmetler katma
+değer vergisine tabidir. Sigortalının, verilen zararın onarımı için satın alacağı malzeme ve
+onarım için gerekli işçilik hizmeti de anılan yasa maddesi gereğince katma değer vergisine
+tabidir. O halde, başvuru sahibi yararına hükmedilecek tazminat miktarına, bu miktar
+üzerinden hesap edilecek KDV’nin de eklenmesi gerek
