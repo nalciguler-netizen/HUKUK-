@@ -1,0 +1,36 @@
+name: Kurul kararlarını topla (Sigorta Tahkim, Rekabet, KVKK)
+
+on:
+  workflow_dispatch:
+    inputs:
+      yeniden:
+        description: "Tüm dergi sayılarını baştan işle (1 = evet). Normalde boş bırakın."
+        required: false
+        default: ""
+  schedule:
+    - cron: "17 3 5 * *"   # her ayın 5'i, 06:17 (Türkiye saati)
+
+permissions:
+  contents: write
+
+jobs:
+  topla:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: PDF araçlarını kur
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils
+      - name: Topla
+        env:
+          YENIDEN: ${{ github.event.inputs.yeniden }}
+        run: python scripts/kurul_topla.py
+      - name: Kaydet
+        run: |
+          git config user.name "kurul-kararlari"
+          git config user.email "yolhava.destek@gmail.com"
+          git add kurul
+          if git diff --cached --quiet; then echo "Yeni karar yok."; else git commit -m "Kurul kararları güncellendi" && git push; fi
