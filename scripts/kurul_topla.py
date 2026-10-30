@@ -1,10 +1,11 @@
 """Kurul kararlarını toplar (Hukuk Platformu).
 - Sigorta Tahkim Komisyonu: Hakem Kararları Dergisi sayılarını (karardrgsN.pdf) indirir, kararlara ayırır,
   kurul/stk/NNN.json olarak yazar. Daha önce işlenen sayılar atlanır; her ay yeni sayılar eklenir.
-- Rekabet Kurulu ve KVKK: şimdilik yalnızca sayfa yapısını kaydeder (kurul/_kesif/), ayrıştırıcı sonra eklenecek.
+- Rekabet Kurulu: karar listesinden PDF'leri indirir, kurul/rekabet/NNNN.json (en çok 25 karar) olarak yazar; her çalışmada sınırlı sayıda (arşiv birkaç çalışmada tamamlanır).
+- KVKK ve Uyuşmazlık Mahkemesi: şimdilik yalnızca sayfa yapısını kaydeder (kurul/_kesif/), ayrıştırıcı sonra eklenecek.
 Kararlar kamuya açık resmî metinlerdir; kişi bilgileri yayımlayan kurumca gizlenmiştir."""
 from __future__ import annotations
-import hashlib, json, os, re, subprocess, sys, tempfile, time, urllib.request, urllib.error
+import hashlib, html as htmlmod, json, os, re, subprocess, sys, tempfile, time, urllib.request, urllib.error
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "kurul")
 UA = {"User-Agent": "Mozilla/5.0 (HukukPlatformu kurul-kararlari; iletisim yolhava.destek@gmail.com)"}
@@ -26,8 +27,23 @@ def save(path, data):
         f.write(data)
 
 
-HDR = re.compile(r"^[\s\f]*(\d{2}[/.]\d{2}[/.]\d{4})\s+Tarih\w*\s+(?:ve\s+)?(K-\d{4}/\d+|\d{4}/İHK-\d+)\s+Sayılı\s+(?:Uyuşmazlık\s+)?(Hakem Kararı|İtiraz Hakem Heyeti Kararı)\s*$", re.I | re.M)
+NUM = r"(K\s*[-.]?\s*\d{4}\s*[-/]\s*\d+|\d{4}\s*/\s*\d+(?=\s)|\d{4}\s*/\s*[İI]HK\s*[-./]?\s*\d+|[İI]HK\s*[-./]\s*\d+)"
+# Karar başlığı: satır tarihle başlar, karar numarasıyla sürer ve "... Kararı" (isteğe bağlı parantezli konu) ile biter.
+HDR = re.compile(r"^[ \t\f]*(\d{2}[/.]\d{2}[/.]\d{4})\s+Tarih\w*\s*(?:ve\s+|[-–—]\s*)?" + NUM +
+                 r"\s+(?:Sayılı\s+)?((?:Uyuşmazlık\s+)?(?:[İi]tiraz\s+)?(?:Hakem\s+)?(?:Heyeti\s+)?Karar\w*)\.?[ \t]*(\([^)\n]*\)?)?[ \t]*$", re.I | re.M)
+TOCNUM = re.compile(r"\d{2}[/.]\d{2}[/.]\d{4}\s+Tarih\w*\s*(?:ve\s+|[-–—]\s*)?" + NUM, re.I)
 SEC = re.compile(r"^[\f ]*(I|II|III|IV|V|VI|VII)\.\s+(.+?)(?:\.{3,}.*)?$", re.M)
+
+
+def norm_no(x):
+    x = re.sub(r"\s+", "", x).replace("I", "İ") if "HK" in x.upper() else re.sub(r"\s+", "", x)
+    m = re.match(r"K[-.]?(\d{4})[-/](\d+)$", x, re.I) or re.match(r"(\d{4})/(\d+)$", x)
+    if m: return f"K-{m.group(1)}/{m.group(2)}"
+    m = re.match(r"(\d{4})/İHK[-./]?(\d+)$", x)
+    if m: return f"{m.group(1)}/İHK-{m.group(2)}"
+    m = re.match(r"İHK[-./](\d+)$", x)
+    if m: return f"İHK-{m.group(1)}"
+    return x
 
 
 def fold(s):
@@ -48,29 +64,36 @@ def kategori_kisa(k):
 
 
 def stk_bol(t, sayi):
-    items = list(HDR.finditer(t))
+    # İçindekiler: metnin ilk %40'ındaki son nokta-dizili satıra kadar; oradaki karar numaraları geçerli başlık listesidir.
+    lim = int(len(t) * 0.4)
+    dots = [m.end() for m in re.finditer(r"\.{5,}[^\n]*", t[:lim]) if TOCNUM.search(t, max(0, m.start() - 300), m.start())]
+    toc_end = t.find("\n", dots[-1]) if dots else 0
+    toc_end = toc_end if toc_end > 0 else 0
+    toc = {norm_no(m.group(1)) for m in TOCNUM.finditer(t[:toc_end])}
+    items, seen = [], set()
+    for m in HDR.finditer(t, toc_end):
+        if "....." in m.group(0): continue
+        no = norm_no(m.group(2))
+        if no in seen or (toc and no not in toc): continue     # yalnızca içindekilerde olan numara, ilk geçtiği yerde
+        seen.add(no); items.append((m, no))
     out = []
-    toc_end = t.find("\n", t.rfind(".....", 0, items[0].start())) if items else 0
-    for i, m in enumerate(items):
-        end = items[i + 1].start() if i + 1 < len(items) else len(t)
+    for i, (m, no) in enumerate(items):
+        end = items[i + 1][0].start() if i + 1 < len(items) else len(t)
         body = t[m.end():end]
-        secs = list(SEC.finditer(t, max(0, toc_end), m.start()))
+        secs = list(SEC.finditer(t, toc_end, m.start()))
         kat = re.sub(r"\s+", " ", secs[-1].group(2)).strip() if secs else ""
-        itz = "tiraz" in m.group(3).lower()
+        itz = "tiraz" in m.group(3).lower() or "İHK" in no
         body = re.sub(r"\n[\s\f]*\d{1,3}[ \t]*\n", "\n", body)
         body = body.replace("\f", "\n")
         body = re.sub(r"[ \t]+", " ", body)
         body = re.sub(r"\n{3,}", "\n\n", body).strip()
-        no = m.group(2)
+        konu = (m.group(4) or "").strip("() ")
         out.append({"id": "stk-" + no.replace("/", "-").replace("İ", "I"), "kaynak": "stk", "sayi": sayi, "tarih": m.group(1).replace("/", "."),
                     "no": no, "tur": "İtiraz Hakem Heyeti Kararı" if itz else "Hakem Kararı",
-                    "kategori": "İtiraz Hakem Heyeti" if itz else kategori_kisa(kat), "metin": body})
-    # aynı numara iki kez geçerse (ör. düzeltme) sonuncusu kalır
-    uniq = {}
+                    "kategori": "İtiraz Hakem Heyeti" if itz else kategori_kisa(kat), "konu": konu, "metin": body})
     for x in out:
-        x["ara"] = fold(f'{x["no"]} {x["kategori"]} {x["tur"]}\n{x["metin"]}')
-        uniq[x["id"]] = x
-    return list(uniq.values())
+        x["ara"] = fold(f'{x["no"]} {x["kategori"]} {x["tur"]} {x["konu"]}\n{x["metin"]}')
+    return out
 
 
 def stk():
@@ -107,7 +130,7 @@ def stk():
             with open(os.path.join(d, f"{n:03d}.json"), "w", encoding="utf-8") as f:
                 json.dump(kararlar, f, ensure_ascii=False)
         else:
-            save(os.path.join(ROOT, "_kesif", f"stk-{n:03d}.txt"), txt[:6000])
+            save(os.path.join(ROOT, "_kesif", f"stk-{n:03d}.txt"), txt[:20000])
         idx["sayilar"][key] = {"adet": len(kararlar), "dosya": f"{n:03d}.json" if kararlar else "", "url": kaynak_url, "sha": sha, "karakter": len(txt)}
         print(f"sayı {n}: {len(kararlar)} karar")
     idx["guncelleme"] = time.strftime("%Y-%m-%d %H:%M")
@@ -117,13 +140,127 @@ def stk():
     print("Sigorta Tahkim toplam karar:", idx["toplam"])
 
 
+REK = "https://www.rekabet.gov.tr"
+REK_MAX = int(os.environ.get("REKABET_MAX", "1500"))          # bir çalışmada en fazla indirilecek karar
+REK_SURE = int(os.environ.get("REKABET_SURE", str(75 * 60)))  # bir çalışmada en fazla süre (saniye)
+PARCA, PARCA_BOYUT, MAX_METIN = 25, 600_000, 120_000          # dosya başına karar / karakter sınırı; tek karar metni sınırı
+
+
+def rek_liste(html):
+    """Kararlar sayfasındaki tabloları ayrıştırır."""
+    out = []
+    for blok in html.split('<table class="table yantablo1"')[1:]:
+        def alan(ad):
+            m = re.search(ad + r"\s*:\s*</th>\s*<td[^>]*>\s*([^<]*)<", blok)
+            return htmlmod.unescape(m.group(1)).strip() if m else ""
+        m = re.search(r'href="(/Karar\?kararId=([0-9a-fA-F-]{36}))"[^>]*>(.*?)</a>', blok, re.S)
+        if not m: continue
+        out.append({"kid": m.group(2).lower(), "url": REK + m.group(1), "baslik": re.sub(r"\s+", " ", htmlmod.unescape(re.sub(r"<[^>]+>", "", m.group(3)))).strip(),
+                    "yayim": alan("Yayımlanma Tarihi"), "no": alan("Karar Sayısı"), "tarih": alan("Karar Tarihi"), "tur": alan("Karar Türü")})
+    son = max([int(x) for x in re.findall(r"/tr/Kararlar\?page=(\d+)", html)] or [1])
+    return out, son
+
+
+def tarih2(t):
+    m = re.match(r"(\d{1,2})\.(\d{1,2})\.(\d{4})", t or "")
+    return f"{int(m.group(1)):02d}.{int(m.group(2)):02d}.{m.group(3)}" if m else (t or "")
+
+
+def pdf_metin(data):
+    with tempfile.TemporaryDirectory() as tmp:
+        p = os.path.join(tmp, "d.pdf"); open(p, "wb").write(data)
+        t = subprocess.run(["pdftotext", "-layout", p, "-"], capture_output=True, text=True).stdout
+    t = t.replace("\f", "\n")
+    t = re.sub(r"[ \t]+", " ", t)
+    t = re.sub(r"\n[ \t]*\d{1,3}/\d{1,3}[ \t]*\n", "\n", t)   # "3/25" sayfa numaraları
+    return re.sub(r"\n{3,}", "\n\n", t).strip()
+
+
+def rekabet():
+    """Rekabet Kurulu kararları: liste sayfalarından yeni kararlar ve geriye doğru arşiv; her çalışmada sınırlı sayıda."""
+    d = os.path.join(ROOT, "rekabet"); os.makedirs(d, exist_ok=True)
+    ip, idp = os.path.join(d, "index.json"), os.path.join(d, "_ids.json")
+    idx = json.load(open(ip, encoding="utf-8")) if os.path.exists(ip) else {"kaynak": "Rekabet Kurulu kararları (rekabet.gov.tr)", "sayilar": {}, "geri_sayfa": 1, "arsiv_tamam": False}
+    ids = set(json.load(open(idp, encoding="utf-8"))) if os.path.exists(idp) else set()
+    parca_no = max([int(k) for k in idx["sayilar"]] or [1])
+    pp = os.path.join(d, f"{parca_no:04d}.json")
+    parca = json.load(open(pp, encoding="utf-8")) if os.path.exists(pp) else []
+    t0, yeni, hata = time.time(), 0, 0
+
+    def yaz():
+        with open(os.path.join(d, f"{parca_no:04d}.json"), "w", encoding="utf-8") as f:
+            json.dump(parca, f, ensure_ascii=False)
+        idx["sayilar"][str(parca_no)] = {"adet": len(parca), "dosya": f"{parca_no:04d}.json"}
+
+    def isle(k):
+        nonlocal parca, parca_no, yeni, hata
+        if k["kid"] in ids: return
+        try:
+            data, ct = get(k["url"], 60)
+            metin = pdf_metin(data) if data[:4] == b"%PDF" else ""
+        except Exception as e:
+            hata += 1; print("rekabet karar alınamadı:", k["url"], type(e).__name__); return
+        finally:
+            time.sleep(0.4)
+        if len(metin) > MAX_METIN: metin = metin[:MAX_METIN] + "\n\n(Karar metni uzun olduğu için kısaltıldı; tamamı için resmî PDF'e bakın.)"
+        if len(metin) < 200: metin = (metin + "\n\n(Karar metni PDF'te görüntü olarak yer aldığından yalnızca konusu alınabildi.)").strip()
+        x = {"id": "rek-" + k["kid"], "kaynak": "rekabet", "sayi": parca_no, "no": k["no"], "tarih": tarih2(k["tarih"]), "tur": "Kurul Kararı",
+             "kategori": k["tur"] or "Diğer", "url": k["url"], "yayim": tarih2(k["yayim"]),
+             "metin": f"Konu: {k['baslik']}\nKarar sayısı: {k['no']} · Karar tarihi: {tarih2(k['tarih'])} · Karar türü: {k['tur']}\n\n{metin}"}
+        x["ara"] = fold(f'{x["no"]} {x["kategori"]}\n{x["metin"]}')
+        parca.append(x); ids.add(k["kid"]); yeni += 1
+        if len(parca) >= PARCA or sum(len(y["metin"]) + len(y["ara"]) for y in parca) > PARCA_BOYUT:
+            yaz(); parca_no += 1; parca = []
+
+    def sayfa(n):
+        html, _ = get(f"{REK}/tr/Kararlar?page={n}", 60)
+        time.sleep(0.5)
+        return rek_liste(html.decode("utf-8", "replace"))
+
+    def bitti(): return yeni >= REK_MAX or time.time() - t0 > REK_SURE
+
+    # 1) Yeni kararlar: baştan, tamamı bilinen sayfaya kadar
+    son = 1
+    for n in range(1, 200):
+        if bitti(): break
+        try: lst, s2 = sayfa(n)
+        except Exception as e: print("rekabet sayfa", n, "hata", type(e).__name__); break
+        if not lst: break
+        son = s2
+        tumu_bilinen = all(k["kid"] in ids for k in lst)
+        for k in lst:
+            if bitti(): break
+            isle(k)
+        if tumu_bilinen: break
+    # 2) Arşiv: kalınan sayfadan geriye doğru (sayfalar yeni kararlarla kaydığı için 2 sayfa örtüşmeli)
+    if not idx.get("arsiv_tamam"):
+        n = max(1, int(idx.get("geri_sayfa", 1)) - 2)
+        while not bitti():
+            try: lst, s2 = sayfa(n)
+            except Exception as e: print("rekabet sayfa", n, "hata", type(e).__name__); break
+            if not lst: idx["arsiv_tamam"] = True; break
+            son = max(son, s2)
+            for k in lst:
+                if bitti(): break
+                isle(k)
+            if bitti(): break
+            idx["geri_sayfa"] = n = n + 1
+            if n > son: idx["arsiv_tamam"] = True; break
+    if parca: yaz()
+    idx["guncelleme"] = time.strftime("%Y-%m-%d %H:%M"); idx["toplam"] = len(ids); idx["son_sayfa"] = son
+    with open(ip, "w", encoding="utf-8") as f: json.dump(idx, f, ensure_ascii=False, indent=1)
+    with open(idp, "w", encoding="utf-8") as f: json.dump(sorted(ids), f)
+    print(f"Rekabet: bu çalışmada {yeni} yeni karar, {hata} hata; toplam {len(ids)}; arşiv sayfası {idx.get('geri_sayfa')}/{son}{' (tamam)' if idx.get('arsiv_tamam') else ''}")
+
+
 def kesif():
-    """Rekabet ve KVKK sayfalarının ham hâlini kaydeder (ayrıştırıcı yazılabilsin diye)."""
+    """Rekabet, KVKK ve Uyuşmazlık Mahkemesi sayfalarının ham hâlini kaydeder (ayrıştırıcı yazılabilsin diye)."""
     hedefler = {
-        "rekabet-ana.html": "https://www.rekabet.gov.tr/",
-        "rekabet-kararlar.html": "https://www.rekabet.gov.tr/tr/Kararlar",
-        "kvkk-ana.html": "https://www.kvkk.gov.tr/",
-        "kvkk-duyurular.html": "https://www.kvkk.gov.tr/Icerik/2015/Duyurular",
+        "kvkk-karar-ozetleri.html": "https://www.kvkk.gov.tr/Icerik/5406/kurul-karar-ozetleri",
+        "kvkk-kurul-kararlari.html": "https://www.kvkk.gov.tr/Icerik/5419/kurul-kararlari",
+        "kvkk-ilke-kararlari.html": "https://www.kvkk.gov.tr/Icerik/7201/ilke-kararlari",
+        "uyusmazlik-ana.html": "https://www.uyusmazlik.gov.tr/",
+        "uyusmazlik-kararlar.html": "https://www.uyusmazlik.gov.tr/Karar",
     }
     rapor = []
     for ad, url in hedefler.items():
@@ -132,16 +269,22 @@ def kesif():
             html = data.decode("utf-8", "replace")
             save(os.path.join(ROOT, "_kesif", ad), html[:400000])
             rapor.append(f"{ad}: {len(html)} karakter ({url})")
-            links = sorted(set(re.findall(r'href="([^"]*(?:[Kk]arar|Icerik)[^"]*)"', html)))[:400]
+            links = sorted(set(re.findall(r'href="([^"]*(?:[Kk]arar|Icerik|[Ii]ctihat|[Aa]rama)[^"]*)"', html)))[:400]
             save(os.path.join(ROOT, "_kesif", ad + ".links.txt"), "\n".join(links))
-            # karar listesinden ilk karar bağlantısını da kaydet
-            if ad == "rekabet-kararlar.html":
-                k = [l for l in links if "kararId" in l or "/Karar" in l]
-                if k:
-                    u = k[0] if k[0].startswith("http") else "https://www.rekabet.gov.tr" + k[0]
-                    d2, ct2 = get(u, 40)
-                    save(os.path.join(ROOT, "_kesif", "rekabet-ornek-karar.bin.txt"), f"{u}\n{ct2}\n" + d2[:200000].decode("utf-8", "replace"))
-                    rapor.append(f"rekabet örnek karar: {u} ({ct2})")
+            # listedeki ilk iki içerik bağlantısını da kaydet (karar sayfasının yapısı için)
+            if ad.startswith("kvkk-") or ad == "uyusmazlik-kararlar.html":
+                base = "https://www.kvkk.gov.tr" if ad.startswith("kvkk-") else "https://www.uyusmazlik.gov.tr"
+                num = lambda l: int((re.search(r"/Icerik/(\d+)/", l) or re.search(r"(\d+)", l) or [0, 0])[1])
+                cand = sorted([l for l in links if re.search(r"/Icerik/\d+/|[Kk]arar.*\d", l) and l.rstrip("/") != url.rstrip("/")], key=num, reverse=True)[:2]
+                for j, l in enumerate(cand):
+                    u = l if l.startswith("http") else base + ("" if l.startswith("/") else "/") + l
+                    try:
+                        d2, ct2 = get(u, 40)
+                        save(os.path.join(ROOT, "_kesif", f"{ad[:-5]}-ornek{j + 1}.txt"), f"{u}\n{ct2}\n" + d2[:300000].decode("utf-8", "replace"))
+                        rapor.append(f"{ad} örnek {j + 1}: {u} ({ct2})")
+                    except Exception as e:
+                        rapor.append(f"{ad} örnek {j + 1}: HATA {type(e).__name__} ({u})")
+                    time.sleep(1)
         except Exception as e:
             rapor.append(f"{ad}: HATA {type(e).__name__} {e} ({url})")
         time.sleep(1)
@@ -151,5 +294,7 @@ def kesif():
 
 if __name__ == "__main__":
     stk()
+    try: rekabet()
+    except Exception as e: print("rekabet hatası:", e)
     try: kesif()
     except Exception as e: print("keşif hatası:", e)
