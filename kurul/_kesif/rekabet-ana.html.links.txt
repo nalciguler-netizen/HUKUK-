@@ -1,0 +1,11 @@
+/tr/Kararlar
+/tr/Sayfa/Duyurular/nihai-karar-aciklamalari/tefhim-duyurulari
+/tr/Sayfa/Duyurular/nihai-karar-aciklamalari/tefhim-duyurulari/ihale-duyurulari
+/tr/Sayfa/Yayinlar/karar-istatistikleri
+/tr/Sayfa/Yayinlar/karar-istatistikleri/kobi-ler-icin-rekabet-hukuku
+/tr/Sayfa/Yayinlar/karar-istatistikleri/rekabet-el-kitabi
+/tr/Sayfa/Yayinlar/karar-istatistikleri/tuketiciler-icin-rekabet-hukuku
+/tr/SonKurulKarari/2bddb7b1-01ce-f111-a671-005056854155
+/tr/SonKurulKarari/4e3c69ff-01ce-f111-a671-005056854155
+/tr/SonKurulKarari/67c450d7-01ce-f111-a671-005056854155
+/tr/SonkurulKararlari

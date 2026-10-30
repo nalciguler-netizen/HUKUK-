@@ -1,0 +1,5 @@
+rekabet-ana.html: 1909907 karakter (https://www.rekabet.gov.tr/)
+rekabet-kararlar.html: 70885 karakter (https://www.rekabet.gov.tr/tr/Kararlar)
+rekabet örnek karar: https://www.rekabet.gov.tr/Karar?kararId=1478f4ee-32b3-4ac6-b87c-b6aeb40b6be4 (application/pdf)
+kvkk-ana.html: 117389 karakter (https://www.kvkk.gov.tr/)
+kvkk-duyurular.html: 115377 karakter (https://www.kvkk.gov.tr/Icerik/2015/Duyurular)

@@ -1,0 +1,462 @@
+{
+ "kaynak": "Sigorta Tahkim Komisyonu - Hakem Kararları Dergisi",
+ "sayilar": {
+  "1": {
+   "adet": 3,
+   "dosya": "001.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs1.pdf",
+   "sha": "b54662f7cac92aad",
+   "karakter": 117869
+  },
+  "2": {
+   "adet": 0,
+   "dosya": "",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs2.pdf",
+   "sha": "0b6f5c3362a4e6af",
+   "karakter": 100650
+  },
+  "3": {
+   "adet": 0,
+   "dosya": "",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs3.pdf",
+   "sha": "47c5e6b4da991c40",
+   "karakter": 121953
+  },
+  "5": {
+   "adet": 0,
+   "dosya": "",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs5.pdf",
+   "sha": "e6c290b737913744",
+   "karakter": 112701
+  },
+  "6": {
+   "adet": 0,
+   "dosya": "",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs6.pdf",
+   "sha": "d350184ea85ee456",
+   "karakter": 124909
+  },
+  "7": {
+   "adet": 0,
+   "dosya": "",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs7.pdf",
+   "sha": "e8a215838df31a25",
+   "karakter": 104842
+  },
+  "8": {
+   "adet": 0,
+   "dosya": "",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs8.pdf",
+   "sha": "7b9eb6c45c29f494",
+   "karakter": 131335
+  },
+  "9": {
+   "adet": 0,
+   "dosya": "",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs9.pdf",
+   "sha": "32eea6e8cfda108d",
+   "karakter": 105016
+  },
+  "10": {
+   "adet": 0,
+   "dosya": "",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs10.pdf",
+   "sha": "e03321ffa2f6d5e4",
+   "karakter": 124265
+  },
+  "11": {
+   "adet": 0,
+   "dosya": "",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs11.pdf",
+   "sha": "7134e3eaf0d7e1de",
+   "karakter": 113438
+  },
+  "12": {
+   "adet": 5,
+   "dosya": "012.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs12.pdf",
+   "sha": "a1b72d2d9fce1283",
+   "karakter": 120848
+  },
+  "13": {
+   "adet": 9,
+   "dosya": "013.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs13.pdf",
+   "sha": "019935b33394814e",
+   "karakter": 121255
+  },
+  "14": {
+   "adet": 13,
+   "dosya": "014.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs14.pdf",
+   "sha": "3397f32df02fffe8",
+   "karakter": 86548
+  },
+  "15": {
+   "adet": 0,
+   "dosya": "",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs15.pdf",
+   "sha": "b873d2d5b5f75cab",
+   "karakter": 82336
+  },
+  "16": {
+   "adet": 5,
+   "dosya": "016.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs16.pdf",
+   "sha": "e3cdc0eb8db4e626",
+   "karakter": 95840
+  },
+  "17": {
+   "adet": 0,
+   "dosya": "",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs17.pdf",
+   "sha": "c2c4419917631bd9",
+   "karakter": 105222
+  },
+  "18": {
+   "adet": 0,
+   "dosya": "",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs18.pdf",
+   "sha": "ee51b01bc51f2f37",
+   "karakter": 136868
+  },
+  "19": {
+   "adet": 2,
+   "dosya": "019.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs19.pdf",
+   "sha": "3ceee45b09300af6",
+   "karakter": 152190
+  },
+  "20": {
+   "adet": 4,
+   "dosya": "020.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs20.pdf",
+   "sha": "b4bdb647abfff8b3",
+   "karakter": 197543
+  },
+  "21": {
+   "adet": 10,
+   "dosya": "021.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs21.pdf",
+   "sha": "ad3024c43568cdcd",
+   "karakter": 131942
+  },
+  "22": {
+   "adet": 3,
+   "dosya": "022.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs22.pdf",
+   "sha": "6bef33f8ed6df5ec",
+   "karakter": 225405
+  },
+  "23": {
+   "adet": 5,
+   "dosya": "023.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs23.pdf",
+   "sha": "88e75c430004c11b",
+   "karakter": 222404
+  },
+  "24": {
+   "adet": 7,
+   "dosya": "024.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs24.pdf",
+   "sha": "d632487af3a400bf",
+   "karakter": 270766
+  },
+  "25": {
+   "adet": 7,
+   "dosya": "025.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs25.pdf",
+   "sha": "c753501ba3635f9e",
+   "karakter": 350083
+  },
+  "26": {
+   "adet": 2,
+   "dosya": "026.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs26.pdf",
+   "sha": "b15ee84e71d13c6f",
+   "karakter": 303786
+  },
+  "27": {
+   "adet": 0,
+   "dosya": "",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs27.pdf",
+   "sha": "fc6046eeb07e78a0",
+   "karakter": 236493
+  },
+  "28": {
+   "adet": 6,
+   "dosya": "028.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs28.pdf",
+   "sha": "a187fc3faee6d9ef",
+   "karakter": 195308
+  },
+  "29": {
+   "adet": 6,
+   "dosya": "029.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs29.pdf",
+   "sha": "6e3f7b014aa6443e",
+   "karakter": 238865
+  },
+  "30": {
+   "adet": 10,
+   "dosya": "030.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs30.pdf",
+   "sha": "9dcab37118d97eb2",
+   "karakter": 206786
+  },
+  "31": {
+   "adet": 8,
+   "dosya": "031.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs31.pdf",
+   "sha": "885fb52d0644ec6b",
+   "karakter": 142379
+  },
+  "32": {
+   "adet": 11,
+   "dosya": "032.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs32.pdf",
+   "sha": "def4941771b08901",
+   "karakter": 238057
+  },
+  "33": {
+   "adet": 5,
+   "dosya": "033.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs33.pdf",
+   "sha": "5e820e64a48b9d02",
+   "karakter": 373474
+  },
+  "34": {
+   "adet": 3,
+   "dosya": "034.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs34.pdf",
+   "sha": "4996f0e107a033be",
+   "karakter": 298755
+  },
+  "35": {
+   "adet": 8,
+   "dosya": "035.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs35.pdf",
+   "sha": "ba2a4cb72e4f2af7",
+   "karakter": 216831
+  },
+  "36": {
+   "adet": 3,
+   "dosya": "036.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs36.pdf",
+   "sha": "95c3bb3acdae668b",
+   "karakter": 235903
+  },
+  "37": {
+   "adet": 3,
+   "dosya": "037.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs37.pdf",
+   "sha": "8d2370a1b7b29414",
+   "karakter": 299798
+  },
+  "38": {
+   "adet": 9,
+   "dosya": "038.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs38.pdf",
+   "sha": "f1ee1aa94942b55a",
+   "karakter": 144330
+  },
+  "39": {
+   "adet": 2,
+   "dosya": "039.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs39.pdf",
+   "sha": "d3d6ae79cc5f2b73",
+   "karakter": 218777
+  },
+  "40": {
+   "adet": 0,
+   "dosya": "",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs40.pdf",
+   "sha": "cc772f3f1a9ec595",
+   "karakter": 271943
+  },
+  "41": {
+   "adet": 1,
+   "dosya": "041.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs41.pdf",
+   "sha": "293a174efdbe9b12",
+   "karakter": 269826
+  },
+  "42": {
+   "adet": 0,
+   "dosya": "",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs42.pdf",
+   "sha": "c0db26515d35512f",
+   "karakter": 308550
+  },
+  "43": {
+   "adet": 3,
+   "dosya": "043.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs43.pdf",
+   "sha": "429980f898f11da5",
+   "karakter": 298776
+  },
+  "44": {
+   "adet": 4,
+   "dosya": "044.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs44.pdf",
+   "sha": "320d34d9f650f6a5",
+   "karakter": 245960
+  },
+  "45": {
+   "adet": 3,
+   "dosya": "045.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs45.pdf",
+   "sha": "d54ebb8fb8f807e9",
+   "karakter": 360897
+  },
+  "46": {
+   "adet": 5,
+   "dosya": "046.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs46.pdf",
+   "sha": "049f5989bef6b406",
+   "karakter": 343142
+  },
+  "47": {
+   "adet": 20,
+   "dosya": "047.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs47.pdf",
+   "sha": "010de30c086d67df",
+   "karakter": 345406
+  },
+  "48": {
+   "adet": 9,
+   "dosya": "048.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs48.pdf",
+   "sha": "afe3eb42adf2f315",
+   "karakter": 340841
+  },
+  "49": {
+   "adet": 3,
+   "dosya": "049.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs49.pdf",
+   "sha": "1766f1eea91c490b",
+   "karakter": 331996
+  },
+  "50": {
+   "adet": 20,
+   "dosya": "050.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs50.pdf",
+   "sha": "a96acd4ddf8e08c0",
+   "karakter": 375152
+  },
+  "51": {
+   "adet": 24,
+   "dosya": "051.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs51.pdf",
+   "sha": "f0ea289c53e9cc99",
+   "karakter": 329511
+  },
+  "52": {
+   "adet": 0,
+   "dosya": "",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs52.pdf",
+   "sha": "ce7a472e10084eea",
+   "karakter": 227310
+  },
+  "53": {
+   "adet": 19,
+   "dosya": "053.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs53.pdf",
+   "sha": "60d4aa553cb0151f",
+   "karakter": 313140
+  },
+  "54": {
+   "adet": 17,
+   "dosya": "054.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs54.pdf",
+   "sha": "2a8ccb4303dfd041",
+   "karakter": 271837
+  },
+  "55": {
+   "adet": 15,
+   "dosya": "055.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs55.pdf",
+   "sha": "0e043c8944dfd703",
+   "karakter": 388470
+  },
+  "56": {
+   "adet": 13,
+   "dosya": "056.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs56.pdf",
+   "sha": "1d367e6c988c868e",
+   "karakter": 301336
+  },
+  "57": {
+   "adet": 0,
+   "dosya": "",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs57.pdf",
+   "sha": "fa850f717d19be06",
+   "karakter": 456898
+  },
+  "58": {
+   "adet": 2,
+   "dosya": "058.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs58.pdf",
+   "sha": "7ff154c1ba063beb",
+   "karakter": 441963
+  },
+  "59": {
+   "adet": 24,
+   "dosya": "059.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs59.pdf",
+   "sha": "24381d9d327960ff",
+   "karakter": 484162
+  },
+  "61": {
+   "adet": 21,
+   "dosya": "061.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs61.pdf",
+   "sha": "f4cf43be3e301631",
+   "karakter": 363754
+  },
+  "62": {
+   "adet": 0,
+   "dosya": "",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs62.pdf",
+   "sha": "725479dd39037d15",
+   "karakter": 305091
+  },
+  "63": {
+   "adet": 16,
+   "dosya": "063.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs63.pdf",
+   "sha": "a26446748c8fda89",
+   "karakter": 390797
+  },
+  "64": {
+   "adet": 19,
+   "dosya": "064.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs64.pdf",
+   "sha": "b5788770ec8130a9",
+   "karakter": 284728
+  },
+  "65": {
+   "adet": 20,
+   "dosya": "065.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs65.pdf",
+   "sha": "57165a8d49cab1bd",
+   "karakter": 292492
+  },
+  "66": {
+   "adet": 18,
+   "dosya": "066.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs66.pdf",
+   "sha": "a8a3a2330f0b444b",
+   "karakter": 308508
+  },
+  "67": {
+   "adet": 25,
+   "dosya": "067.json",
+   "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs67.pdf",
+   "sha": "37d677ee8f9de7ec",
+   "karakter": 319635
+  }
+ },
+ "guncelleme": "2026-10-30 13:41",
+ "toplam": 450
+}
