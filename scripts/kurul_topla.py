@@ -2,7 +2,8 @@
 - Sigorta Tahkim Komisyonu: Hakem Kararları Dergisi sayılarını (karardrgsN.pdf) indirir, kararlara ayırır,
   kurul/stk/NNN.json olarak yazar. Daha önce işlenen sayılar atlanır; her ay yeni sayılar eklenir.
 - Rekabet Kurulu: karar listesinden PDF'leri indirir, kurul/rekabet/NNNN.json (en çok 25 karar) olarak yazar; her çalışmada sınırlı sayıda (arşiv birkaç çalışmada tamamlanır).
-- KVKK ve Uyuşmazlık Mahkemesi: şimdilik yalnızca sayfa yapısını kaydeder (kurul/_kesif/), ayrıştırıcı sonra eklenecek.
+- KVKK: kurul kararları, karar özetleri ve ilke kararları (kurul/kvkk/NNNN.json).
+- Uyuşmazlık Mahkemesi: şimdilik yalnızca sayfa yapısını kaydeder (kurul/_kesif/), ayrıştırıcı sonra eklenecek.
 Kararlar kamuya açık resmî metinlerdir; kişi bilgileri yayımlayan kurumca gizlenmiştir."""
 from __future__ import annotations
 import hashlib, html as htmlmod, json, os, re, subprocess, sys, tempfile, time, urllib.request, urllib.error
@@ -15,10 +16,19 @@ MAX_SAYI = int(os.environ.get("MAX_SAYI", "150"))
 YENIDEN = os.environ.get("YENIDEN", "") == "1"   # tüm sayıları baştan işle
 
 
-def get(url, timeout=60):
-    req = urllib.request.Request(url, headers=UA)
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return r.read(), r.headers.get("Content-Type", "")
+def get(url, timeout=60, deneme=3):
+    """İndirir; geçici hatalarda (zaman aşımı, 429, 5xx) artan beklemeyle tekrar dener. 404/403 hemen döner."""
+    for i in range(deneme):
+        try:
+            req = urllib.request.Request(url, headers=UA)
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return r.read(), r.headers.get("Content-Type", "")
+        except urllib.error.HTTPError as e:
+            if e.code in (403, 404) or i == deneme - 1: raise
+            time.sleep(15 * (i + 1) if e.code == 429 else 5 * (i + 1))
+        except Exception:
+            if i == deneme - 1: raise
+            time.sleep(5 * (i + 1))
 
 
 def save(path, data):
@@ -143,7 +153,7 @@ def stk():
 REK = "https://www.rekabet.gov.tr"
 REK_MAX = int(os.environ.get("REKABET_MAX", "1500"))          # bir çalışmada en fazla indirilecek karar
 REK_SURE = int(os.environ.get("REKABET_SURE", str(75 * 60)))  # bir çalışmada en fazla süre (saniye)
-PARCA, PARCA_BOYUT, MAX_METIN = 25, 600_000, 120_000          # dosya başına karar / karakter sınırı; tek karar metni sınırı
+PARCA, PARCA_BOYUT, MAX_METIN = 25, 600_000, 60_000           # dosya başına karar / karakter sınırı; tek karar metni sınırı
 
 
 def rek_liste(html):
@@ -199,7 +209,9 @@ def rekabet():
             data, ct = get(k["url"], 60)
             metin = pdf_metin(data) if data[:4] == b"%PDF" else ""
         except Exception as e:
-            hata += 1; print("rekabet karar alınamadı:", k["url"], type(e).__name__); return
+            hata += 1; print("rekabet karar alınamadı:", k["url"], type(e).__name__, e)
+            if hata >= 25: raise RuntimeError("rekabet.gov.tr çok sayıda hata veriyor; bu çalışma durduruldu")
+            return
         finally:
             time.sleep(0.4)
         if len(metin) > MAX_METIN: metin = metin[:MAX_METIN] + "\n\n(Karar metni uzun olduğu için kısaltıldı; tamamı için resmî PDF'e bakın.)"
@@ -207,9 +219,9 @@ def rekabet():
         x = {"id": "rek-" + k["kid"], "kaynak": "rekabet", "sayi": parca_no, "no": k["no"], "tarih": tarih2(k["tarih"]), "tur": "Kurul Kararı",
              "kategori": k["tur"] or "Diğer", "url": k["url"], "yayim": tarih2(k["yayim"]),
              "metin": f"Konu: {k['baslik']}\nKarar sayısı: {k['no']} · Karar tarihi: {tarih2(k['tarih'])} · Karar türü: {k['tur']}\n\n{metin}"}
-        x["ara"] = fold(f'{x["no"]} {x["kategori"]}\n{x["metin"]}')
+        # "ara" (arama metni) dosyaya yazılmaz; sunucu içe aktarırken üretir (depo boyutu yarıya iner)
         parca.append(x); ids.add(k["kid"]); yeni += 1
-        if len(parca) >= PARCA or sum(len(y["metin"]) + len(y["ara"]) for y in parca) > PARCA_BOYUT:
+        if len(parca) >= PARCA or sum(len(y["metin"]) for y in parca) > PARCA_BOYUT:
             yaz(); parca_no += 1; parca = []
 
     def sayfa(n):
@@ -224,7 +236,7 @@ def rekabet():
     for n in range(1, 200):
         if bitti(): break
         try: lst, s2 = sayfa(n)
-        except Exception as e: print("rekabet sayfa", n, "hata", type(e).__name__); break
+        except Exception as e: print("rekabet sayfa", n, "hata", type(e).__name__, e); break
         if not lst: break
         son = s2
         tumu_bilinen = all(k["kid"] in ids for k in lst)
@@ -237,7 +249,11 @@ def rekabet():
         n = max(1, int(idx.get("geri_sayfa", 1)) - 2)
         while not bitti():
             try: lst, s2 = sayfa(n)
-            except Exception as e: print("rekabet sayfa", n, "hata", type(e).__name__); break
+            except Exception as e:
+                print("rekabet sayfa", n, "hata", type(e).__name__, e); hs = idx.get("_sayfa_hata", 0) + 1; idx["_sayfa_hata"] = hs
+                if hs >= 3: idx["geri_sayfa"] = n = n + 1; idx["_sayfa_hata"] = 0   # aynı sayfa 3 çalışmadır açılmıyorsa atla
+                break
+            idx["_sayfa_hata"] = 0
             if not lst: idx["arsiv_tamam"] = True; break
             son = max(son, s2)
             for k in lst:
@@ -253,14 +269,99 @@ def rekabet():
     print(f"Rekabet: bu çalışmada {yeni} yeni karar, {hata} hata; toplam {len(ids)}; arşiv sayfası {idx.get('geri_sayfa')}/{son}{' (tamam)' if idx.get('arsiv_tamam') else ''}")
 
 
+KVKK = "https://www.kvkk.gov.tr"
+KVKK_LISTE = [("Kurul Kararı", "/Icerik/5419/kurul-kararlari"), ("Karar Özeti", "/Icerik/5406/kurul-karar-ozetleri"), ("İlke Kararı", "/Icerik/7201/ilke-kararlari")]
+
+
+def kvkk_liste(html):
+    out = []
+    for m in re.finditer(r'members__item-meta[^>]*>\s*<h2>(.*?)</h2>\s*<a href="([^"]+)"', html, re.S):
+        baslik = re.sub(r"\s+", " ", htmlmod.unescape(re.sub(r"<[^>]+>", "", m.group(1)))).strip().strip('"“”')
+        out.append({"baslik": baslik, "url": htmlmod.unescape(m.group(2)).strip()})
+    son = max([int(x) for x in re.findall(r"\?page=(\d+)", html)] or [1])
+    return out, son
+
+
+def html_metin(html):
+    """İçerik sayfasından karar metni: script/menü çıkarılır, paragraf ve tablo hücreleri birleştirilir."""
+    h = re.sub(r"(?is)<(script|style|nav|header|footer|form)[^>]*>.*?</\1>", " ", html)
+    # Ana içerik: KVKK'da "news__detail-article" / "col-lg-8"; kenar çubuğu (col-lg-4, sidebar) çıkarılır
+    for bas in ('class="news__detail-article', 'class="content-detail', 'class="col-lg-8', '<main'):
+        i = h.find(bas)
+        if i >= 0:
+            j = min([x for x in (h.find('class="col-lg-4', i), h.find("sidebar-widget", i), h.find("</main>", i)) if x > 0] or [len(h)])
+            h = h[i:j]; break
+    parcalar = re.findall(r"(?is)<(?:p|li|td|h3|h4)[^>]*>(.*?)</(?:p|li|td|h3|h4)>", h)
+    satir = [re.sub(r"\s+", " ", htmlmod.unescape(re.sub(r"<[^>]+>", " ", x))).strip() for x in parcalar]
+    satir = [x for x in satir if len(x) > 2]
+    t = "\n".join(satir)
+    for kes in ("Bu sayfadaki bilgiler", "Kişisel Verileri Koruma Kurumu ©", "Tüm Hakları Saklıdır"):
+        i = t.find(kes)
+        if i > 500: t = t[:i]
+    return t.strip()
+
+
+def kvkk():
+    """KVKK kurul kararları, karar özetleri ve ilke kararları (HTML sayfası veya Resmî Gazete PDF'i)."""
+    d = os.path.join(ROOT, "kvkk"); os.makedirs(d, exist_ok=True)
+    ip = os.path.join(d, "index.json")
+    idx = json.load(open(ip, encoding="utf-8")) if os.path.exists(ip) else {"kaynak": "Kişisel Verileri Koruma Kurulu kararları (kvkk.gov.tr)", "sayilar": {}}
+    ids = set()
+    for v in idx["sayilar"].values():
+        try: ids.update(x["id"] for x in json.load(open(os.path.join(d, v["dosya"]), encoding="utf-8")))
+        except Exception: pass
+    parca_no = max([int(k) for k in idx["sayilar"]] or [1])
+    pp = os.path.join(d, f"{parca_no:04d}.json")
+    parca = json.load(open(pp, encoding="utf-8")) if os.path.exists(pp) else []
+    yeni, ornek = 0, False
+    def yaz():
+        with open(os.path.join(d, f"{parca_no:04d}.json"), "w", encoding="utf-8") as f: json.dump(parca, f, ensure_ascii=False)
+        idx["sayilar"][str(parca_no)] = {"adet": len(parca), "dosya": f"{parca_no:04d}.json"}
+    for tur, yol in KVKK_LISTE:
+        n, son = 1, 1
+        while n <= son and n <= 80:
+            try:
+                html, _ = get(f"{KVKK}{yol}?page={n}", 60); lst, son = kvkk_liste(html.decode("utf-8", "replace"))
+            except Exception as e:
+                print("kvkk liste", tur, n, "hata", type(e).__name__, e); break
+            time.sleep(0.5)
+            if not lst: break
+            bilinen = 0
+            for k in lst:
+                m = re.search(r"(\d{1,2}[./]\d{1,2}[./]\d{4})\s*Tarih\w*\s*(?:ve\s*)?(\d{4}/\d+)\s*Sayılı", k["baslik"], re.I)
+                no = m.group(2) if m else ""
+                kid = "kvkk-" + (re.sub(r"\W+", "-", no) if no else hashlib.sha1(k["url"].encode()).hexdigest()[:12]) + ("-ozet" if tur == "Karar Özeti" else "")
+                if kid in ids: bilinen += 1; continue
+                try:
+                    data, ct = get(k["url"], 60)
+                    if data[:4] == b"%PDF": metin = pdf_metin(data)
+                    else:
+                        hs = data.decode("utf-8", "replace"); metin = html_metin(hs)
+                        if not ornek: save(os.path.join(ROOT, "_kesif", "kvkk-detay-ornek.html"), hs[:300000]); ornek = True
+                except Exception as e:
+                    print("kvkk karar alınamadı:", k["url"], type(e).__name__, e); continue
+                finally: time.sleep(0.5)
+                if len(metin) > MAX_METIN: metin = metin[:MAX_METIN] + "\n\n(Metin kısaltıldı; tamamı için resmî kaynağa bakın.)"
+                x = {"id": kid, "kaynak": "kvkk", "sayi": parca_no, "no": no, "tarih": tarih2(m.group(1).replace("/", ".")) if m else "", "tur": tur,
+                     "kategori": tur, "url": k["url"], "metin": f"Konu: {k['baslik']}\n\n{metin}"}
+                parca.append(x); ids.add(kid); yeni += 1
+                if len(parca) >= PARCA or sum(len(y["metin"]) for y in parca) > PARCA_BOYUT:
+                    yaz(); parca_no += 1; parca = []
+            if bilinen == len(lst): break      # bu sayfadaki kararların hepsi zaten var: daha eskileri de var
+            n += 1
+    if parca: yaz()
+    idx["guncelleme"] = time.strftime("%Y-%m-%d %H:%M"); idx["toplam"] = len(ids)
+    with open(ip, "w", encoding="utf-8") as f: json.dump(idx, f, ensure_ascii=False, indent=1)
+    print(f"KVKK: bu çalışmada {yeni} yeni karar; toplam {len(ids)}")
+
+
 def kesif():
-    """Rekabet, KVKK ve Uyuşmazlık Mahkemesi sayfalarının ham hâlini kaydeder (ayrıştırıcı yazılabilsin diye)."""
+    """Uyuşmazlık Mahkemesi sayfalarının ham hâlini kaydeder (ayrıştırıcı yazılabilsin diye)."""
     hedefler = {
-        "kvkk-karar-ozetleri.html": "https://www.kvkk.gov.tr/Icerik/5406/kurul-karar-ozetleri",
-        "kvkk-kurul-kararlari.html": "https://www.kvkk.gov.tr/Icerik/5419/kurul-kararlari",
-        "kvkk-ilke-kararlari.html": "https://www.kvkk.gov.tr/Icerik/7201/ilke-kararlari",
         "uyusmazlik-ana.html": "https://www.uyusmazlik.gov.tr/",
-        "uyusmazlik-kararlar.html": "https://www.uyusmazlik.gov.tr/Karar",
+        "uyusmazlik-arama.html": "https://www.uyusmazlik.gov.tr/Home/Arama",
+        "uyusmazlik-app.js.txt": "https://www.uyusmazlik.gov.tr/Assets/front/js/app.js",
+        "uyusmazlik-fill.js.txt": "https://www.uyusmazlik.gov.tr/Assets/front/js/fill.js",
     }
     rapor = []
     for ad, url in hedefler.items():
@@ -296,5 +397,7 @@ if __name__ == "__main__":
     stk()
     try: rekabet()
     except Exception as e: print("rekabet hatası:", e)
+    try: kvkk()
+    except Exception as e: print("kvkk hatası:", e)
     try: kesif()
     except Exception as e: print("keşif hatası:", e)
