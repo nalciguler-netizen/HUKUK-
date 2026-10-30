@@ -42,13 +42,13 @@
    "dosya": "0010.json"
   },
   "11": {
-   "adet": 1,
+   "adet": 2,
    "dosya": "0011.json"
   }
  },
- "geri_sayfa": 1,
+ "geri_sayfa": 3,
  "arsiv_tamam": false,
- "guncelleme": "2026-10-30 15:02",
- "toplam": 72,
+ "guncelleme": "2026-10-30 16:41",
+ "toplam": 73,
  "son_sayfa": 1047
 }
