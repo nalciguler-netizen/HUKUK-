@@ -14,6 +14,9 @@ STK_URLS = ["https://www.sigortatahkim.org/content/CmsFiles/karardrgs{n}.pdf",
             "https://sigortatahkim.org/content/CmsFiles/karardrgs{n}.pdf"]
 MAX_SAYI = int(os.environ.get("MAX_SAYI", "150"))
 YENIDEN = os.environ.get("YENIDEN", "") == "1"   # tüm sayıları baştan işle
+T0 = time.time()
+BUTCE = int(os.environ.get("KURUL_SURE", str(140 * 60)))   # bütün çalışma için süre bütçesi (GitHub görevi 180 dk'da kesilir)
+kalan_sure = lambda: BUTCE - (time.time() - T0)
 
 
 def get(url, timeout=60, deneme=3):
@@ -143,6 +146,8 @@ def stk():
             save(os.path.join(ROOT, "_kesif", f"stk-{n:03d}.txt"), txt[:20000])
         idx["sayilar"][key] = {"adet": len(kararlar), "dosya": f"{n:03d}.json" if kararlar else "", "url": kaynak_url, "sha": sha, "karakter": len(txt)}
         print(f"sayı {n}: {len(kararlar)} karar")
+        with open(ip, "w", encoding="utf-8") as f: json.dump(idx, f, ensure_ascii=False, indent=1)   # ilerleme her sayıda kaydedilir
+        if kalan_sure() < 60 * 60: print("süre bütçesi: Sigorta Tahkim'e sonraki çalışmada devam edilecek"); break
     idx["guncelleme"] = time.strftime("%Y-%m-%d %H:%M")
     idx["toplam"] = sum(v.get("adet", 0) for v in idx["sayilar"].values())
     with open(ip, "w", encoding="utf-8") as f:
@@ -229,7 +234,8 @@ def rekabet():
         time.sleep(0.5)
         return rek_liste(html.decode("utf-8", "replace"))
 
-    def bitti(): return yeni >= REK_MAX or time.time() - t0 > REK_SURE
+    sure = max(0, min(REK_SURE, kalan_sure() - 10 * 60))     # kesintiye uğramadan kaydedebilmek için 10 dk pay
+    def bitti(): return yeni >= REK_MAX or time.time() - t0 > sure
 
     # 1) Yeni kararlar: baştan, tamamı bilinen sayfaya kadar
     son = 1
@@ -394,10 +400,12 @@ def kesif():
 
 
 if __name__ == "__main__":
-    stk()
-    try: rekabet()
-    except Exception as e: print("rekabet hatası:", e)
+    # Sıra: küçük işler önce, süresi esnek olan Rekabet arşivi en sonda (kalan süreyi kullanır)
+    try: stk()
+    except Exception as e: print("stk hatası:", e)
     try: kvkk()
     except Exception as e: print("kvkk hatası:", e)
     try: kesif()
     except Exception as e: print("keşif hatası:", e)
+    try: rekabet()
+    except Exception as e: print("rekabet hatası:", e)
