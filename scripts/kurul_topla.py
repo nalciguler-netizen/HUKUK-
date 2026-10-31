@@ -6,6 +6,7 @@
 - Uyuşmazlık Mahkemesi: şimdilik yalnızca sayfa yapısını kaydeder (kurul/_kesif/), ayrıştırıcı sonra eklenecek.
 Kararlar kamuya açık resmî metinlerdir; kişi bilgileri yayımlayan kurumca gizlenmiştir."""
 from __future__ import annotations
+from concurrent.futures import ThreadPoolExecutor
 import hashlib, html as htmlmod, json, os, re, subprocess, sys, tempfile, time, urllib.request, urllib.error
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "kurul")
@@ -42,7 +43,7 @@ def save(path, data):
 
 NUM = r"(K\s*[-.]?\s*\d{4}\s*[-/]\s*\d+|\d{4}\s*/\s*\d+(?=\s)|\d{4}\s*/\s*[İI]HK\s*[-./]?\s*\d+|[İI]HK\s*[-./]\s*\d+)"
 # Karar başlığı: satır tarihle başlar, karar numarasıyla sürer ve "... Kararı" (isteğe bağlı parantezli konu) ile biter.
-HDR = re.compile(r"^[ \t\f]*(\d{2}[/.]\d{2}[/.]\d{4})\s+Tarih\w*\s*(?:ve\s+|[-–—]\s*)?" + NUM +
+HDR = re.compile(r"^[ \t\f]*(?:[x•▪*\-–]\s+|\d{1,2}\.\s+)?(\d{2}[/.]\d{2}[/.]\d{4})\s+Tarih\w*\s*(?:ve\s+|[-–—]\s*)?" + NUM +
                  r"\s+(?:Sayılı\s+)?((?:Uyuşmazlık\s+)?(?:[İi]tiraz\s+)?(?:Hakem\s+)?(?:Heyeti\s+)?Karar\w*)\.?[ \t]*(\([^)\n]*\)?)?[ \t]*$", re.I | re.M)
 TOCNUM = re.compile(r"\d{2}[/.]\d{2}[/.]\d{4}\s+Tarih\w*\s*(?:ve\s+|[-–—]\s*)?" + NUM, re.I)
 SEC = re.compile(r"^[\f ]*(I|II|III|IV|V|VI|VII)\.\s+(.+?)(?:\.{3,}.*)?$", re.M)
@@ -87,7 +88,9 @@ def stk_bol(t, sayi):
     for m in HDR.finditer(t, toc_end):
         if "....." in m.group(0): continue
         no = norm_no(m.group(2))
-        if no in seen or (toc and no not in toc): continue     # yalnızca içindekilerde olan numara, ilk geçtiği yerde
+        # yalnızca içindekilerde olan numara (ya da eski dergilerdeki gibi madde işaretiyle başlayan başlık), ilk geçtiği yerde
+        imli = re.match(r"[ \t\f]*(?:[x•▪*\-–]|\d{1,2}\.)\s", m.group(0)) is not None
+        if no in seen or (toc and no not in toc and not imli): continue
         seen.add(no); items.append((m, no))
     out = []
     for i, (m, no) in enumerate(items):
@@ -207,18 +210,28 @@ def rekabet():
             json.dump(parca, f, ensure_ascii=False)
         idx["sayilar"][str(parca_no)] = {"adet": len(parca), "dosya": f"{parca_no:04d}.json"}
 
-    def isle(k):
-        nonlocal parca, parca_no, yeni, hata
-        if k["kid"] in ids: return
+    def indir(k):
         try:
             data, ct = get(k["url"], 60)
-            metin = pdf_metin(data) if data[:4] == b"%PDF" else ""
+            return k, (pdf_metin(data) if data[:4] == b"%PDF" else ""), None
         except Exception as e:
-            hata += 1; print("rekabet karar alınamadı:", k["url"], type(e).__name__, e)
-            if hata >= 25: raise RuntimeError("rekabet.gov.tr çok sayıda hata veriyor; bu çalışma durduruldu")
-            return
-        finally:
-            time.sleep(0.4)
+            return k, None, e
+
+    def isle_hepsi(lst):
+        """Sayfadaki yeni kararların PDF'leri aynı anda 3'er indirilir (site yavaş yanıt verdiği için), sırayla eklenir."""
+        nonlocal hata
+        yeniler = [k for k in lst if k["kid"] not in ids]
+        if not yeniler or bitti(): return
+        with ThreadPoolExecutor(max_workers=3) as ex:
+            for k, metin, e in ex.map(indir, yeniler):
+                if e is not None:
+                    hata += 1; print("rekabet karar alınamadı:", k["url"], type(e).__name__, e)
+                    if hata >= 25: raise RuntimeError("rekabet.gov.tr çok sayıda hata veriyor; bu çalışma durduruldu")
+                    continue
+                ekle(k, metin)
+
+    def ekle(k, metin):
+        nonlocal parca, parca_no, yeni
         if len(metin) > MAX_METIN: metin = metin[:MAX_METIN] + "\n\n(Karar metni uzun olduğu için kısaltıldı; tamamı için resmî PDF'e bakın.)"
         if len(metin) < 200: metin = (metin + "\n\n(Karar metni PDF'te görüntü olarak yer aldığından yalnızca konusu alınabildi.)").strip()
         x = {"id": "rek-" + k["kid"], "kaynak": "rekabet", "sayi": parca_no, "no": k["no"], "tarih": tarih2(k["tarih"]), "tur": "Kurul Kararı",
@@ -246,9 +259,7 @@ def rekabet():
         if not lst: break
         son = s2
         tumu_bilinen = all(k["kid"] in ids for k in lst)
-        for k in lst:
-            if bitti(): break
-            isle(k)
+        isle_hepsi(lst)
         if tumu_bilinen: break
     # 2) Arşiv: kalınan sayfadan geriye doğru (sayfalar yeni kararlarla kaydığı için 2 sayfa örtüşmeli)
     if not idx.get("arsiv_tamam"):
@@ -262,14 +273,13 @@ def rekabet():
             idx["_sayfa_hata"] = 0
             if not lst: idx["arsiv_tamam"] = True; break
             son = max(son, s2)
-            for k in lst:
-                if bitti(): break
-                isle(k)
+            isle_hepsi(lst)
             if bitti(): break
             idx["geri_sayfa"] = n = n + 1
             if n > son: idx["arsiv_tamam"] = True; break
     if parca: yaz()
     idx["guncelleme"] = time.strftime("%Y-%m-%d %H:%M"); idx["toplam"] = len(ids); idx["son_sayfa"] = son
+    idx["son_calisma"] = {"yeni": yeni, "hata": hata, "dakika": round((time.time() - t0) / 60, 1)}
     with open(ip, "w", encoding="utf-8") as f: json.dump(idx, f, ensure_ascii=False, indent=1)
     with open(idp, "w", encoding="utf-8") as f: json.dump(sorted(ids), f)
     print(f"Rekabet: bu çalışmada {yeni} yeni karar, {hata} hata; toplam {len(ids)}; arşiv sayfası {idx.get('geri_sayfa')}/{son}{' (tamam)' if idx.get('arsiv_tamam') else ''}")
