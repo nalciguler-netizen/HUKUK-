@@ -1,0 +1,67 @@
+{
+ "kaynak": "Kişisel Verileri Koruma Kurulu kararları (kvkk.gov.tr)",
+ "sayilar": {
+  "1": {
+   "adet": 25,
+   "dosya": "0001.json"
+  },
+  "2": {
+   "adet": 25,
+   "dosya": "0002.json"
+  },
+  "3": {
+   "adet": 25,
+   "dosya": "0003.json"
+  },
+  "4": {
+   "adet": 25,
+   "dosya": "0004.json"
+  },
+  "5": {
+   "adet": 25,
+   "dosya": "0005.json"
+  },
+  "6": {
+   "adet": 25,
+   "dosya": "0006.json"
+  },
+  "7": {
+   "adet": 25,
+   "dosya": "0007.json"
+  },
+  "8": {
+   "adet": 25,
+   "dosya": "0008.json"
+  },
+  "9": {
+   "adet": 25,
+   "dosya": "0009.json"
+  },
+  "10": {
+   "adet": 25,
+   "dosya": "0010.json"
+  },
+  "11": {
+   "adet": 25,
+   "dosya": "0011.json"
+  },
+  "12": {
+   "adet": 25,
+   "dosya": "0012.json"
+  },
+  "13": {
+   "adet": 25,
+   "dosya": "0013.json"
+  },
+  "14": {
+   "adet": 25,
+   "dosya": "0014.json"
+  },
+  "15": {
+   "adet": 2,
+   "dosya": "0015.json"
+  }
+ },
+ "guncelleme": "2026-10-31 11:47",
+ "toplam": 352
+}
