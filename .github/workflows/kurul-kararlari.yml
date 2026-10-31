@@ -16,7 +16,7 @@ permissions:
 jobs:
   topla:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -27,10 +27,13 @@ jobs:
       - name: Topla
         env:
           YENIDEN: ${{ github.event.inputs.yeniden }}
+        continue-on-error: true
+        timeout-minutes: 160
         run: python scripts/kurul_topla.py
       - name: Kaydet
+        if: always()
         run: |
           git config user.name "kurul-kararlari"
           git config user.email "yolhava.destek@gmail.com"
           git add kurul
-          if git diff --cached --quiet; then echo "Yeni karar yok."; else git commit -m "Kurul kararları güncellendi" && git push; fi
+          if git diff --cached --quiet; then echo "Yeni karar yok."; else git commit -m "Kurul kararları güncellendi" && git pull --rebase -q && git push; fi
