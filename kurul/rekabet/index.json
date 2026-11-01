@@ -66,19 +66,79 @@
    "dosya": "0016.json"
   },
   "17": {
-   "adet": 15,
+   "adet": 20,
    "dosya": "0017.json"
+  },
+  "18": {
+   "adet": 18,
+   "dosya": "0018.json"
+  },
+  "19": {
+   "adet": 24,
+   "dosya": "0019.json"
+  },
+  "20": {
+   "adet": 25,
+   "dosya": "0020.json"
+  },
+  "21": {
+   "adet": 24,
+   "dosya": "0021.json"
+  },
+  "22": {
+   "adet": 16,
+   "dosya": "0022.json"
+  },
+  "23": {
+   "adet": 24,
+   "dosya": "0023.json"
+  },
+  "24": {
+   "adet": 21,
+   "dosya": "0024.json"
+  },
+  "25": {
+   "adet": 25,
+   "dosya": "0025.json"
+  },
+  "26": {
+   "adet": 11,
+   "dosya": "0026.json"
+  },
+  "27": {
+   "adet": 11,
+   "dosya": "0027.json"
+  },
+  "28": {
+   "adet": 14,
+   "dosya": "0028.json"
+  },
+  "29": {
+   "adet": 14,
+   "dosya": "0029.json"
+  },
+  "30": {
+   "adet": 25,
+   "dosya": "0030.json"
+  },
+  "31": {
+   "adet": 25,
+   "dosya": "0031.json"
+  },
+  "32": {
+   "adet": 5,
+   "dosya": "0032.json"
   }
  },
- "geri_sayfa": 20,
+ "geri_sayfa": 49,
  "arsiv_tamam": false,
- "guncelleme": "2026-11-01 00:14",
- "toplam": 186,
+ "guncelleme": "2026-11-01 11:29",
+ "toplam": 473,
  "son_sayfa": 1047,
  "_sayfa_hata": 1,
  "son_calisma": {
-  "yeni": 28,
-  "hata": 0,
-  "dakika": 4.1
+  "yeni": 287,
+  "hata": 3,
+  "dakika": 59.5
  }
 }
