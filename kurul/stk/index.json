@@ -16,36 +16,36 @@
    "karakter": 100650
   },
   "3": {
-   "adet": 0,
-   "dosya": "",
+   "adet": 10,
+   "dosya": "003.json",
    "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs3.pdf",
    "sha": "47c5e6b4da991c40",
    "karakter": 121953
   },
   "5": {
-   "adet": 0,
-   "dosya": "",
+   "adet": 13,
+   "dosya": "005.json",
    "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs5.pdf",
    "sha": "e6c290b737913744",
    "karakter": 112701
   },
   "6": {
-   "adet": 0,
-   "dosya": "",
+   "adet": 12,
+   "dosya": "006.json",
    "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs6.pdf",
    "sha": "d350184ea85ee456",
    "karakter": 124909
   },
   "7": {
-   "adet": 0,
-   "dosya": "",
+   "adet": 11,
+   "dosya": "007.json",
    "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs7.pdf",
    "sha": "e8a215838df31a25",
    "karakter": 104842
   },
   "8": {
-   "adet": 0,
-   "dosya": "",
+   "adet": 14,
+   "dosya": "008.json",
    "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs8.pdf",
    "sha": "7b9eb6c45c29f494",
    "karakter": 131335
@@ -58,15 +58,15 @@
    "karakter": 105016
   },
   "10": {
-   "adet": 0,
-   "dosya": "",
+   "adet": 14,
+   "dosya": "010.json",
    "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs10.pdf",
    "sha": "e03321ffa2f6d5e4",
    "karakter": 124265
   },
   "11": {
-   "adet": 0,
-   "dosya": "",
+   "adet": 11,
+   "dosya": "011.json",
    "url": "https://www.sigortatahkim.org/content/CmsFiles/karardrgs11.pdf",
    "sha": "7134e3eaf0d7e1de",
    "karakter": 113438
@@ -457,6 +457,6 @@
    "karakter": 319635
   }
  },
- "guncelleme": "2026-10-31 11:28",
- "toplam": 896
+ "guncelleme": "2026-11-01 00:10",
+ "toplam": 981
 }

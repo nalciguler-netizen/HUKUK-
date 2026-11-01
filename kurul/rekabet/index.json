@@ -62,14 +62,23 @@
    "dosya": "0015.json"
   },
   "16": {
-   "adet": 12,
+   "adet": 25,
    "dosya": "0016.json"
+  },
+  "17": {
+   "adet": 15,
+   "dosya": "0017.json"
   }
  },
- "geri_sayfa": 17,
+ "geri_sayfa": 20,
  "arsiv_tamam": false,
- "guncelleme": "2026-10-31 13:05",
- "toplam": 158,
+ "guncelleme": "2026-11-01 00:14",
+ "toplam": 186,
  "son_sayfa": 1047,
- "_sayfa_hata": 0
+ "_sayfa_hata": 1,
+ "son_calisma": {
+  "yeni": 28,
+  "hata": 0,
+  "dakika": 4.1
+ }
 }
