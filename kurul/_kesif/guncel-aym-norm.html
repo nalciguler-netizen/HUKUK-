@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="tr" translate="no" class="notranslate">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="google" content="notranslate" />
+  <meta name="theme-color" content="#000000" />
+  <meta name="description" content="Metronic React Demo 5" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;500;600;700&display=swap" />
+  <title>Anayasa Mahkemesi Kararlar bilgi Bankası</title>
+  <link rel="shortcut icon" href="media/logos/AYM_logo.png" />
+  <link rel="stylesheet" id="layout-styles-anchor" href="/kbb/splash-screen.css" />
+  <script src="/kbb/network-config.js"></script>
+  <!-- Google tag (gtag.js) --> 
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-FWT821WSXY"></script> 
+  <script> window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-FWT821WSXY'); </script>
+  <script type="module" crossorigin src="/kbb/assets/index-DJw1O8y-.js"></script>
+  <link rel="stylesheet" crossorigin href="/kbb/assets/index-C8foP45h.css">
+</head>
+
+<body id="kt_body" class="page-loading">
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <!--begin::Theme mode setup on page load-->
+  <script>
+    let themeMode = 'system'
+
+    if (localStorage.getItem('kt_theme_mode_value')) {
+      themeMode = localStorage.getItem('kt_theme_mode_value')
+    }
+
+    if (themeMode === 'system') {
+      themeMode = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    }
+
+    document.documentElement.setAttribute('data-bs-theme', themeMode)
+  </script>
+  <!--end::Theme mode setup on page load-->
+
+  <div id="root"></div>
+
+  <!--begin::Loading markup-->
+  <div id="splash-screen" class="splash-screen">
+    <img src="media/logos/AYM_logo.png" class="dark-logo" alt="Keenthemes dark logo" style="width: 100px; height: auto;"/>
+    <img src="media/logos/AYM_logo.png" class="light-logo" alt="Keenthemes light logo" style="width: 100px; height: auto;"/>
+    <div class="loader-wrapper">
+      <span class="loader"></span>
+      <span class="loading-text">Loading...</span>
+    </div>
+  </div>
+  <!--end::Loading markup-->
+
+  <div id="root-modals"></div>
+</body>
+
+</html>
