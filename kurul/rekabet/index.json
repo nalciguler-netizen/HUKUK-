@@ -216,13 +216,13 @@
  },
  "geri_sayfa": 95,
  "arsiv_tamam": false,
- "guncelleme": "2026-11-01 20:59",
+ "guncelleme": "2026-11-02 00:54",
  "toplam": 931,
- "son_sayfa": 1047,
- "_sayfa_hata": 0,
+ "son_sayfa": 1,
+ "_sayfa_hata": 1,
  "son_calisma": {
-  "yeni": 458,
-  "hata": 3,
-  "dakika": 76.2
+  "yeni": 0,
+  "hata": 0,
+  "dakika": 6.5
  }
 }
