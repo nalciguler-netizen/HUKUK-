@@ -371,6 +371,30 @@ def kvkk():
     print(f"KVKK: bu çalışmada {yeni} yeni karar; toplam {len(ids)}")
 
 
+def guncel_kesif():
+    """Anayasa Mahkemesi'nin son kararları: bireysel başvuru ve norm denetimi karar bilgi bankalarının sayfa yapısı
+    kurul/_kesif/guncel-aym-*.html dosyalarına yazılır (AYM toplayıcısı buna göre yazılacak).
+    Yargıtay, Danıştay ve UYAP Emsal'in yeni kararları platformda resmî sitelerden canlı arandığı için ayrıca toplanmaz."""
+    import datetime
+    bit = datetime.date.today(); bas = bit - datetime.timedelta(days=7)
+    f = lambda d: d.strftime("%d.%m.%Y")
+    rapor = [f"Tarih aralığı: {f(bas)} - {f(bit)}"]
+    # Anayasa Mahkemesi: bireysel başvuru ve norm denetimi karar bilgi bankaları (sayfa yapısı kaydedilir)
+    for ad, url in (("aym-bb", "https://kararlarbilgibankasi.anayasa.gov.tr/"), ("aym-bb-ara", f"https://kararlarbilgibankasi.anayasa.gov.tr/Ara?KararTarihiBaslangic={f(bas)}&KararTarihiBitis={f(bit)}"),
+                    ("aym-norm", "https://normkararlarbilgibankasi.anayasa.gov.tr/"), ("aym-norm-ara", f"https://normkararlarbilgibankasi.anayasa.gov.tr/Ara?KararTarihiBaslangic={f(bas)}&KararTarihiBitis={f(bit)}")):
+        try:
+            d, ct = get(url, 40); h = d.decode("utf-8", "replace")
+            save(os.path.join(ROOT, "_kesif", f"guncel-{ad}.html"), h[:300000])
+            links = sorted(set(re.findall(r'href="([^"]*(?:/BB/|/ND/|Karar|karar)[^"]*)"', h)))[:200]
+            save(os.path.join(ROOT, "_kesif", f"guncel-{ad}.links.txt"), "\n".join(links))
+            rapor.append(f"{ad}: {len(h)} karakter, {len(links)} karar bağlantısı ({url})")
+        except Exception as e:
+            rapor.append(f"{ad}: HATA {type(e).__name__} {e} ({url})")
+        time.sleep(1)
+    save(os.path.join(ROOT, "_kesif", "guncel-rapor.txt"), "\n".join(rapor))
+    print("\n".join(rapor))
+
+
 def kesif():
     """Uyuşmazlık Mahkemesi sayfalarının ham hâlini kaydeder (ayrıştırıcı yazılabilsin diye)."""
     hedefler = {
@@ -417,5 +441,7 @@ if __name__ == "__main__":
     except Exception as e: print("kvkk hatası:", e)
     try: kesif()
     except Exception as e: print("keşif hatası:", e)
+    try: guncel_kesif()
+    except Exception as e: print("AYM keşif hatası:", e)
     try: rekabet()
     except Exception as e: print("rekabet hatası:", e)
