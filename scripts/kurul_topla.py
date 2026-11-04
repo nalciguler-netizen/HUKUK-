@@ -396,12 +396,15 @@ def guncel_kesif():
 
 
 def kesif():
-    """Uyuşmazlık Mahkemesi sayfalarının ham hâlini kaydeder (ayrıştırıcı yazılabilsin diye)."""
+    """Uyuşmazlık Mahkemesi ve Kamu İhale Kurulu sayfalarının ham hâlini kaydeder (ayrıştırıcı yazılabilsin diye)."""
     hedefler = {
         "uyusmazlik-ana.html": "https://www.uyusmazlik.gov.tr/",
         "uyusmazlik-arama.html": "https://www.uyusmazlik.gov.tr/Home/Arama",
         "uyusmazlik-app.js.txt": "https://www.uyusmazlik.gov.tr/Assets/front/js/app.js",
         "uyusmazlik-fill.js.txt": "https://www.uyusmazlik.gov.tr/Assets/front/js/fill.js",
+        # Kamu İhale Kurulu kararları (EKAP) — sayfa yapısı incelenip ayrıştırıcı yazılacak
+        "kik-ana.html": "https://ekap.kik.gov.tr/EKAP/Vatandas/kurulkararsorgu.aspx",
+        "kik-kurum.html": "https://www.kik.gov.tr/",
     }
     rapor = []
     for ad, url in hedefler.items():
