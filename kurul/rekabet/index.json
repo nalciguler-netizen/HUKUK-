@@ -302,19 +302,123 @@
    "dosya": "0075.json"
   },
   "76": {
-   "adet": 12,
+   "adet": 25,
    "dosya": "0076.json"
+  },
+  "77": {
+   "adet": 15,
+   "dosya": "0077.json"
+  },
+  "78": {
+   "adet": 18,
+   "dosya": "0078.json"
+  },
+  "79": {
+   "adet": 18,
+   "dosya": "0079.json"
+  },
+  "80": {
+   "adet": 23,
+   "dosya": "0080.json"
+  },
+  "81": {
+   "adet": 25,
+   "dosya": "0081.json"
+  },
+  "82": {
+   "adet": 25,
+   "dosya": "0082.json"
+  },
+  "83": {
+   "adet": 25,
+   "dosya": "0083.json"
+  },
+  "84": {
+   "adet": 25,
+   "dosya": "0084.json"
+  },
+  "85": {
+   "adet": 25,
+   "dosya": "0085.json"
+  },
+  "86": {
+   "adet": 25,
+   "dosya": "0086.json"
+  },
+  "87": {
+   "adet": 20,
+   "dosya": "0087.json"
+  },
+  "88": {
+   "adet": 24,
+   "dosya": "0088.json"
+  },
+  "89": {
+   "adet": 23,
+   "dosya": "0089.json"
+  },
+  "90": {
+   "adet": 16,
+   "dosya": "0090.json"
+  },
+  "91": {
+   "adet": 19,
+   "dosya": "0091.json"
+  },
+  "92": {
+   "adet": 25,
+   "dosya": "0092.json"
+  },
+  "93": {
+   "adet": 20,
+   "dosya": "0093.json"
+  },
+  "94": {
+   "adet": 25,
+   "dosya": "0094.json"
+  },
+  "95": {
+   "adet": 22,
+   "dosya": "0095.json"
+  },
+  "96": {
+   "adet": 23,
+   "dosya": "0096.json"
+  },
+  "97": {
+   "adet": 25,
+   "dosya": "0097.json"
+  },
+  "98": {
+   "adet": 25,
+   "dosya": "0098.json"
+  },
+  "99": {
+   "adet": 25,
+   "dosya": "0099.json"
+  },
+  "100": {
+   "adet": 25,
+   "dosya": "0100.json"
+  },
+  "101": {
+   "adet": 25,
+   "dosya": "0101.json"
+  },
+  "102": {
+   "adet": 12,
+   "dosya": "0102.json"
   }
  },
- "geri_sayfa": 141,
+ "geri_sayfa": 200,
  "arsiv_tamam": false,
- "guncelleme": "2026-11-03 22:01",
- "toplam": 1386,
+ "guncelleme": "2026-11-04 02:22",
+ "toplam": 1977,
  "son_sayfa": 1047,
  "_sayfa_hata": 1,
  "son_calisma": {
-  "yeni": 255,
-  "hata": 6,
-  "dakika": 60.1
+  "yeni": 591,
+  "hata": 0,
+  "dakika": 57.4
  }
 }
