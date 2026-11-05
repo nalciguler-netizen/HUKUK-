@@ -566,19 +566,155 @@
    "dosya": "0141.json"
   },
   "142": {
-   "adet": 17,
+   "adet": 25,
    "dosya": "0142.json"
+  },
+  "143": {
+   "adet": 25,
+   "dosya": "0143.json"
+  },
+  "144": {
+   "adet": 25,
+   "dosya": "0144.json"
+  },
+  "145": {
+   "adet": 25,
+   "dosya": "0145.json"
+  },
+  "146": {
+   "adet": 18,
+   "dosya": "0146.json"
+  },
+  "147": {
+   "adet": 25,
+   "dosya": "0147.json"
+  },
+  "148": {
+   "adet": 25,
+   "dosya": "0148.json"
+  },
+  "149": {
+   "adet": 25,
+   "dosya": "0149.json"
+  },
+  "150": {
+   "adet": 25,
+   "dosya": "0150.json"
+  },
+  "151": {
+   "adet": 25,
+   "dosya": "0151.json"
+  },
+  "152": {
+   "adet": 25,
+   "dosya": "0152.json"
+  },
+  "153": {
+   "adet": 25,
+   "dosya": "0153.json"
+  },
+  "154": {
+   "adet": 19,
+   "dosya": "0154.json"
+  },
+  "155": {
+   "adet": 25,
+   "dosya": "0155.json"
+  },
+  "156": {
+   "adet": 25,
+   "dosya": "0156.json"
+  },
+  "157": {
+   "adet": 25,
+   "dosya": "0157.json"
+  },
+  "158": {
+   "adet": 25,
+   "dosya": "0158.json"
+  },
+  "159": {
+   "adet": 25,
+   "dosya": "0159.json"
+  },
+  "160": {
+   "adet": 25,
+   "dosya": "0160.json"
+  },
+  "161": {
+   "adet": 25,
+   "dosya": "0161.json"
+  },
+  "162": {
+   "adet": 20,
+   "dosya": "0162.json"
+  },
+  "163": {
+   "adet": 25,
+   "dosya": "0163.json"
+  },
+  "164": {
+   "adet": 22,
+   "dosya": "0164.json"
+  },
+  "165": {
+   "adet": 21,
+   "dosya": "0165.json"
+  },
+  "166": {
+   "adet": 25,
+   "dosya": "0166.json"
+  },
+  "167": {
+   "adet": 25,
+   "dosya": "0167.json"
+  },
+  "168": {
+   "adet": 25,
+   "dosya": "0168.json"
+  },
+  "169": {
+   "adet": 25,
+   "dosya": "0169.json"
+  },
+  "170": {
+   "adet": 25,
+   "dosya": "0170.json"
+  },
+  "171": {
+   "adet": 25,
+   "dosya": "0171.json"
+  },
+  "172": {
+   "adet": 25,
+   "dosya": "0172.json"
+  },
+  "173": {
+   "adet": 25,
+   "dosya": "0173.json"
+  },
+  "174": {
+   "adet": 25,
+   "dosya": "0174.json"
+  },
+  "175": {
+   "adet": 25,
+   "dosya": "0175.json"
+  },
+  "176": {
+   "adet": 11,
+   "dosya": "0176.json"
   }
  },
- "geri_sayfa": 297,
+ "geri_sayfa": 378,
  "arsiv_tamam": false,
- "guncelleme": "2026-11-04 22:37",
- "toplam": 2945,
+ "guncelleme": "2026-11-05 12:16",
+ "toplam": 3764,
  "son_sayfa": 1047,
  "_sayfa_hata": 0,
  "son_calisma": {
-  "yeni": 429,
-  "hata": 3,
-  "dakika": 75.1
+  "yeni": 819,
+  "hata": 1,
+  "dakika": 75.8
  }
 }
