@@ -1,5 +1,5 @@
-Tarih aralığı: 30.10.2026 - 06.11.2026
+Tarih aralığı: 31.10.2026 - 07.11.2026
 aym-bb: 2452 karakter, 0 karar bağlantısı (https://kararlarbilgibankasi.anayasa.gov.tr/)
-aym-bb-ara: HATA HTTPError HTTP Error 404: Not Found (https://kararlarbilgibankasi.anayasa.gov.tr/Ara?KararTarihiBaslangic=30.10.2026&KararTarihiBitis=06.11.2026)
+aym-bb-ara: HATA HTTPError HTTP Error 404: Not Found (https://kararlarbilgibankasi.anayasa.gov.tr/Ara?KararTarihiBaslangic=31.10.2026&KararTarihiBitis=07.11.2026)
 aym-norm: 2452 karakter, 0 karar bağlantısı (https://normkararlarbilgibankasi.anayasa.gov.tr/)
-aym-norm-ara: HATA HTTPError HTTP Error 404: Not Found (https://normkararlarbilgibankasi.anayasa.gov.tr/Ara?KararTarihiBaslangic=30.10.2026&KararTarihiBitis=06.11.2026)
+aym-norm-ara: HATA HTTPError HTTP Error 404: Not Found (https://normkararlarbilgibankasi.anayasa.gov.tr/Ara?KararTarihiBaslangic=31.10.2026&KararTarihiBitis=07.11.2026)
