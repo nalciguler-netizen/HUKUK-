@@ -1278,19 +1278,55 @@
    "dosya": "0319.json"
   },
   "320": {
-   "adet": 11,
+   "adet": 25,
    "dosya": "0320.json"
+  },
+  "321": {
+   "adet": 19,
+   "dosya": "0321.json"
+  },
+  "322": {
+   "adet": 25,
+   "dosya": "0322.json"
+  },
+  "323": {
+   "adet": 25,
+   "dosya": "0323.json"
+  },
+  "324": {
+   "adet": 23,
+   "dosya": "0324.json"
+  },
+  "325": {
+   "adet": 25,
+   "dosya": "0325.json"
+  },
+  "326": {
+   "adet": 25,
+   "dosya": "0326.json"
+  },
+  "327": {
+   "adet": 25,
+   "dosya": "0327.json"
+  },
+  "328": {
+   "adet": 25,
+   "dosya": "0328.json"
+  },
+  "329": {
+   "adet": 4,
+   "dosya": "0329.json"
   }
  },
- "geri_sayfa": 737,
+ "geri_sayfa": 759,
  "arsiv_tamam": false,
- "guncelleme": "2026-11-07 02:14",
- "toplam": 7350,
+ "guncelleme": "2026-11-07 10:35",
+ "toplam": 7560,
  "son_sayfa": 1047,
- "_sayfa_hata": 0,
+ "_sayfa_hata": 1,
  "son_calisma": {
-  "yeni": 950,
+  "yeni": 210,
   "hata": 0,
-  "dakika": 75.0
+  "dakika": 20.2
  }
 }
