@@ -1718,19 +1718,83 @@
    "dosya": "0429.json"
   },
   "430": {
-   "adet": 16,
+   "adet": 25,
    "dosya": "0430.json"
+  },
+  "431": {
+   "adet": 25,
+   "dosya": "0431.json"
+  },
+  "432": {
+   "adet": 25,
+   "dosya": "0432.json"
+  },
+  "433": {
+   "adet": 25,
+   "dosya": "0433.json"
+  },
+  "434": {
+   "adet": 25,
+   "dosya": "0434.json"
+  },
+  "435": {
+   "adet": 25,
+   "dosya": "0435.json"
+  },
+  "436": {
+   "adet": 25,
+   "dosya": "0436.json"
+  },
+  "437": {
+   "adet": 25,
+   "dosya": "0437.json"
+  },
+  "438": {
+   "adet": 25,
+   "dosya": "0438.json"
+  },
+  "439": {
+   "adet": 25,
+   "dosya": "0439.json"
+  },
+  "440": {
+   "adet": 25,
+   "dosya": "0440.json"
+  },
+  "441": {
+   "adet": 24,
+   "dosya": "0441.json"
+  },
+  "442": {
+   "adet": 25,
+   "dosya": "0442.json"
+  },
+  "443": {
+   "adet": 25,
+   "dosya": "0443.json"
+  },
+  "444": {
+   "adet": 25,
+   "dosya": "0444.json"
+  },
+  "445": {
+   "adet": 25,
+   "dosya": "0445.json"
+  },
+  "446": {
+   "adet": 17,
+   "dosya": "0446.json"
   }
  },
- "geri_sayfa": 1008,
- "arsiv_tamam": false,
- "guncelleme": "2026-11-08 11:42",
- "toplam": 10049,
+ "geri_sayfa": 1048,
+ "arsiv_tamam": true,
+ "guncelleme": "2026-11-08 20:12",
+ "toplam": 10449,
  "son_sayfa": 1047,
  "_sayfa_hata": 0,
  "son_calisma": {
-  "yeni": 609,
-  "hata": 1,
-  "dakika": 75.8
+  "yeni": 400,
+  "hata": 0,
+  "dakika": 28.2
  }
 }
