@@ -1786,19 +1786,19 @@
    "dosya": "0446.json"
   },
   "447": {
-   "adet": 10,
+   "adet": 12,
    "dosya": "0447.json"
   }
  },
  "geri_sayfa": 1048,
  "arsiv_tamam": true,
- "guncelleme": "2026-11-16 11:31",
- "toplam": 10467,
- "son_sayfa": 1049,
+ "guncelleme": "2026-11-16 23:47",
+ "toplam": 10469,
+ "son_sayfa": 1050,
  "_sayfa_hata": 0,
  "son_calisma": {
-  "yeni": 12,
+  "yeni": 2,
   "hata": 2,
-  "dakika": 6.0
+  "dakika": 0.4
  }
 }
